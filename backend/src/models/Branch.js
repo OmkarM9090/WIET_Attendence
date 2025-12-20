@@ -5,14 +5,15 @@ const branchSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true, // Computer, Mechanical
+      unique: true,
+      trim: true
     },
-
     code: {
       type: String,
-      required: true, // COMP, MECH
+      required: true,
       unique: true,
-    },
+      uppercase: true
+    }
   },
   { timestamps: true }
 );
