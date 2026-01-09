@@ -20,6 +20,4 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/student", studentAttendanceRoutes);
 
 
-
-
 export default app;
