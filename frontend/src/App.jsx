@@ -9,6 +9,7 @@ import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminCreateUser from "./pages/AdminCreateUser";
 import BranchManagement from "./pages/BranchManagement";
+import SubjectManagement from "./pages/SubjectManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 
@@ -44,6 +45,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <BranchManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/subjects"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <SubjectManagement />
               </ProtectedRoute>
             }
           />
