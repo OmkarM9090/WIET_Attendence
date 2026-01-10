@@ -1,3 +1,11 @@
+/**
+ * BUTTON COMPONENT
+ * Reusable button with variants and loading state
+ * Theme-controlled styling
+ */
+
+import { theme } from "../styles/theme";
+
 export default function Button({
   children,
   onClick,
@@ -6,17 +14,92 @@ export default function Button({
   disabled = false,
   fullWidth = false,
   loading = false,
+  className = "",
 }) {
-  const baseClasses = "px-6 py-2 rounded-lg font-medium transition-colors text-sm";
-  const widthClass = fullWidth ? "w-full" : "";
+  // Base styles
+  const baseStyles = {
+    padding: "0.625rem 1.5rem",
+    borderRadius: theme.borderRadius.md,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
+    transition: theme.transitions.base,
+    cursor: disabled || loading ? "not-allowed" : "pointer",
+    border: "1px solid transparent",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0.5rem",
+    width: fullWidth ? "100%" : "auto",
+  };
 
-  const variantClasses = {
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed",
-    secondary:
-      "bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed",
-    danger:
-      "bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed",
+  // Variant styles
+  const getVariantStyles = () => {
+    if (disabled || loading) {
+      return {
+        backgroundColor: theme.colors.disabled,
+        color: theme.colors.text.secondary,
+        cursor: "not-allowed",
+        opacity: 0.6,
+      };
+    }
+
+    const variants = {
+      primary: {
+        backgroundColor: theme.colors.primary[500],
+        color: theme.colors.text.inverse,
+        hover: {
+          backgroundColor: theme.colors.primary[600],
+        },
+      },
+      secondary: {
+        backgroundColor: theme.colors.neutral[100],
+        color: theme.colors.text.primary,
+        hover: {
+          backgroundColor: theme.colors.neutral[200],
+        },
+      },
+      outline: {
+        backgroundColor: "transparent",
+        color: theme.colors.primary[500],
+        borderColor: theme.colors.primary[500],
+        hover: {
+          backgroundColor: theme.colors.primary[50],
+        },
+      },
+      danger: {
+        backgroundColor: theme.colors.error,
+        color: theme.colors.text.inverse,
+        hover: {
+          backgroundColor: "#dc2626",
+        },
+      },
+      success: {
+        backgroundColor: theme.colors.success,
+        color: theme.colors.text.inverse,
+        hover: {
+          backgroundColor: "#059669",
+        },
+      },
+    };
+
+    return variants[variant] || variants.primary;
+  };
+
+  const variantStyles = getVariantStyles();
+
+  const handleMouseEnter = (e) => {
+    if (!disabled && !loading && variantStyles.hover) {
+      Object.assign(e.currentTarget.style, variantStyles.hover);
+    }
+  };
+
+  const handleMouseLeave = (e) => {
+    if (!disabled && !loading) {
+      e.currentTarget.style.backgroundColor = variantStyles.backgroundColor;
+      if (variant === "outline") {
+        e.currentTarget.style.backgroundColor = "transparent";
+      }
+    }
   };
 
   return (
@@ -24,13 +107,23 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${variantClasses[variant]}`}
+      className={className}
+      style={{
+        ...baseStyles,
+        ...variantStyles,
+        border: variant === "outline" ? `1px solid ${variantStyles.borderColor}` : "1px solid transparent",
+      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {loading ? (
-        <span className="flex items-center justify-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-white"></div>
-          Loading...
-        </span>
+        <>
+          <div
+            className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            style={{ opacity: 0.7 }}
+          />
+          <span>Loading...</span>
+        </>
       ) : (
         children
       )}

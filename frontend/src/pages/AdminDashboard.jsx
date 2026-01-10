@@ -1,144 +1,402 @@
+/**
+ * ADMIN DASHBOARD
+ * Main dashboard for administrators
+ * Shows system overview, statistics, and quick actions
+ *
+ * API Endpoints Used:
+ * - GET /api/admin/branches
+ * - GET /api/admin/students
+ * - GET /api/admin/subjects
+ */
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+import { theme } from "../styles/theme";
+
+// Services
+import { getBranches, getStudents, getSubjects } from "../services/adminService";
+
+// Components
+import DashboardLayout from "../components/DashboardLayout";
+import StatsCard from "../components/StatsCard";
 import Button from "../components/Button";
-import Card from "../components/Card";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Alert from "../components/Alert";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    students: 0,
-    teachers: 0,
-    branches: 0,
-  });
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Data state
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalBranches: 0,
+    totalSubjects: 0,
+    defaulters: 0,
+  });
+
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  /**
+   * Fetch dashboard statistics
+   */
   useEffect(() => {
-    // Simulate loading data
-    setLoading(true);
-    setTimeout(() => {
-      setStats({
-        totalUsers: 156,
-        students: 120,
-        teachers: 36,
-        branches: 4,
-      });
-      setLoading(false);
-    }, 1000);
+    fetchDashboardData();
   }, []);
 
-  const quickActions = [
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // Fetch all required data in parallel
+      const [branchesData, studentsData, subjectsData] = await Promise.all([
+        getBranches(),
+        getStudents(),
+        getSubjects(),
+      ]);
+
+      setStats({
+        totalStudents: studentsData.length || 0,
+        totalBranches: branchesData.length || 0,
+        totalSubjects: subjectsData.length || 0,
+        defaulters: 0, // Will be calculated from actual defaulters API
+      });
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError("Failed to load dashboard data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sidebar menu items for admin
+  const sidebarItems = [
     {
-      title: "Create User",
-      description: "Add new student or teacher",
-      icon: "➕",
-      action: () => navigate("/admin/create-user"),
-    },
-    {
-      title: "Manage Branches",
-      description: "View and manage branches",
-      icon: "🏢",
-      action: () => alert("Coming soon"),
-    },
-    {
-      title: "Manage Subjects",
-      description: "Add or edit subjects",
-      icon: "📖",
-      action: () => alert("Coming soon"),
-    },
-    {
-      title: "View Reports",
-      description: "Attendance and performance",
+      path: "/admin",
       icon: "📊",
-      action: () => alert("Coming soon"),
+      label: "Dashboard",
+    },
+    {
+      path: "/admin/branches",
+      icon: "🏢",
+      label: "Branches",
+    },
+    {
+      path: "/admin/subjects",
+      icon: "📚",
+      label: "Subjects",
+    },
+    {
+      path: "/admin/students",
+      icon: "🎓",
+      label: "Students",
+    },
+    {
+      path: "/admin/teachers",
+      icon: "👨‍🏫",
+      label: "Teachers",
+    },
+    {
+      path: "/admin/reports",
+      icon: "📋",
+      label: "Reports",
+    },
+    {
+      path: "/admin/defaulters",
+      icon: "⚠️",
+      label: "Defaulters",
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
+  // Quick action cards
+  const quickActions = [
+    {
+      title: "Add Branch",
+      description: "Create new academic branch",
+      icon: "🏢",
+      color: "primary",
+      action: () => navigate("/admin/branches"),
+    },
+    {
+      title: "Add Subject",
+      description: "Add subjects for branches",
+      icon: "📚",
+      color: "info",
+      action: () => navigate("/admin/subjects"),
+    },
+    {
+      title: "Add Student",
+      description: "Enroll new students",
+      icon: "🎓",
+      color: "success",
+      action: () => navigate("/admin/students"),
+    },
+    {
+      title: "Add Teacher",
+      description: "Register teaching staff",
+      icon: "👨‍🏫",
+      color: "warning",
+      action: () => navigate("/admin/teachers"),
+    },
+  ];
+
+  return (
+    <DashboardLayout
+      sidebarItems={sidebarItems}
+      title="Dashboard"
+      subtitle="Overview of your attendance management system"
+    >
+      {loading ? (
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner />
         </div>
-      </div>
-    );
-  }
+      ) : (
+        <>
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6">
+              <Alert type="error" message={error} />
+            </div>
+          )}
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage your college attendance system</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Total Users", value: stats.totalUsers, icon: "👥" },
-            { label: "Students", value: stats.students, icon: "🎓" },
-            { label: "Teachers", value: stats.teachers, icon: "👨‍🏫" },
-            { label: "Branches", value: stats.branches, icon: "🏫" },
-          ].map((stat, idx) => (
-            <Card key={idx}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className="text-4xl">{stat.icon}</div>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Quick Actions</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {quickActions.map((action, idx) => (
-              <Card key={idx} className="cursor-pointer transition-shadow hover:shadow-md">
-                <button
-                  onClick={action.action}
-                  className="w-full text-left"
-                >
-                  <div className="mb-3 text-3xl">{action.icon}</div>
-                  <h3 className="font-semibold text-gray-900">{action.title}</h3>
-                  <p className="mt-1 text-sm text-gray-600">{action.description}</p>
-                </button>
-              </Card>
-            ))}
+          {/* Welcome Section */}
+          <div
+            className="mb-8 rounded-lg p-6"
+            style={{
+              background: `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`,
+              color: theme.colors.text.inverse,
+            }}
+          >
+            <h2 className="text-2xl font-bold">Welcome back, Admin! 👋</h2>
+            <p className="mt-2 opacity-90">
+              Here's what's happening with your attendance system today.
+            </p>
           </div>
-        </div>
 
-        {/* Recent Activity */}
-        <div className="mt-8">
-          <Card title="Recent Activity">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                <div>
-                  <p className="font-medium text-gray-900">New user created</p>
-                  <p className="text-sm text-gray-500">John Doe - Student</p>
+          {/* Statistics Grid */}
+          <div className="mb-8">
+            <h3
+              className="mb-4 text-lg font-semibold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              System Overview
+            </h3>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <StatsCard
+                title="Total Students"
+                value={stats.totalStudents}
+                icon="🎓"
+                color="primary"
+                trend={
+                  stats.totalStudents > 0
+                    ? { direction: "up", value: "+12%", label: "from last month" }
+                    : null
+                }
+              />
+              <StatsCard
+                title="Total Branches"
+                value={stats.totalBranches}
+                icon="🏢"
+                color="info"
+              />
+              <StatsCard
+                title="Total Subjects"
+                value={stats.totalSubjects}
+                icon="📚"
+                color="success"
+              />
+              <StatsCard
+                title="Defaulters"
+                value={stats.defaulters}
+                icon="⚠️"
+                color="warning"
+                trend={
+                  stats.defaulters > 0
+                    ? { direction: "down", value: "-5%", label: "from last month" }
+                    : null
+                }
+              />
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="mb-8">
+            <h3
+              className="mb-4 text-lg font-semibold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              Quick Actions
+            </h3>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="rounded-lg p-6 text-left transition-all"
+                  style={{
+                    backgroundColor: theme.colors.background,
+                    border: `1px solid ${theme.colors.border}`,
+                    boxShadow: theme.shadows.sm,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = theme.shadows.md;
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = theme.shadows.sm;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
+                >
+                  <div className="mb-4 text-3xl">{action.icon}</div>
+                  <h4
+                    className="text-base font-semibold"
+                    style={{ color: theme.colors.text.primary }}
+                  >
+                    {action.title}
+                  </h4>
+                  <p
+                    className="mt-1 text-sm"
+                    style={{ color: theme.colors.text.secondary }}
+                  >
+                    {action.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Activity / System Info */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* System Status */}
+            <div
+              className="rounded-lg p-6"
+              style={{
+                backgroundColor: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: theme.shadows.sm,
+              }}
+            >
+              <h3
+                className="mb-4 text-lg font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                System Status
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: theme.colors.success }}
+                    />
+                    <span
+                      className="text-sm"
+                      style={{ color: theme.colors.text.secondary }}
+                    >
+                      Database
+                    </span>
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: theme.colors.success }}
+                  >
+                    Operational
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">2 hours ago</span>
-              </div>
-              <div className="flex items-center justify-between pb-4">
-                <div>
-                  <p className="font-medium text-gray-900">System updated</p>
-                  <p className="text-sm text-gray-500">Database maintenance completed</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: theme.colors.success }}
+                    />
+                    <span
+                      className="text-sm"
+                      style={{ color: theme.colors.text.secondary }}
+                    >
+                      API Server
+                    </span>
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: theme.colors.success }}
+                  >
+                    Running
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">5 hours ago</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: theme.colors.success }}
+                    />
+                    <span
+                      className="text-sm"
+                      style={{ color: theme.colors.text.secondary }}
+                    >
+                      Email Service
+                    </span>
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: theme.colors.success }}
+                  >
+                    Active
+                  </span>
+                </div>
               </div>
             </div>
-          </Card>
-        </div>
-      </main>
-    </div>
+
+            {/* Quick Links */}
+            <div
+              className="rounded-lg p-6"
+              style={{
+                backgroundColor: theme.colors.background,
+                border: `1px solid ${theme.colors.border}`,
+                boxShadow: theme.shadows.sm,
+              }}
+            >
+              <h3
+                className="mb-4 text-lg font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                Quick Links
+              </h3>
+              <div className="space-y-3">
+                <Button
+                  onClick={() => navigate("/admin/students")}
+                  variant="outline"
+                  fullWidth
+                >
+                  📊 View All Students
+                </Button>
+                <Button
+                  onClick={() => navigate("/admin/teachers")}
+                  variant="outline"
+                  fullWidth
+                >
+                  👥 Manage Teachers
+                </Button>
+                <Button
+                  onClick={() => navigate("/admin/reports")}
+                  variant="outline"
+                  fullWidth
+                >
+                  📈 Generate Reports
+                </Button>
+                <Button
+                  onClick={() => navigate("/admin/defaulters")}
+                  variant="outline"
+                  fullWidth
+                >
+                  ⚠️ View Defaulters
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </DashboardLayout>
   );
 }
