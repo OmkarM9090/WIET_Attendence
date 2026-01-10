@@ -35,6 +35,15 @@ const attendanceSessionSchema = new mongoose.Schema(
       required: true,
     },
 
+
+    batch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Batch",
+    required: function () {
+      return this.sessionType === "PRACTICAL";
+    }
+  },
+  
     absentStudents: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -13,33 +13,54 @@ export const createAttendance = async (req, res) => {
       branchId,
       year,
       division,
+      sessionType,   // LECTURE | PRACTICAL
+      batch,         // required only for PRACTICAL
       absentStudentIds
     } = req.body;
 
-    //  Teacher id comes from JWT
     const teacherId = req.user.id;
 
-    // 1️. Validate required fields
-    if (!date || !subjectId || !branchId || !year || !division) {
+    // 1️⃣ Validate required fields
+    if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
-        message: "All fields are required"
+        message: "Missing required fields"
       });
     }
 
-    // 2️. Get total students count
-    const totalStudents = await Student.countDocuments({
+    // 2️⃣ Practical requires batch
+    if (sessionType === "PRACTICAL" && !batch) {
+      return res.status(400).json({
+        message: "Batch is required for practical session"
+      });
+    }
+
+    // 3️⃣ Lecture must NOT have batch
+    if (sessionType === "LECTURE" && batch) {
+      return res.status(400).json({
+        message: "Batch should not be sent for lecture"
+      });
+    }
+
+    // 4️⃣ Count eligible students
+    const studentFilter = {
       branch: branchId,
       year,
       division
-    });
+    };
+
+    if (sessionType === "PRACTICAL") {
+      studentFilter.batch = batch;
+    }
+
+    const totalStudents = await Student.countDocuments(studentFilter);
 
     if (totalStudents === 0) {
       return res.status(400).json({
-        message: "No students found for this class"
+        message: "No students found for this session"
       });
     }
 
-    // 3️. Create attendance session
+    // 5️⃣ Create attendance session
     const attendance = await AttendanceSession.create({
       date,
       teacher: teacherId,
@@ -47,6 +68,8 @@ export const createAttendance = async (req, res) => {
       branch: branchId,
       year,
       division,
+      sessionType,
+      batch: sessionType === "PRACTICAL" ? batch : null,
       absentStudents: absentStudentIds || [],
       totalStudents
     });
@@ -55,19 +78,20 @@ export const createAttendance = async (req, res) => {
       message: "Attendance saved successfully",
       attendance
     });
+
   } catch (error) {
     console.error("CREATE ATTENDANCE ERROR:", error);
 
-    // Duplicate attendance (unique index)
     if (error.code === 11000) {
       return res.status(400).json({
-        message: "Attendance already marked for this lecture"
+        message: "Attendance already marked for this session"
       });
     }
 
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 /**
