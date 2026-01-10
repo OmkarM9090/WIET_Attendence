@@ -20,28 +20,28 @@ export const createAttendance = async (req, res) => {
 
     const teacherId = req.user.id;
 
-    // 1️⃣ Validate required fields
+    // 1️ Validate required fields
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
         message: "Missing required fields"
       });
     }
 
-    // 2️⃣ Practical requires batch
+    // 2️ Practical requires batch
     if (sessionType === "PRACTICAL" && !batch) {
       return res.status(400).json({
         message: "Batch is required for practical session"
       });
     }
 
-    // 3️⃣ Lecture must NOT have batch
+    // 3️ Lecture must NOT have batch
     if (sessionType === "LECTURE" && batch) {
       return res.status(400).json({
         message: "Batch should not be sent for lecture"
       });
     }
 
-    // 4️⃣ Count eligible students
+    // 4️ Count eligible students
     const studentFilter = {
       branch: branchId,
       year,
@@ -60,7 +60,7 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // 5️⃣ Create attendance session
+    // 5️ Create attendance session
     const attendance = await AttendanceSession.create({
       date,
       teacher: teacherId,

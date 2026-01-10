@@ -1,29 +1,83 @@
-import axios from "axios";
+/**
+ * AUTH SERVICE
+ * Handles all authentication-related API calls
+ * Login, Forgot Password, Reset Password, User Registration
+ */
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import axiosInstance from "../utils/axios.js";
 
-// Get token from localStorage
-const getToken = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  return user?.token;
+/**
+ * Login user with email and password
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @returns {Promise} Response with token, role, name
+ */
+export const loginUser = async (email, password) => {
+  try {
+    const response = await axiosInstance.post("/auth/login", {
+      email,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Login failed" };
+  }
 };
 
-export const loginUser = (data) =>
-  axios.post(`${API}/auth/login`, data);
+/**
+ * Request password reset OTP
+ * @param {string} email - User email
+ * @returns {Promise} Success message
+ */
+export const forgotPassword = async (email) => {
+  try {
+    const response = await axiosInstance.post("/auth/forgot-password", {
+      email,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Request failed" };
+  }
+};
 
-export const forgotPassword = (data) =>
-  axios.post(`${API}/auth/forgot-password`, data);
+/**
+ * Reset password with OTP
+ * @param {string} email - User email
+ * @param {string} otp - OTP from email
+ * @param {string} newPassword - New password
+ * @returns {Promise} Success message
+ */
+export const resetPassword = async (email, otp, newPassword) => {
+  try {
+    const response = await axiosInstance.post("/auth/reset-password", {
+      email,
+      otp,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Reset failed" };
+  }
+};
 
-export const resetPassword = (data) =>
-  axios.post(`${API}/auth/reset-password`, data);
-
-// ADMIN CREATE USER (SIGNUP) - requires authentication
-export const registerUser = (data) => {
-  const token = getToken();
-  return axios.post(`${API}/auth/register`, data, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+/**
+ * Register new user (Admin only)
+ * @param {string} name - User name
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @returns {Promise} Success message
+ */
+export const registerUser = async (name, email, password) => {
+  try {
+    const response = await axiosInstance.post("/auth/register", {
+      name,
+      email,
+      password,
+      role: "admin",
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Registration failed" };
+  }
 };
 
