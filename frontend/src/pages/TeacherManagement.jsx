@@ -5,12 +5,15 @@ import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
-import { getBranches, getSubjects, createTeacher, assignTeacher } from "../services/adminService";
+import Table from "../components/Table";
+import { getBranches, getSubjects, createTeacher, assignTeacher, getTeachers } from "../services/adminService";
 
 export default function TeacherManagement() {
   // Data
   const [branches, setBranches] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   // Create Teacher state
   const [tName, setTName] = useState("");
@@ -43,11 +46,27 @@ export default function TeacherManagement() {
     { label: "Reports", path: "/admin/defaulters", icon: "📊" },
   ];
 
+  const fetchTeachers = async () => {
+    try {
+      setLoadingTeachers(true);
+      const data = await getTeachers();
+      setTeachers(data);
+      if (data.length && !aTeacherId) {
+        setATeacherId(data[0]._id);
+      }
+    } catch (err) {
+      setTeachers([]);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
         const branchesRes = await getBranches();
         setBranches(branchesRes);
+        await fetchTeachers();
       } catch (err) {
         // non-blocking
       }
@@ -91,6 +110,8 @@ export default function TeacherManagement() {
       const res = await createTeacher(payload);
       setCreateSuccess(res.message || "Teacher created successfully");
       setLastCreatedTeacherId(res.teacher?._id || "");
+
+      await fetchTeachers();
 
       // reset form minimal
       setTName("");
@@ -202,12 +223,18 @@ export default function TeacherManagement() {
           </h3>
 
           <form onSubmit={handleAssignTeacher}>
-            <FormInput
-              label="Teacher ID"
+            <FormSelect
+              label="Teacher"
               name="aTeacherId"
               value={aTeacherId}
               onChange={(e) => setATeacherId(e.target.value)}
-              placeholder="Paste Teacher ID (from create response)"
+              options={[
+                { label: loadingTeachers ? "Loading..." : "Select Teacher", value: "" },
+                ...teachers.map((t) => ({
+                  label: `${t.userId?.name || "Unnamed"} (${t.userId?.email || "no email"})`,
+                  value: t._id,
+                })),
+              ]}
               required
             />
 
@@ -288,6 +315,25 @@ export default function TeacherManagement() {
             </p>
           </form>
         </section>
+      </div>
+
+      {/* Teachers Table */}
+      <div className="mt-8">
+        <h4 className="mb-3 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
+          Teachers
+        </h4>
+        <Table
+          columns={[
+            { header: "Name", accessor: "userId", render: (val) => val?.name || "-" },
+            { header: "Email", accessor: "userId", render: (val) => val?.email || "-" },
+            { header: "Department", accessor: "department", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
+            { header: "Designation", accessor: "designation" },
+            { header: "Status", accessor: "status" },
+          ]}
+          data={teachers}
+          emptyMessage={loadingTeachers ? "Loading teachers..." : "No teachers found"}
+          actions={() => null}
+        />
       </div>
     </DashboardLayout>
   );

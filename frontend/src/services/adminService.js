@@ -99,12 +99,13 @@ export const createStudent = async (studentData) => {
  * @param {number} year - Filter by year
  * @param {string} division - Filter by division
  */
-export const getStudents = async (branch = null, year = null, division = null) => {
+export const getStudents = async (branch = null, year = null, division = null, search = null) => {
   try {
     const params = {};
     if (branch) params.branch = branch;
     if (year) params.year = year;
     if (division) params.division = division;
+    if (search) params.search = search;
 
     const response = await axiosInstance.get("/admin/students", { params });
     return response.data;
@@ -137,6 +138,30 @@ export const uploadStudentsExcel = async (file) => {
   }
 };
 
+/**
+ * Update a student
+ */
+export const updateStudent = async (id, studentData) => {
+  try {
+    const response = await axiosInstance.patch(`/admin/students/${id}`, studentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to update student" };
+  }
+};
+
+/**
+ * Delete a student
+ */
+export const deleteStudent = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/admin/students/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete student" };
+  }
+};
+
 // ============ TEACHER MANAGEMENT ============
 
 /**
@@ -165,5 +190,17 @@ export const assignTeacher = async (assignmentData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to assign teacher" };
+  }
+};
+
+/**
+ * Get all teachers (populated with user + department)
+ */
+export const getTeachers = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/teachers");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch teachers" };
   }
 };

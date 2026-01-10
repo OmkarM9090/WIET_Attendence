@@ -4,11 +4,13 @@ import { allowRoles } from "../middlewares/roleMiddleware.js";
 import {
   createTeacher,
   assignTeacher,
+  getTeachers,
 } from "../controllers/teacherAdminController.js";
 
 const router = express.Router();
 
 router.post("/teachers", protect, allowRoles("admin"), createTeacher);
+router.get("/teachers", protect, allowRoles("admin"), getTeachers);
 router.post("/assign-teacher", protect, allowRoles("admin"), assignTeacher);
 
 export default router;

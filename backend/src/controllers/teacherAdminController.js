@@ -3,6 +3,20 @@ import User from "../models/User.js";
 import Teacher from "../models/Teacher.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
 
+// GET ALL TEACHERS (Admin)
+export const getTeachers = async (_req, res) => {
+  try {
+    const teachers = await Teacher.find()
+      .populate("userId", "name email")
+      .populate("department", "name code");
+
+    res.json(teachers);
+  } catch (error) {
+    console.error("GET TEACHERS ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 /**
  * CREATE TEACHER
  * Admin only
