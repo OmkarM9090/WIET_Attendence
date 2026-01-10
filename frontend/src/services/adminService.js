@@ -181,6 +181,7 @@ export const getTeachers = async (search = null) => {
 
 /**
  * Create a new teacher
+ * @param {object} teacherData - Teacher information
  */
 export const createTeacher = async (teacherData) => {
   try {
@@ -217,6 +218,7 @@ export const deleteTeacher = async (id) => {
 
 /**
  * Assign a teacher to a subject for a specific class
+ * @param {object} assignmentData - Assignment details
  */
 export const assignTeacher = async (assignmentData) => {
   try {
@@ -227,5 +229,41 @@ export const assignTeacher = async (assignmentData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to assign teacher" };
+  }
+};
+
+// Get all teaching assignments (optional filter by teacher)
+export const getAssignments = async (teacherId = null) => {
+  try {
+    const params = {};
+    if (teacherId) params.teacher = teacherId;
+    const response = await axiosInstance.get("/admin/assignments", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch assignments" };
+  }
+};
+
+/**
+ * Update a teaching assignment
+ */
+export const updateAssignment = async (id, assignmentData) => {
+  try {
+    const response = await axiosInstance.patch(`/admin/assignments/${id}`, assignmentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to update assignment" };
+  }
+};
+
+/**
+ * Delete a teaching assignment
+ */
+export const deleteAssignment = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/admin/assignments/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete assignment" };
   }
 };

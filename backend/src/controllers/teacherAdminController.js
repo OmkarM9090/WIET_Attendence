@@ -3,7 +3,9 @@ import User from "../models/User.js";
 import Teacher from "../models/Teacher.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
 
-// GET ALL TEACHERS (Admin)
+/**
+ * GET ALL TEACHERS (Admin)
+ */
 export const getTeachers = async (req, res) => {
   try {
     const { search } = req.query;
@@ -76,34 +78,6 @@ export const createTeacher = async (req, res) => {
   }
 };
 
-
-// Assign Teacher to Subject + Class
-export const assignTeacher = async (req, res) => {
-  try {
-    const { teacher, subject, branch, year, division } = req.body;
-
-    if (!teacher || !subject || !branch || !year || !division) {
-      return res.status(400).json({ message: "All fields required" });
-    }
-
-    const assignment = await TeachingAssignment.create({
-      teacher,
-      subject,
-      branch,
-      year,
-      division,
-    });
-
-    res.status(201).json({
-      message: "Teacher assigned successfully",
-      assignment,
-    });
-  } catch (error) {
-    console.error("ASSIGN TEACHER ERROR:", error);
-    res.status(400).json({ message: error.message });
-  }
-};
-
 /**
  * UPDATE TEACHER
  * Admin only
@@ -166,6 +140,132 @@ export const deleteTeacher = async (req, res) => {
     res.json({ message: "Teacher deleted" });
   } catch (error) {
     console.error("DELETE TEACHER ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Assign Teacher to Subject + Class
+export const assignTeacher = async (req, res) => {
+  try {
+    const { teacher, subject, branch, year, division } = req.body;
+
+    if (!teacher || !subject || !branch || !year || !division) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const assignment = await TeachingAssignment.create({
+      teacher,
+      subject,
+      branch,
+      year,
+      division,
+    });
+
+    res.status(201).json({
+      message: "Teacher assigned successfully",
+      assignment,
+    });
+  } catch (error) {
+    console.error("ASSIGN TEACHER ERROR:", error);
+
+    // Friendly duplicate message for unique index
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message:
+          "This teacher is already assigned to this subject for the same branch, year, and division.",
+      });
+    }
+
+    // Validation/other errors
+    const status = error?.name === "ValidationError" ? 400 : 500;
+    res.status(status).json({ message: error.message || "Server error" });
+  }
+};
+
+// List all teaching assignments (admin)
+export const getAssignments = async (req, res) => {
+  try {
+    const { teacher } = req.query;
+    const filter = {};
+    if (teacher) filter.teacher = teacher;
+
+    const assignments = await TeachingAssignment.find(filter)
+      .populate({ path: "teacher", populate: { path: "userId", select: "name email" } })
+      .populate("subject", "name code")
+      .populate("branch", "name code")
+      .sort({ createdAt: -1 });
+
+    res.json(assignments);
+  } catch (error) {
+    console.error("GET ASSIGNMENTS ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * UPDATE TEACHING ASSIGNMENT
+ * Admin only
+ */
+export const updateAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { teacher, subject, branch, year, division } = req.body;
+
+    const assignment = await TeachingAssignment.findById(id);
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found" });
+    }
+
+    // Update fields
+    if (teacher) assignment.teacher = teacher;
+    if (subject) assignment.subject = subject;
+    if (branch) assignment.branch = branch;
+    if (year) assignment.year = year;
+    if (division) assignment.division = division;
+
+    await assignment.save();
+
+    const updatedAssignment = await TeachingAssignment.findById(id)
+      .populate({ path: "teacher", populate: { path: "userId", select: "name email" } })
+      .populate("subject", "name code")
+      .populate("branch", "name code");
+
+    res.json({
+      message: "Assignment updated successfully",
+      assignment: updatedAssignment,
+    });
+  } catch (error) {
+    console.error("UPDATE ASSIGNMENT ERROR:", error);
+    
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message: "This teacher is already assigned to this subject for the same branch, year, and division.",
+      });
+    }
+
+    const status = error?.name === "ValidationError" ? 400 : 500;
+    res.status(status).json({ message: error.message || "Server error" });
+  }
+};
+
+/**
+ * DELETE TEACHING ASSIGNMENT
+ * Admin only
+ */
+export const deleteAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const assignment = await TeachingAssignment.findById(id);
+    if (!assignment) {
+      return res.status(404).json({ message: "Assignment not found" });
+    }
+
+    await TeachingAssignment.findByIdAndDelete(id);
+
+    res.json({ message: "Assignment deleted successfully" });
+  } catch (error) {
+    console.error("DELETE ASSIGNMENT ERROR:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

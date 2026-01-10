@@ -7,15 +7,21 @@ import {
   getTeachers,
   updateTeacher,
   deleteTeacher,
+  getAssignments,
+  updateAssignment,
+  deleteAssignment,
 } from "../controllers/teacherAdminController.js";
 
 const router = express.Router();
 
-router.post("/teachers", protect, allowRoles("admin"), createTeacher);
 router.get("/teachers", protect, allowRoles("admin"), getTeachers);
+router.post("/teachers", protect, allowRoles("admin"), createTeacher);
 router.patch("/teachers/:id", protect, allowRoles("admin"), updateTeacher);
 router.delete("/teachers/:id", protect, allowRoles("admin"), deleteTeacher);
 router.post("/assign-teacher", protect, allowRoles("admin"), assignTeacher);
+router.get("/assignments", protect, allowRoles("admin"), getAssignments);
+router.patch("/assignments/:id", protect, allowRoles("admin"), updateAssignment);
+router.delete("/assignments/:id", protect, allowRoles("admin"), deleteAssignment);
 
 export default router;
 

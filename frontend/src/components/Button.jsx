@@ -14,13 +14,28 @@ export default function Button({
   disabled = false,
   fullWidth = false,
   loading = false,
+  size = "md",
   className = "",
 }) {
   // Base styles
+  const sizeStyles = {
+    sm: {
+      padding: "0.375rem 0.75rem",
+      fontSize: theme.typography.fontSize.xs,
+    },
+    md: {
+      padding: "0.625rem 1.5rem",
+      fontSize: theme.typography.fontSize.sm,
+    },
+    lg: {
+      padding: "0.875rem 2rem",
+      fontSize: theme.typography.fontSize.base,
+    },
+  };
+
   const baseStyles = {
-    padding: "0.625rem 1.5rem",
+    ...sizeStyles[size] || sizeStyles.md,
     borderRadius: theme.borderRadius.md,
-    fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.typography.fontWeight.medium,
     transition: theme.transitions.base,
     cursor: disabled || loading ? "not-allowed" : "pointer",
