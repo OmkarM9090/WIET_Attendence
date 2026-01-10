@@ -10,6 +10,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminCreateUser from "./pages/AdminCreateUser";
 import BranchManagement from "./pages/BranchManagement";
 import SubjectManagement from "./pages/SubjectManagement";
+import TeacherManagement from "./pages/TeacherManagement";
+import StudentManagement from "./pages/StudentManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 
@@ -53,6 +55,22 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <SubjectManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/teachers"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <TeacherManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/students"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <StudentManagement />
               </ProtectedRoute>
             }
           />
