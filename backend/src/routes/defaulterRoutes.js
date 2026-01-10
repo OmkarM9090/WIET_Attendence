@@ -1,6 +1,7 @@
 import express from "express";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { exportDefaulterExcel } from "../controllers/defaulterExcelController.js";
+import { exportDefaulterPDF } from "../controllers/defaulterPdfController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
 

@@ -1,109 +1,217 @@
+/**
+ * FORGOT PASSWORD PAGE
+ * Step 1: Request password reset OTP
+ * User enters email → Receives OTP via email
+ *
+ * API: POST /api/auth/forgot-password
+ * Request: { email }
+ * Response: { message: "OTP sent to email" }
+ */
+
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { forgotPassword } from "../services/authService";
-import { useNavigate, Link } from "react-router-dom";
-import FormInput from "../components/FormInput";
+import { theme } from "../styles/theme";
+
+// UI Components
 import Button from "../components/Button";
+import FormInput from "../components/FormInput";
 import Alert from "../components/Alert";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
+  /**
+   * Handle forgot password request
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setMessage("");
+
+    // Validation
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await forgotPassword({ email });
-      setMessage(res.data.message);
-      setTimeout(() => {
-        navigate("/reset-password");
-      }, 2000);
+      await forgotPassword(email);
+      setSuccess(true);
+      setEmail("");
     } catch (err) {
-      setError(err.response?.data?.message || "Error sending OTP");
+      setError(err.message || "Failed to send OTP. Please try again.");
+      console.error("Forgot password error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo Section */}
+    <div
+      className="flex min-h-screen items-center justify-center px-6 py-12"
+      style={{
+        background: `linear-gradient(135deg, ${theme.colors.primary[50]} 0%, ${theme.colors.neutral[50]} 100%)`,
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-lg p-8"
+        style={{
+          backgroundColor: theme.colors.background,
+          boxShadow: theme.shadows.lg,
+        }}
+      >
+        {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
-              <span className="text-3xl">🔑</span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Reset Password</h1>
-          <p className="mt-2 text-gray-600">Request password reset OTP</p>
+          <h2
+            className="text-3xl font-bold"
+            style={{ color: theme.colors.text.primary }}
+          >
+            Reset Password
+          </h2>
+          <p
+            className="mt-2 text-sm"
+            style={{ color: theme.colors.text.secondary }}
+          >
+            Enter your email and we'll send you an OTP to reset your password
+          </p>
         </div>
 
-        {/* Reset Password Card */}
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
-          <h2 className="mb-6 text-center text-xl font-semibold text-gray-900">
-            Forgot Your Password?
-          </h2>
-
-          <p className="mb-6 text-center text-sm text-gray-600">
-            Enter your email address and we'll send you an OTP to reset your password.
-          </p>
-
-          {message && (
-            <div className="mb-4">
-              <Alert
-                message={message}
-                type="success"
-                onClose={() => setMessage("")}
-              />
+        {/* Success State */}
+        {success ? (
+          <div className="space-y-6">
+            {/* Success Icon */}
+            <div className="flex justify-center">
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-full"
+                style={{ backgroundColor: theme.colors.success, opacity: 0.1 }}
+              >
+                <span className="text-4xl">✓</span>
+              </div>
             </div>
-          )}
 
-          {error && (
-            <div className="mb-4">
-              <Alert
-                message={error}
-                type="error"
-                onClose={() => setError("")}
-              />
+            {/* Success Message */}
+            <Alert
+              type="success"
+              message="OTP sent successfully! Check your email for the one-time password. It will expire in 10 minutes."
+            />
+
+            {/* Next Step Info */}
+            <div
+              className="rounded-lg border p-4 text-center"
+              style={{
+                borderColor: theme.colors.primary[200],
+                backgroundColor: theme.colors.primary[50],
+              }}
+            >
+              <p
+                className="text-sm font-medium"
+                style={{ color: theme.colors.primary[700] }}
+              >
+                What's Next?
+              </p>
+              <p
+                className="mt-2 text-xs"
+                style={{ color: theme.colors.primary[600] }}
+              >
+                Check your inbox for an email with the OTP code. Then proceed to verify it and set your new password.
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Proceed Button */}
+            <Link to="/reset-password" className="block">
+              <Button fullWidth>Proceed to Reset Password</Button>
+            </Link>
+
+            {/* Back to Login */}
+            <div className="text-center">
+              <Link
+                to="/"
+                className="text-sm font-medium hover:underline"
+                style={{ color: theme.colors.primary[500] }}
+              >
+                Back to Login
+              </Link>
+            </div>
+          </div>
+        ) : (
+          // Form State
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Alerts */}
+            {error && <Alert type="error" message={error} />}
+
+            {/* Email Input */}
             <FormInput
               label="Email Address"
-              name="email"
               type="email"
-              placeholder="your@example.com"
+              placeholder="Enter your registered email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               required
             />
 
-            <Button type="submit" fullWidth loading={loading}>
+            {/* Info Box */}
+            <div
+              className="rounded-lg border p-4"
+              style={{
+                borderColor: theme.colors.primary[200],
+                backgroundColor: theme.colors.primary[50],
+              }}
+            >
+              <p
+                className="text-xs font-semibold"
+                style={{ color: theme.colors.primary[700] }}
+              >
+                ℹ️ What happens next?
+              </p>
+              <ul
+                className="mt-3 space-y-2 text-xs"
+                style={{ color: theme.colors.primary[600] }}
+              >
+                <li>✓ We'll send an OTP to your email</li>
+                <li>✓ OTP will be valid for 10 minutes</li>
+                <li>✓ Use it to reset your password</li>
+                <li>✓ Check spam folder if not found</li>
+              </ul>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              loading={loading}
+              fullWidth
+            >
               {loading ? "Sending OTP..." : "Send OTP"}
             </Button>
-          </form>
 
-          {/* Back to Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Remember your password?{" "}
-              <Link
-                to="/"
-                className="font-medium text-blue-600 hover:text-blue-700"
+            {/* Back to Login */}
+            <div className="text-center">
+              <p
+                className="text-sm"
+                style={{ color: theme.colors.text.secondary }}
               >
-                Sign in here
-              </Link>
-            </p>
-          </div>
-        </div>
+                Remember your password?{" "}
+                <Link
+                  to="/"
+                  className="font-medium hover:underline"
+                  style={{ color: theme.colors.primary[500] }}
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

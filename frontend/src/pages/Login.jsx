@@ -1,119 +1,242 @@
+/**
+ * LOGIN PAGE
+ * Public route - Entry point for all users
+ * Handles email/password authentication
+ * Routes to appropriate dashboard based on user role
+ *
+ * API: POST /api/auth/login
+ * Response: { token, role, name }
+ */
+
 import { useState } from "react";
-import { loginUser } from "../services/authService";
-import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import FormInput from "../components/FormInput";
+import { useAuth } from "../context/AuthContext";
+import { loginUser } from "../services/authService";
+import { theme } from "../styles/theme";
+
+// UI Components
 import Button from "../components/Button";
+import FormInput from "../components/FormInput";
 import Alert from "../components/Alert";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // UI state
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
+  /**
+   * Handle login form submission
+   */
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
+
+    // Validation
+    if (!email.trim() || !password.trim()) {
+      setError("Email and password are required");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await loginUser({ email, password });
-      login(res.data);
+      const response = await loginUser(email, password);
 
-      if (res.data.role === "admin") navigate("/admin");
-      else if (res.data.role === "teacher") navigate("/teacher");
-      else navigate("/student");
+      // Store auth data using context
+      login({
+        token: response.token,
+        role: response.role,
+        name: response.name,
+      });
+
+      setSuccess("Login successful! Redirecting...");
+
+      // Redirect based on role
+      setTimeout(() => {
+        if (response.role === "admin") {
+          navigate("/admin");
+        } else if (response.role === "teacher") {
+          navigate("/teacher");
+        } else if (response.role === "student") {
+          navigate("/student");
+        }
+      }, 500);
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.message || "Login failed. Please try again.");
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo Section */}
-        <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
-              <span className="text-3xl">📚</span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Attendance System</h1>
-          <p className="mt-2 text-gray-600">College Management Platform</p>
+    <div
+      className="flex min-h-screen"
+      style={{
+        background: `linear-gradient(135deg, ${theme.colors.primary[50]} 0%, ${theme.colors.neutral[50]} 100%)`,
+      }}
+    >
+      {/* Left Side - Branding */}
+      <div
+        className="hidden w-1/2 flex-col justify-between p-12 lg:flex"
+        style={{ backgroundColor: theme.colors.primary[600] }}
+      >
+        <div>
+          <h1
+            className="text-4xl font-bold text-white"
+            style={{ fontFamily: theme.typography.fontFamily.sans }}
+          >
+            Attendance System
+          </h1>
+          <p
+            className="mt-4 text-lg"
+            style={{ color: theme.colors.text.inverse, opacity: 0.9 }}
+          >
+            Modern, efficient, and secure attendance management for educational institutions
+          </p>
         </div>
 
-        {/* Login Card */}
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
-          <h2 className="mb-6 text-center text-xl font-semibold text-gray-900">
-            Sign In to Your Account
-          </h2>
+        <div>
+          <p
+            className="text-sm"
+            style={{ color: theme.colors.text.inverse, opacity: 0.8 }}
+          >
+            © 2025 WIET Attendance System. All rights reserved.
+          </p>
+        </div>
+      </div>
 
-          {error && (
-            <div className="mb-4">
-              <Alert
-                message={error}
-                type="error"
-                onClose={() => setError("")}
-              />
-            </div>
-          )}
+      {/* Right Side - Login Form */}
+      <div className="flex w-full items-center justify-center px-6 lg:w-1/2">
+        <div
+          className="w-full max-w-md rounded-lg p-8"
+          style={{
+            backgroundColor: theme.colors.background,
+            boxShadow: theme.shadows.lg,
+          }}
+        >
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <h2
+              className="text-3xl font-bold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              Sign In
+            </h2>
+            <p
+              className="mt-2 text-sm"
+              style={{ color: theme.colors.text.secondary }}
+            >
+              Welcome back! Please login to your account
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Alerts */}
+          {error && <Alert type="error" message={error} />}
+          {success && <Alert type="success" message={success} />}
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email Input */}
             <FormInput
               label="Email Address"
-              name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               required
             />
 
+            {/* Password Input */}
             <FormInput
               label="Password"
-              name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
               required
             />
 
+            {/* Show Password Toggle */}
+            <div className="flex items-center justify-between text-sm">
+              <label
+                className="flex items-center cursor-pointer"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={() => setShowPassword(!showPassword)}
+                  className="mr-2 h-4 w-4 rounded"
+                  style={{ accentColor: theme.colors.primary[500] }}
+                />
+                Show password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="font-medium hover:underline"
+                style={{ color: theme.colors.primary[500] }}
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            {/* Submit Button */}
             <Button
               type="submit"
-              fullWidth
               loading={loading}
-              className="mt-2"
+              fullWidth
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
-          {/* Forgot Password Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Forgot your password?{" "}
-              <Link
-                to="/forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-700"
-              >
-                Reset it here
-              </Link>
+          {/* Demo Credentials Info */}
+          <div
+            className="mt-8 rounded-lg border p-4"
+            style={{
+              borderColor: theme.colors.primary[200],
+              backgroundColor: theme.colors.primary[50],
+            }}
+          >
+            <p
+              className="text-xs font-semibold"
+              style={{ color: theme.colors.primary[700] }}
+            >
+              📌 Demo Credentials
             </p>
+            <div
+              className="mt-2 space-y-1 text-xs"
+              style={{ color: theme.colors.primary[600] }}
+            >
+              <p>
+                <span className="font-semibold">Admin:</span> admin@wiet.edu / admin123
+              </p>
+              <p>
+                <span className="font-semibold">Teacher:</span> teacher@wiet.edu / teacher123
+              </p>
+              <p>
+                <span className="font-semibold">Student:</span> student@wiet.edu / student123
+              </p>
+            </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
-            © 2025 College Attendance System. All rights reserved.
-          </p>
         </div>
       </div>
     </div>
