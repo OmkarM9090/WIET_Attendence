@@ -4,11 +4,25 @@ import Teacher from "../models/Teacher.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
 
 // GET ALL TEACHERS (Admin)
-export const getTeachers = async (_req, res) => {
+export const getTeachers = async (req, res) => {
   try {
+    const { search } = req.query;
+
     const teachers = await Teacher.find()
       .populate("userId", "name email")
       .populate("department", "name code");
+
+    // Text search across teacher name, email, or designation
+    if (search) {
+      const regex = new RegExp(search, "i");
+      const filtered = teachers.filter((t) => {
+        const name = t.userId?.name || "";
+        const email = t.userId?.email || "";
+        const designation = t.designation || "";
+        return regex.test(name) || regex.test(email) || regex.test(designation);
+      });
+      return res.json(filtered);
+    }
 
     res.json(teachers);
   } catch (error) {
@@ -87,5 +101,71 @@ export const assignTeacher = async (req, res) => {
   } catch (error) {
     console.error("ASSIGN TEACHER ERROR:", error);
     res.status(400).json({ message: error.message });
+  }
+};
+
+/**
+ * UPDATE TEACHER
+ * Admin only
+ */
+export const updateTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, department, designation } = req.body;
+
+    const teacher = await Teacher.findById(id);
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+    const user = await User.findById(teacher.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Ensure email is unique if changed
+    if (email && email !== user.email) {
+      const exists = await User.findOne({ email });
+      if (exists) return res.status(400).json({ message: "Email already in use" });
+      user.email = email;
+    }
+
+    if (name) user.name = name;
+    await user.save();
+
+    // Update teacher fields
+    if (department) teacher.department = department;
+    if (designation) teacher.designation = designation;
+    await teacher.save();
+
+    const updated = await Teacher.findById(id)
+      .populate("userId", "name email")
+      .populate("department", "name code");
+
+    res.json({ message: "Teacher updated", teacher: updated });
+  } catch (error) {
+    console.error("UPDATE TEACHER ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * DELETE TEACHER
+ * Admin only
+ */
+export const deleteTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const teacher = await Teacher.findById(id);
+    if (!teacher) return res.status(404).json({ message: "Teacher not found" });
+
+    // Delete user and teacher record
+    await User.findByIdAndDelete(teacher.userId);
+    await Teacher.findByIdAndDelete(id);
+
+    // Also delete any teaching assignments
+    await TeachingAssignment.deleteMany({ teacher: id });
+
+    res.json({ message: "Teacher deleted" });
+  } catch (error) {
+    console.error("DELETE TEACHER ERROR:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

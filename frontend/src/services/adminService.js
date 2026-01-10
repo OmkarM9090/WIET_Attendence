@@ -165,8 +165,22 @@ export const deleteStudent = async (id) => {
 // ============ TEACHER MANAGEMENT ============
 
 /**
+ * Get all teachers (with optional search)
+ */
+export const getTeachers = async (search = null) => {
+  try {
+    const params = {};
+    if (search) params.search = search;
+
+    const response = await axiosInstance.get("/admin/teachers", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch teachers" };
+  }
+};
+
+/**
  * Create a new teacher
- * @param {object} teacherData - Teacher information
  */
 export const createTeacher = async (teacherData) => {
   try {
@@ -178,8 +192,31 @@ export const createTeacher = async (teacherData) => {
 };
 
 /**
+ * Update a teacher
+ */
+export const updateTeacher = async (id, teacherData) => {
+  try {
+    const response = await axiosInstance.patch(`/admin/teachers/${id}`, teacherData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to update teacher" };
+  }
+};
+
+/**
+ * Delete a teacher
+ */
+export const deleteTeacher = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/admin/teachers/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete teacher" };
+  }
+};
+
+/**
  * Assign a teacher to a subject for a specific class
- * @param {object} assignmentData - Assignment details
  */
 export const assignTeacher = async (assignmentData) => {
   try {
@@ -190,17 +227,5 @@ export const assignTeacher = async (assignmentData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to assign teacher" };
-  }
-};
-
-/**
- * Get all teachers (populated with user + department)
- */
-export const getTeachers = async () => {
-  try {
-    const response = await axiosInstance.get("/admin/teachers");
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Failed to fetch teachers" };
   }
 };

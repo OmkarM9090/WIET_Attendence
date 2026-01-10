@@ -5,12 +5,16 @@ import {
   createTeacher,
   assignTeacher,
   getTeachers,
+  updateTeacher,
+  deleteTeacher,
 } from "../controllers/teacherAdminController.js";
 
 const router = express.Router();
 
 router.post("/teachers", protect, allowRoles("admin"), createTeacher);
 router.get("/teachers", protect, allowRoles("admin"), getTeachers);
+router.patch("/teachers/:id", protect, allowRoles("admin"), updateTeacher);
+router.delete("/teachers/:id", protect, allowRoles("admin"), deleteTeacher);
 router.post("/assign-teacher", protect, allowRoles("admin"), assignTeacher);
 
 export default router;

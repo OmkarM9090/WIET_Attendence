@@ -6,7 +6,16 @@ import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
 import Table from "../components/Table";
-import { getBranches, getSubjects, createTeacher, assignTeacher, getTeachers } from "../services/adminService";
+import Modal from "../components/Modal";
+import {
+  getBranches,
+  getSubjects,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher,
+  assignTeacher,
+  getTeachers,
+} from "../services/adminService";
 
 export default function TeacherManagement() {
   // Data
@@ -14,6 +23,9 @@ export default function TeacherManagement() {
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
+
+  // Search
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Create Teacher state
   const [tName, setTName] = useState("");
@@ -25,6 +37,12 @@ export default function TeacherManagement() {
   const [createSuccess, setCreateSuccess] = useState("");
   const [createError, setCreateError] = useState("");
   const [lastCreatedTeacherId, setLastCreatedTeacherId] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Edit Teacher state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Assign Teacher state
   const [aTeacherId, setATeacherId] = useState("");
@@ -49,7 +67,7 @@ export default function TeacherManagement() {
   const fetchTeachers = async () => {
     try {
       setLoadingTeachers(true);
-      const data = await getTeachers();
+      const data = await getTeachers(searchTerm || null);
       setTeachers(data);
       if (data.length && !aTeacherId) {
         setATeacherId(data[0]._id);
@@ -72,7 +90,14 @@ export default function TeacherManagement() {
       }
     };
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Refetch when search changes
+    fetchTeachers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   // Fetch subjects when branch or semester changes
   useEffect(() => {
@@ -113,11 +138,13 @@ export default function TeacherManagement() {
 
       await fetchTeachers();
 
-      // reset form minimal
+      // reset form
       setTName("");
       setTEmail("");
       setTPassword("");
       setTDepartment("");
+      setTDesignation("Assistant Professor");
+      setIsCreateOpen(false);
     } catch (err) {
       setCreateError(err.message || "Failed to create teacher");
     } finally {
@@ -127,6 +154,13 @@ export default function TeacherManagement() {
 
   const handleAssignTeacher = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (!aTeacherId || !aBranch || !aSemester || !aSubject || !aYear || !aDivision) {
+      setAssignError("All fields are required");
+      return;
+    }
+    
     try {
       setAssignLoading(true);
       setAssignError("");
@@ -154,6 +188,58 @@ export default function TeacherManagement() {
     }
   };
 
+  const openEditModal = (teacher) => {
+    setEditingTeacher({
+      id: teacher._id,
+      name: teacher.userId?.name || "",
+      email: teacher.userId?.email || "",
+      department: teacher.department?._id || teacher.department,
+      designation: teacher.designation || "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingTeacher) return;
+    try {
+      setSavingEdit(true);
+      setCreateError("");
+      setCreateSuccess("");
+
+      const payload = {
+        name: editingTeacher.name.trim(),
+        email: editingTeacher.email.trim(),
+        department: editingTeacher.department,
+        designation: editingTeacher.designation,
+      };
+
+      await updateTeacher(editingTeacher.id, payload);
+      setCreateSuccess("Teacher updated successfully");
+      setIsEditOpen(false);
+      setEditingTeacher(null);
+      await fetchTeachers();
+    } catch (err) {
+      setCreateError(err.message || "Failed to update teacher");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteTeacher = async (teacher) => {
+    const ok = window.confirm(`Delete teacher ${teacher.userId?.name || ""}? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      setCreateError("");
+      setCreateSuccess("");
+      await deleteTeacher(teacher._id);
+      setCreateSuccess("Teacher deleted");
+      await fetchTeachers();
+    } catch (err) {
+      setCreateError(err.message || "Failed to delete teacher");
+    }
+  };
+
   return (
     <DashboardLayout
       title="Teachers Management"
@@ -176,51 +262,55 @@ export default function TeacherManagement() {
         )}
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Create Teacher Card */}
-        <section
-          className="rounded-lg border p-6"
-          style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.background }}
-        >
-          <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-            Create Teacher
-          </h3>
+      {/* Top action bar */}
+      <div
+        className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border p-6 md:flex-row md:items-center"
+        style={{
+          borderColor: theme.colors.primary[100],
+          backgroundColor: theme.colors.primary[50],
+          boxShadow: theme.shadows.md,
+        }}
+      >
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: theme.colors.primary[600] }}>
+            👨‍🏫 Manage Teachers
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: theme.colors.text.secondary }}>
+            Create, search, and assign teachers to classes
+          </p>
+        </div>
 
-          <form onSubmit={handleCreateTeacher}>
-            <FormInput label="Name" name="tName" value={tName} onChange={(e) => setTName(e.target.value)} required />
-            <FormInput label="Email" name="tEmail" type="email" value={tEmail} onChange={(e) => setTEmail(e.target.value)} required />
-            <FormInput label="Password" name="tPassword" type="password" value={tPassword} onChange={(e) => setTPassword(e.target.value)} required />
-            <FormSelect
-              label="Department"
-              name="tDepartment"
-              value={tDepartment}
-              onChange={(e) => setTDepartment(e.target.value)}
-              options={[{ label: "Select Department", value: "" }, ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id }))]}
-              required
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+          <div className="w-full max-w-xs">
+            <FormInput
+              label=""
+              name="search"
+              placeholder="🔍 Search teachers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <FormInput label="Designation" name="tDesignation" value={tDesignation} onChange={(e) => setTDesignation(e.target.value)} />
+          </div>
+          <Button onClick={() => setIsCreateOpen(true)}>+ Add Teacher</Button>
+        </div>
+      </div>
 
-            <div className="mt-4 flex justify-end">
-              <Button disabled={createLoading}>{createLoading ? "Creating..." : "Create"}</Button>
-            </div>
-          </form>
-
-          {lastCreatedTeacherId && (
-            <p className="mt-4 text-xs" style={{ color: theme.colors.text.secondary }}>
-              Last created Teacher ID: <span style={{ color: theme.colors.text.primary }}>{lastCreatedTeacherId}</span>
-            </p>
-          )}
-        </section>
-
+      {/* Main content area */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* Assign Teacher Card */}
         <section
-          className="rounded-lg border p-6"
-          style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.background }}
+          className="rounded-xl border p-8"
+          style={{
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.background,
+            boxShadow: theme.shadows.md,
+          }}
         >
-          <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-            Assign Teacher to Class
-          </h3>
+          <div className="mb-6 flex items-center gap-3">
+            <span className="text-2xl">📋</span>
+            <h3 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>
+              Assign to Class
+            </h3>
+          </div>
 
           <form onSubmit={handleAssignTeacher}>
             <FormSelect
@@ -306,35 +396,173 @@ export default function TeacherManagement() {
               />
             </div>
 
-            <div className="mt-4 flex justify-end">
-              <Button disabled={assignLoading}>{assignLoading ? "Assigning..." : "Assign"}</Button>
+            <div className="mt-6 flex justify-end">
+              <Button type="submit" disabled={assignLoading}>{assignLoading ? "Assigning..." : "Assign Teacher"}</Button>
             </div>
 
-            <p className="mt-3 text-xs" style={{ color: theme.colors.text.secondary }}>
-              Note: Subject options are filtered by Branch + Semester.
-            </p>
+            <div className="mt-4 rounded-lg p-3" style={{ backgroundColor: theme.colors.neutral[50] }}>
+              <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                ℹ️ Subject options are dynamically filtered by Branch + Semester selection.
+              </p>
+            </div>
           </form>
         </section>
       </div>
 
-      {/* Teachers Table */}
-      <div className="mt-8">
-        <h4 className="mb-3 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-          Teachers
-        </h4>
+      {/* Teachers Table Section */}
+      <div className="mt-10">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="text-2xl">👥</span>
+          <div>
+            <h4 className="text-xl font-bold" style={{ color: theme.colors.text.primary }}>
+              All Teachers
+            </h4>
+            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+              Manage and track all teachers in the system
+            </p>
+          </div>
+        </div>
         <Table
           columns={[
             { header: "Name", accessor: "userId", render: (val) => val?.name || "-" },
             { header: "Email", accessor: "userId", render: (val) => val?.email || "-" },
             { header: "Department", accessor: "department", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
             { header: "Designation", accessor: "designation" },
-            { header: "Status", accessor: "status" },
           ]}
           data={teachers}
           emptyMessage={loadingTeachers ? "Loading teachers..." : "No teachers found"}
-          actions={() => null}
+          actions={(row) => (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => openEditModal(row)}>
+                Edit
+              </Button>
+              <Button variant="danger" onClick={() => handleDeleteTeacher(row)}>
+                Delete
+              </Button>
+            </div>
+          )}
         />
       </div>
+
+      {/* Create Teacher Modal */}
+      <Modal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Create Teacher"
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateTeacher} disabled={createLoading}>
+              {createLoading ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        }
+      >
+        <form onSubmit={handleCreateTeacher}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormInput
+              label="Name"
+              name="modalName"
+              value={tName}
+              onChange={(e) => setTName(e.target.value)}
+              required
+            />
+            <FormInput
+              label="Email"
+              name="modalEmail"
+              type="email"
+              value={tEmail}
+              onChange={(e) => setTEmail(e.target.value)}
+              required
+            />
+            <FormInput
+              label="Password"
+              name="modalPassword"
+              type="password"
+              value={tPassword}
+              onChange={(e) => setTPassword(e.target.value)}
+              required
+            />
+            <FormSelect
+              label="Department"
+              name="modalDepartment"
+              value={tDepartment}
+              onChange={(e) => setTDepartment(e.target.value)}
+              options={[
+                { label: "Select Department", value: "" },
+                ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
+              ]}
+              required
+            />
+            <FormInput
+              label="Designation"
+              name="modalDesignation"
+              value={tDesignation}
+              onChange={(e) => setTDesignation(e.target.value)}
+            />
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Teacher Modal */}
+      <Modal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        title="Edit Teacher"
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubmit} disabled={savingEdit}>
+              {savingEdit ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        }
+      >
+        {editingTeacher && (
+          <form onSubmit={handleEditSubmit}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInput
+                label="Name"
+                name="editName"
+                value={editingTeacher.name}
+                onChange={(e) => setEditingTeacher({ ...editingTeacher, name: e.target.value })}
+                required
+              />
+              <FormInput
+                label="Email"
+                name="editEmail"
+                type="email"
+                value={editingTeacher.email}
+                onChange={(e) => setEditingTeacher({ ...editingTeacher, email: e.target.value })}
+                required
+              />
+              <FormSelect
+                label="Department"
+                name="editDepartment"
+                value={editingTeacher.department}
+                onChange={(e) => setEditingTeacher({ ...editingTeacher, department: e.target.value })}
+                options={[
+                  { label: "Select Department", value: "" },
+                  ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
+                ]}
+                required
+              />
+              <FormInput
+                label="Designation"
+                name="editDesignation"
+                value={editingTeacher.designation}
+                onChange={(e) => setEditingTeacher({ ...editingTeacher, designation: e.target.value })}
+              />
+            </div>
+          </form>
+        )}
+      </Modal>
     </DashboardLayout>
   );
 }
