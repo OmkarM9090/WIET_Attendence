@@ -41,7 +41,7 @@ export const createStudent = async (req, res) => {
       role: "student",
     });
 
-    // 5️⃣ Create STUDENT (academic identity)
+    // 5️. Create STUDENT (academic identity)
     const student = await Student.create({
       userId: user._id,
       rollNo,
