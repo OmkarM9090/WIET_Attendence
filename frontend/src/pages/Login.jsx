@@ -57,22 +57,25 @@ export default function Login() {
     try {
       const response = await loginUser(email, password);
 
+      // Extract data from the new response format
+      const { token, role, name } = response.data;
+
       // Store auth data using context
       login({
-        token: response.token,
-        role: response.role,
-        name: response.name,
+        token,
+        role,
+        name,
       });
 
       setSuccess("Login successful! Redirecting...");
 
       // Redirect based on role
       setTimeout(() => {
-        if (response.role === "admin") {
+        if (role === "admin") {
           navigate("/admin");
-        } else if (response.role === "teacher") {
+        } else if (role === "teacher") {
           navigate("/teacher");
-        } else if (response.role === "student") {
+        } else if (role === "student") {
           navigate("/student");
         }
       }, 500);

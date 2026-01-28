@@ -28,21 +28,48 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error("Request error:", error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor - Handle auth errors
+// Response interceptor - Handle auth errors and format responses
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Return the response data directly
+    return response;
+  },
   (error) => {
-    // If 401 Unauthorized, token is invalid/expired
-    if (error.response?.status === 401) {
-      // Clear auth data and redirect to login
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+    // Enhanced error handling
+    if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response;
+
+      // If 401 Unauthorized, token is invalid/expired
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return Promise.reject(new Error("Session expired. Please login again."));
+      }
+
+      // If 403 Forbidden
+      if (status === 403) {
+        return Promise.reject(new Error(data.message || "Access denied"));
+      }
+
+      // Other errors
+      const message = data.message || data.error || "An error occurred";
+      error.message = message;
+    } else if (error.request) {
+      // Request made but no response received
+      error.message = "Network error. Please check your connection.";
+    } else {
+      // Something else happened
+      error.message = error.message || "An unexpected error occurred";
     }
+
+    console.error("API Error:", error.message);
     return Promise.reject(error);
   }
 );

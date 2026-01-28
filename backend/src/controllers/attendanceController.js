@@ -24,6 +24,7 @@ export const createAttendance = async (req, res) => {
     // 1️ Validate required fields
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
+        success: false,
         message: "Missing required fields"
       });
     }
@@ -31,6 +32,7 @@ export const createAttendance = async (req, res) => {
     // Validate academicYear
     if (!academicYear) {
       return res.status(400).json({
+        success: false,
         message: "Academic Year is required"
       });
     }
@@ -38,6 +40,7 @@ export const createAttendance = async (req, res) => {
     // 2️ Practical requires batch
     if (sessionType === "PRACTICAL" && !batch) {
       return res.status(400).json({
+        success: false,
         message: "Batch is required for practical session"
       });
     }
@@ -45,6 +48,7 @@ export const createAttendance = async (req, res) => {
     // 3️ Lecture must NOT have batch
     if (sessionType === "LECTURE" && batch) {
       return res.status(400).json({
+        success: false,
         message: "Batch should not be sent for lecture"
       });
     }
@@ -65,6 +69,7 @@ export const createAttendance = async (req, res) => {
 
     if (totalStudents === 0) {
       return res.status(400).json({
+        success: false,
         message: "No students found for this session"
       });
     }
@@ -85,8 +90,9 @@ export const createAttendance = async (req, res) => {
     });
 
     res.status(201).json({
+      success: true,
       message: "Attendance saved successfully",
-      attendance
+      data: attendance
     });
 
   } catch (error) {
@@ -94,11 +100,15 @@ export const createAttendance = async (req, res) => {
 
     if (error.code === 11000) {
       return res.status(400).json({
+        success: false,
         message: "Attendance already marked for this session"
       });
     }
 
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
   }
 };
 
@@ -118,10 +128,16 @@ export const getTeacherAttendance = async (req, res) => {
       .populate("branch", "name code")
       .sort({ date: -1 });
 
-    res.json(attendance);
+    res.json({
+      success: true,
+      data: attendance
+    });
   } catch (error) {
     console.error("GET ATTENDANCE ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error" 
+    });
   }
 };
 
