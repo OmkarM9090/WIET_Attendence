@@ -16,12 +16,18 @@ export const createStudent = async (req, res) => {
       branch,
       year,
       division,
+      academicYear,  // Academic Year (e.g., "2024-2025")
       admissionYear,
     } = req.body;
 
     // 1️. Validation
     if (!name || !email || !password || !rollNo || !branch || !year || !division) {
       return res.status(400).json({ message: "All required fields must be filled" });
+    }
+
+    // Validate academicYear
+    if (!academicYear) {
+      return res.status(400).json({ message: "Academic Year is required" });
     }
 
     // 2️. Check existing user
@@ -48,6 +54,7 @@ export const createStudent = async (req, res) => {
       branch,
       year,
       division,
+      academicYear,  // Academic Year
       admissionYear,
     });
 
@@ -119,6 +126,7 @@ export const updateStudent = async (req, res) => {
       branch,
       year,
       division,
+      academicYear,
       admissionYear,
       status,
     } = req.body;
@@ -144,6 +152,7 @@ export const updateStudent = async (req, res) => {
     if (branch) student.branch = branch;
     if (year) student.year = year;
     if (division) student.division = division;
+    if (academicYear) student.academicYear = academicYear;
     if (admissionYear !== undefined) student.admissionYear = admissionYear;
     if (status) student.status = status;
 

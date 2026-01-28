@@ -8,7 +8,7 @@ import Subject from "../models/Subject.js";
  */
 export const generateDefaulters = async (req, res) => {
   try {
-    const { branchId, year, division, startDate, endDate, threshold = 75 } = req.query;
+    const { branchId, year, division, academicYear, startDate, endDate, threshold = 75 } = req.query;
 
     if (!branchId || !year || !division || !startDate || !endDate) {
       return res.status(400).json({
@@ -16,10 +16,18 @@ export const generateDefaulters = async (req, res) => {
       });
     }
 
+    // Validate academicYear
+    if (!academicYear) {
+      return res.status(400).json({
+        message: "Academic Year is required"
+      });
+    }
+
     const students = await Student.find({
       branch: branchId,
       year,
-      division
+      division,
+      academicYear  // Filter by academic year
     }).populate("userId", "name");
 
     const subjects = await Subject.find({ branch: branchId });
@@ -28,6 +36,7 @@ export const generateDefaulters = async (req, res) => {
       branch: branchId,
       year,
       division,
+      academicYear,  // Filter by academic year
       date: { $gte: new Date(startDate), $lte: new Date(endDate) }
     }).populate("subject");
 
@@ -94,6 +103,7 @@ export const generateDefaulters = async (req, res) => {
         defaulters.push({
           rollNo: student.rollNo,
           name: student.userId.name,
+          academicYear: student.academicYear,  // Include academic year
           batch: student.batchName,
           subjects: summary,
           remark: "Defaulter"

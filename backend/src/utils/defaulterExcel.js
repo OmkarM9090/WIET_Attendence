@@ -7,6 +7,7 @@ export const generateDefaulterExcel = async (defaulters, subjects) => {
   const columns = [
     { header: "Roll No", key: "rollNo", width: 10 },
     { header: "Student Name", key: "name", width: 25 },
+    { header: "Academic Year", key: "academicYear", width: 15 },
     { header: "Batch", key: "batch", width: 10 }
   ];
 
@@ -25,6 +26,7 @@ export const generateDefaulterExcel = async (defaulters, subjects) => {
     const row = {
       rollNo: stu.rollNo,
       name: stu.name,
+      academicYear: stu.academicYear || "N/A",  // Academic Year
       batch: stu.batch,
       remark: stu.remark
     };

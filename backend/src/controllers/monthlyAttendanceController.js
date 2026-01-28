@@ -11,6 +11,7 @@ export const getMonthlyAttendance = async (req, res) => {
       branchId,
       year,
       division,
+      academicYear,  // Academic Year filter
       startDate,
       endDate,
       subjectId
@@ -24,11 +25,19 @@ export const getMonthlyAttendance = async (req, res) => {
       });
     }
 
+    // Validate academicYear
+    if (!academicYear) {
+      return res.status(400).json({
+        message: "Academic Year is required"
+      });
+    }
+
     // 2️ Fetch students of this class
     const students = await Student.find({
       branch: branchId,
       year,
       division,
+      academicYear,  // Filter by academic year
       status: "active"
     }).populate("userId", "name");
 
@@ -52,6 +61,7 @@ export const getMonthlyAttendance = async (req, res) => {
       branch: branchId,
       year,
       division,
+      academicYear,  // Filter by academic year
       date: {
         $gte: new Date(startDate),
         $lte: new Date(endDate)

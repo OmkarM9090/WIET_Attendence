@@ -13,6 +13,7 @@ export const createAttendance = async (req, res) => {
       branchId,
       year,
       division,
+      academicYear,  // Academic Year (e.g., "2024-2025")
       sessionType,   // LECTURE | PRACTICAL
       batch,         // required only for PRACTICAL
       absentStudentIds
@@ -24,6 +25,13 @@ export const createAttendance = async (req, res) => {
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
         message: "Missing required fields"
+      });
+    }
+
+    // Validate academicYear
+    if (!academicYear) {
+      return res.status(400).json({
+        message: "Academic Year is required"
       });
     }
 
@@ -45,7 +53,8 @@ export const createAttendance = async (req, res) => {
     const studentFilter = {
       branch: branchId,
       year,
-      division
+      division,
+      academicYear  // Filter by academic year
     };
 
     if (sessionType === "PRACTICAL") {
@@ -68,6 +77,7 @@ export const createAttendance = async (req, res) => {
       branch: branchId,
       year,
       division,
+      academicYear,  // Save academic year
       sessionType,
       batch: sessionType === "PRACTICAL" ? batch : null,
       absentStudents: absentStudentIds || [],

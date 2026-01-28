@@ -35,14 +35,25 @@ const attendanceSessionSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Academic Year (e.g., "2024-2025")
+    academicYear: {
+      type: String,
+      required: true,
+    },
+
+    sessionType: {
+      type: String,
+      enum: ["LECTURE", "PRACTICAL"],
+      required: true,
+    },
 
     batch: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Batch",
-    required: function () {
-      return this.sessionType === "PRACTICAL";
-    }
-  },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      required: function () {
+        return this.sessionType === "PRACTICAL";
+      },
+    },
   
     absentStudents: [
       {
@@ -61,9 +72,10 @@ const attendanceSessionSchema = new mongoose.Schema(
 
 /**
  * Prevent duplicate attendance for same lecture
+ * Includes academicYear to handle year transitions
  */
 attendanceSessionSchema.index(
-  { date: 1, subject: 1, branch: 1, year: 1, division: 1 },
+  { date: 1, subject: 1, branch: 1, year: 1, division: 1, academicYear: 1 },
   { unique: true }
 );
 

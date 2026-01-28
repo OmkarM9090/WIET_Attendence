@@ -20,6 +20,7 @@ export default function DefaulterManagement() {
   const [branch, setBranch] = useState("");
   const [year, setYear] = useState("");
   const [division, setDivision] = useState("");
+  const [academicYear, setAcademicYear] = useState("");  // Academic Year
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [threshold, setThreshold] = useState("75");
@@ -63,6 +64,7 @@ export default function DefaulterManagement() {
         branchId: branch,
         year: Number(year),
         division,
+        academicYear,  // Include academic year
         startDate,
         endDate,
         threshold: Number(threshold),
@@ -96,6 +98,7 @@ export default function DefaulterManagement() {
         branch: selectedBranch?.name || "N/A",
         year,
         division,
+        academicYear: academicYear || "N/A",  // Include in PDF
         startDate,
         endDate,
         threshold,
@@ -245,6 +248,14 @@ export default function DefaulterManagement() {
                 { label: "B", value: "B" },
                 { label: "C", value: "C" },
               ]}
+              required
+            />
+            <FormInput
+              label="Academic Year"
+              name="academicYear"
+              placeholder="e.g., 2024-2025"
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
               required
             />
             <FormInput

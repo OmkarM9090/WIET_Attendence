@@ -12,6 +12,7 @@ export const generateDefaulterPDF = (
   doc.fontSize(10).text(
     `Branch: ${meta.branch} | Year: ${meta.year} | Division: ${meta.division}`
   );
+  doc.text(`Academic Year: ${meta.academicYear || 'N/A'}`);
   doc.text(`Period: ${meta.startDate} to ${meta.endDate}`);
   doc.moveDown(2);
 

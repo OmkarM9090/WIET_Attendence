@@ -43,6 +43,7 @@ export default function StudentManagement() {
     branch: "",
     year: "",
     division: "",
+    academicYear: "",  // Academic Year e.g., "2024-2025"
     admissionYear: "",
   });
 
@@ -127,6 +128,7 @@ export default function StudentManagement() {
         branch: newStudent.branch,
         year: Number(newStudent.year),
         division: newStudent.division,
+        academicYear: newStudent.academicYear.trim(),  // Required
         admissionYear: newStudent.admissionYear
           ? Number(newStudent.admissionYear)
           : undefined,
@@ -143,6 +145,7 @@ export default function StudentManagement() {
         branch: "",
         year: "",
         division: "",
+        academicYear: "",
         admissionYear: "",
       });
       await refetchStudents();
@@ -193,6 +196,7 @@ export default function StudentManagement() {
     },
     { header: "Year", accessor: "year" },
     { header: "Division", accessor: "division" },
+    { header: "Academic Year", accessor: "academicYear" },
     { header: "Admission Year", accessor: "admissionYear" },
     { header: "Status", accessor: "status" },
   ];
@@ -206,6 +210,7 @@ export default function StudentManagement() {
       branch: student.branch?._id || student.branch,
       year: student.year || "",
       division: student.division || "",
+      academicYear: student.academicYear || "",
       admissionYear: student.admissionYear || "",
       status: student.status || "active",
     });
@@ -227,6 +232,7 @@ export default function StudentManagement() {
         branch: editingStudent.branch,
         year: Number(editingStudent.year),
         division: editingStudent.division,
+        academicYear: editingStudent.academicYear?.trim() || undefined,
         admissionYear: editingStudent.admissionYear === "" ? undefined : Number(editingStudent.admissionYear),
         status: editingStudent.status,
       };
@@ -464,6 +470,14 @@ export default function StudentManagement() {
               required
             />
             <FormInput
+              label="Academic Year"
+              name="academicYear"
+              placeholder="e.g., 2024-2025"
+              value={newStudent.academicYear}
+              onChange={(e) => setNewStudent({ ...newStudent, academicYear: e.target.value })}
+              required
+            />
+            <FormInput
               label="Admission Year"
               name="admissionYear"
               type="number"
@@ -554,6 +568,14 @@ export default function StudentManagement() {
                   { label: "B", value: "B" },
                   { label: "C", value: "C" },
                 ]}
+                required
+              />
+              <FormInput
+                label="Academic Year"
+                name="editAcademicYear"
+                placeholder="e.g., 2024-2025"
+                value={editingStudent.academicYear}
+                onChange={(e) => setEditingStudent({ ...editingStudent, academicYear: e.target.value })}
                 required
               />
               <FormInput

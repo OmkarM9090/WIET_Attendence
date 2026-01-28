@@ -32,6 +32,12 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Academic Year (e.g., "2024-2025")
+    academicYear: {
+      type: String,
+      required: true,
+    },
+
     status: {
       type: String,
       enum: ["active", "dropped"],
