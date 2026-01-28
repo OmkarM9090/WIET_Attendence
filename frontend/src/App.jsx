@@ -12,6 +12,7 @@ import BranchManagement from "./pages/BranchManagement";
 import SubjectManagement from "./pages/SubjectManagement";
 import TeacherManagement from "./pages/TeacherManagement";
 import StudentManagement from "./pages/StudentManagement";
+import DefaulterManagement from "./pages/DefaulterManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 
@@ -71,6 +72,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <StudentManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/defaulters"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <DefaulterManagement />
               </ProtectedRoute>
             }
           />
