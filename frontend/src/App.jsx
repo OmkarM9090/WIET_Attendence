@@ -15,6 +15,7 @@ import StudentManagement from "./pages/StudentManagement";
 import DefaulterManagement from "./pages/DefaulterManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import MarkAttendance from "./pages/MarkAttendance";
+import AttendanceHistory from "./pages/AttendanceHistory";
 import StudentDashboard from "./pages/StudentDashboard";
 
 export default function App() {
@@ -99,6 +100,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["teacher"]}>
                 <MarkAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/attendance-history"
+            element={
+              <ProtectedRoute allowedRoles={["teacher"]}>
+                <AttendanceHistory />
               </ProtectedRoute>
             }
           />
