@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import AttendanceSession from "../models/AttendanceSession.js";
 import Student from "../models/Student.js";
 
@@ -20,6 +21,16 @@ export const createAttendance = async (req, res) => {
     } = req.body;
 
     const teacherId = req.user.id;
+
+    const normalizeAcademicYear = (value) => {
+      if (!value) return value;
+      const trimmed = String(value).trim();
+      const parts = trimmed.split("-");
+      if (parts.length === 2 && parts[0].length === 4 && parts[1].length === 2) {
+        return `${parts[0]}-20${parts[1]}`;
+      }
+      return trimmed;
+    };
 
     // 1️ Validate required fields
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
@@ -54,12 +65,23 @@ export const createAttendance = async (req, res) => {
     }
 
     // 4️ Count eligible students
+    const normalizedAcademicYear = normalizeAcademicYear(academicYear);
     const studentFilter = {
-      branch: branchId,
-      year,
+      branch: mongoose.Types.ObjectId.isValid(branchId)
+        ? new mongoose.Types.ObjectId(branchId)
+        : branchId,
+      year: parseInt(year),
       division,
-      academicYear  // Filter by academic year
+      status: "active"
     };
+
+    if (normalizedAcademicYear) {
+      studentFilter.$or = [
+        { academicYear: normalizedAcademicYear },
+        { academicYear: academicYear },
+        { academicYear: { $exists: false } }
+      ];
+    }
 
     if (sessionType === "PRACTICAL") {
       studentFilter.batch = batch;

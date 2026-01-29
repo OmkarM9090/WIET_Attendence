@@ -1,137 +1,271 @@
-import { useState, useEffect } from "react";
-import Header from "../components/Header";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import DashboardLayout from "../components/DashboardLayout";
+import DashboardHeader from "../components/DashboardHeader";
 import Card from "../components/Card";
+import StatsCard from "../components/StatsCard";
 import LoadingSpinner from "../components/LoadingSpinner";
+import Alert from "../components/Alert";
+import { theme } from "../styles/theme";
+import axiosInstance from "../utils/axios";
 
 export default function StudentDashboard() {
-  const [attendance, setAttendance] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [studentInfo, setStudentInfo] = useState(null);
+  const [attendanceData, setAttendanceData] = useState([]);
+
+  const sidebarItems = [
+    { label: "Dashboard", path: "/student", icon: "🏠" },
+    { label: "My Attendance", path: "/student/attendance", icon: "📊" },
+    { label: "Profile", path: "/student/profile", icon: "👤" },
+  ];
 
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setAttendance([
-        { id: 1, subject: "Programming", attended: 45, total: 50, percentage: "90%" },
-        { id: 2, subject: "Data Structures", attended: 44, total: 50, percentage: "88%" },
-        { id: 3, subject: "Web Development", attended: 47, total: 50, percentage: "94%" },
-        { id: 4, subject: "Database Design", attended: 46, total: 50, percentage: "92%" },
-      ]);
-      setLoading(false);
-    }, 1000);
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      // Fetch student attendance
+      const response = await axiosInstance.get("/api/student/attendance");
+      const data = Array.isArray(response.data) ? response.data : response.data?.data || [];
+      setAttendanceData(data);
+
+      // Extract student info from first attendance record if available
+      if (data.length > 0) {
+        const firstRecord = data[0];
+        setStudentInfo({
+          branch: firstRecord.subject?.branch || "N/A",
+          year: firstRecord.year || "N/A",
+          division: firstRecord.division || "N/A",
+        });
+      }
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      setError(err.response?.data?.message || "Failed to load attendance data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stats = useMemo(() => {
+    if (attendanceData.length === 0) {
+      return {
+        totalSubjects: 0,
+        overallPercentage: 0,
+        totalLectures: 0,
+        lowAttendance: 0,
+      };
+    }
+
+    const totalSubjects = attendanceData.length;
+    const totalLectures = attendanceData.reduce((sum, item) => sum + item.totalLectures, 0);
+    const totalAttended = attendanceData.reduce((sum, item) => sum + item.attended, 0);
+    const overallPercentage = totalLectures > 0 ? Math.round((totalAttended / totalLectures) * 100) : 0;
+    const lowAttendance = attendanceData.filter((item) => item.percentage < 75).length;
+
+    return { totalSubjects, overallPercentage, totalLectures, lowAttendance };
+  }, [attendanceData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center py-12">
-          <LoadingSpinner />
-        </div>
-      </div>
+      <DashboardLayout sidebarItems={sidebarItems}>
+        <LoadingSpinner />
+      </DashboardLayout>
     );
   }
 
-  const averageAttendance = Math.round(
-    attendance.reduce((acc, att) => acc + parseFloat(att.percentage), 0) / attendance.length
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <DashboardLayout sidebarItems={sidebarItems}>
+      <DashboardHeader title="Student Dashboard" subtitle="View your attendance and academic progress" />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-          <p className="mt-2 text-gray-600">View your attendance and academic information</p>
+      {error && (
+        <div className="mb-4">
+          <Alert message={error} type="error" onClose={() => setError("")} />
         </div>
+      )}
 
-        {/* Profile Card */}
-        <Card className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center justify-between">
+      {/* Overall Attendance Alert */}
+      {stats.overallPercentage < 75 && (
+        <div className="mb-6">
+          <Alert
+            message={`⚠️ Your overall attendance is ${stats.overallPercentage}%. You need at least 75% to be eligible for exams.`}
+            type="warning"
+          />
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="mb-8 grid gap-6 md:grid-cols-4">
+        <StatsCard
+          title="Overall Attendance"
+          value={`${stats.overallPercentage}%`}
+          icon="📊"
+          color={stats.overallPercentage >= 75 ? "success" : "error"}
+        />
+        <StatsCard title="Total Subjects" value={stats.totalSubjects} icon="📚" color="primary" />
+        <StatsCard title="Total Lectures" value={stats.totalLectures} icon="🎓" color="info" />
+        <StatsCard
+          title="Low Attendance"
+          value={stats.lowAttendance}
+          icon="⚠️"
+          color="warning"
+        />
+      </div>
+
+      {/* Student Info Card */}
+      {studentInfo && (
+        <Card className="mb-6">
+          <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
+            My Information
+          </h3>
+          <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p className="text-sm text-gray-600">Branch</p>
-              <p className="text-lg font-semibold text-gray-900">Computer Science</p>
+              <div
+                className="text-xs font-medium uppercase"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                Branch
+              </div>
+              <div
+                className="text-sm font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                {studentInfo.branch}
+              </div>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Year</p>
-              <p className="text-lg font-semibold text-gray-900">2nd Year</p>
+              <div
+                className="text-xs font-medium uppercase"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                Year
+              </div>
+              <div
+                className="text-sm font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                {studentInfo.year}
+              </div>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Division</p>
-              <p className="text-lg font-semibold text-gray-900">A</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Roll Number</p>
-              <p className="text-lg font-semibold text-gray-900">045</p>
+              <div
+                className="text-xs font-medium uppercase"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                Division
+              </div>
+              <div
+                className="text-sm font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                {studentInfo.division}
+              </div>
             </div>
           </div>
         </Card>
+      )}
+      {/* Subject-wise Attendance */}
+      <Card>
+        <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
+          Subject-wise Attendance
+        </h3>
 
-        {/* Stats */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Average Attendance", value: `${averageAttendance}%`, icon: "✓" },
-            { label: "Total Classes", value: attendance.length, icon: "📚" },
-            { label: "Total Attended", value: attendance.reduce((acc, att) => acc + att.attended, 0), icon: "👥" },
-            { label: "Classes Missed", value: attendance.reduce((acc, att) => acc + (att.total - att.attended), 0), icon: "⚠️" },
-          ].map((stat, idx) => (
-            <Card key={idx}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className="text-4xl">{stat.icon}</div>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Attendance Details */}
-        <Card title="Subject-wise Attendance">
+        {attendanceData.length === 0 ? (
+          <div className="py-12 text-center">
+            <div className="mb-4 text-6xl">📚</div>
+            <h3
+              className="mb-2 text-lg font-semibold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              No Attendance Records
+            </h3>
+            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+              Your attendance will appear here once your teachers mark it.
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-gray-200">
+              <thead
+                style={{
+                  backgroundColor: theme.colors.neutral[50],
+                  borderBottom: `2px solid ${theme.colors.border}`,
+                }}
+              >
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Subject
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Attended
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Total
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Percentage
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
-                    Status
-                  </th>
+                  {["Subject", "Code", "Attended", "Total", "Percentage", "Status"].map(
+                    (label) => (
+                      <th
+                        key={label}
+                        className="px-4 py-2 text-left text-xs font-semibold uppercase"
+                        style={{ color: theme.colors.text.secondary }}
+                      >
+                        {label}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {attendance.map((att) => {
-                  const percentage = parseFloat(att.percentage);
-                  const status = percentage >= 75 ? "Good" : "At Risk";
-                  const statusColor = percentage >= 75 ? "green" : "red";
+              <tbody>
+                {attendanceData.map((item, idx) => {
+                  const percentage = item.percentage || 0;
+                  const status =
+                    percentage >= 75 ? "Good" : percentage >= 50 ? "Warning" : "Critical";
+                  const statusColor =
+                    percentage >= 75
+                      ? theme.colors.success
+                      : percentage >= 50
+                      ? theme.colors.warning
+                      : theme.colors.error;
 
                   return (
-                    <tr key={att.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{att.subject}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{att.attended}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{att.total}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                        {att.percentage}
+                    <tr
+                      key={idx}
+                      style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+                    >
+                      <td
+                        className="px-4 py-3 text-sm font-medium"
+                        style={{ color: theme.colors.text.primary }}
+                      >
+                        {item.subject?.name || "N/A"}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm"
+                        style={{ color: theme.colors.text.secondary }}
+                      >
+                        {item.subject?.code || "N/A"}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm"
+                        style={{ color: theme.colors.text.primary }}
+                      >
+                        {item.attended || 0}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm"
+                        style={{ color: theme.colors.text.primary }}
+                      >
+                        {item.totalLectures || 0}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-sm font-bold"
+                        style={{ color: statusColor }}
+                      >
+                        {percentage}%
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${
-                            statusColor === "green"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className="inline-block rounded-full px-3 py-1 text-xs font-medium"
+                          style={{
+                            backgroundColor: `${statusColor}20`,
+                            color: statusColor,
+                          }}
                         >
                           {status}
                         </span>
@@ -142,15 +276,33 @@ export default function StudentDashboard() {
               </tbody>
             </table>
           </div>
+        )}
+      </Card>
 
-          {/* Note */}
-          <div className="mt-4 rounded-lg bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> Minimum 75% attendance is required to be eligible for exams.
-            </p>
+      {/* Tips Section */}
+      {stats.lowAttendance > 0 && (
+        <Card className="mt-6" style={{ backgroundColor: `${theme.colors.warning}10` }}>
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">💡</div>
+            <div>
+              <h3
+                className="mb-2 font-semibold"
+                style={{ color: theme.colors.text.primary }}
+              >
+                Attendance Tips
+              </h3>
+              <ul className="space-y-1 text-sm" style={{ color: theme.colors.text.secondary }}>
+                <li>• Attend classes regularly to maintain good attendance</li>
+                <li>• Contact your teachers if you have genuine reasons for absence</li>
+                <li>• You need at least 75% attendance to be eligible for exams</li>
+                <li>
+                  • Focus on improving attendance in subjects where you are below 75%
+                </li>
+              </ul>
+            </div>
           </div>
         </Card>
-      </main>
-    </div>
+      )}
+    </DashboardLayout>
   );
 }

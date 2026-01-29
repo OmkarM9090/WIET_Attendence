@@ -230,13 +230,13 @@ export default function Login() {
               style={{ color: theme.colors.primary[600] }}
             >
               <p>
-                <span className="font-semibold">Admin:</span> admin@wiet.edu / admin123
+                <span className="font-semibold">Admin:</span> admin@college.com / admin123
               </p>
               <p>
-                <span className="font-semibold">Teacher:</span> teacher@wiet.edu / teacher123
+                <span className="font-semibold">Teacher:</span> omkarm842584@gmail.com / 123456
               </p>
               <p>
-                <span className="font-semibold">Student:</span> student@wiet.edu / student123
+                <span className="font-semibold">Student:</span> aditya.student@gmail.com / 123456
               </p>
             </div>
           </div>

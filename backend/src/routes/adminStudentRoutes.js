@@ -8,7 +8,7 @@ import { upload } from "../utils/upload.js";
 const router = express.Router();
 
 router.post("/students", protect, allowRoles("admin"), createStudent);
-router.get("/students", protect, allowRoles("admin"), getStudents);
+router.get("/students", protect, allowRoles("admin", "teacher"), getStudents);
 router.patch("/students/:id", protect, allowRoles("admin"), updateStudent);
 router.delete("/students/:id", protect, allowRoles("admin"), deleteStudent);
 router.post(

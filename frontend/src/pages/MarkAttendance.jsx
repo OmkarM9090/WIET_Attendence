@@ -27,7 +27,7 @@ const MarkAttendance = () => {
   // Form states
   const [selectedAssignment, setSelectedAssignment] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [academicYear, setAcademicYear] = useState("2024-25");
+  const [academicYear, setAcademicYear] = useState("2025-26");
   const [sessionType, setSessionType] = useState("LECTURE");
   const [batch, setBatch] = useState("");
   const [absentStudents, setAbsentStudents] = useState(new Set());
@@ -88,18 +88,18 @@ const MarkAttendance = () => {
     if (!assignment) return;
 
     try {
-      const response = await getStudents({
-        branch: assignment.branch?._id,
-        year: assignment.year,
-        division: assignment.division,
-      });
+      const response = await getStudents(
+        assignment.branch?._id,
+        assignment.year,
+        assignment.division
+      );
 
       if (response.success) {
         // Filter students by academic year and active status
         const filteredStudents = response.data.filter(
           (student) =>
             student.status === "active" &&
-            student.admissionYear <= academicYear.split("-")[0]
+            (!student.admissionYear || student.admissionYear <= parseInt(academicYear.split("-")[0]))
         );
         setStudents(filteredStudents);
         setAbsentStudents(new Set()); // Reset selections
