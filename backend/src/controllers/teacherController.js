@@ -41,10 +41,10 @@ export const getTeacherAssignments = async (req, res) => {
   try {
     const { teacherId } = req.params;
 
-    const assignments = await TeachingAssignment.find({ teacher: teacherId })
-      .populate("subject", "name code")
-      .populate("branch", "name code")
-      .sort({ year: 1, division: 1 });
+    const assignments = await TeachingAssignment.find({ teacherId })
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .sort({ dayOfWeek: 1, startTime: 1 });
 
     res.json({
       success: true,

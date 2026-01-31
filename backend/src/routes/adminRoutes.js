@@ -5,6 +5,10 @@ import {
   createSubject,
   getSubjects,
 } from "../controllers/adminController.js";
+import {
+  createTeachingAssignment,
+  getTeachingAssignments,
+} from "../controllers/teacherAssignmentController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
 
@@ -17,5 +21,19 @@ router.get("/branches", protect, allowRoles("admin"), getBranches);
 // SUBJECT
 router.post("/subjects", protect, allowRoles("admin"), createSubject);
 router.get("/subjects", protect, allowRoles("admin"), getSubjects);
+
+// TEACHING ASSIGNMENTS (Timetable)
+router.post(
+  "/assign-teacher",
+  protect,
+  allowRoles("admin"),
+  createTeachingAssignment
+);
+router.get(
+  "/teacher-assignments",
+  protect,
+  allowRoles("admin"),
+  getTeachingAssignments
+);
 
 export default router;

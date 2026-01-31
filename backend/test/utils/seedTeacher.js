@@ -18,7 +18,9 @@ export const seedTeacher = async () => {
     name: "Database Systems",
     code: "DBS",
     semester: 5,
-    branch: branch._id
+    branch: branch._id,
+    semesterStartDate: new Date("2025-06-01"),
+    semesterEndDate: new Date("2025-11-30")
   });
 
   const user = await User.create({
@@ -37,18 +39,28 @@ export const seedTeacher = async () => {
 
   const assignments = await TeachingAssignment.create([
     {
-      teacher: teacher._id,
-      subject: subject._id,
-      branch: branch._id,
+      teacherId: user._id,
+      subjectId: subject._id,
+      branchId: branch._id,
       year: 3,
-      division: "A"
+      division: "A",
+      dayOfWeek: "MONDAY",
+      startTime: "10:00",
+      endTime: "11:00",
+      sessionType: "LECTURE",
+      academicYear: "2025-2026"
     },
     {
-      teacher: teacher._id,
-      subject: subject._id,
-      branch: branch._id,
+      teacherId: user._id,
+      subjectId: subject._id,
+      branchId: branch._id,
       year: 3,
-      division: "B"
+      division: "B",
+      dayOfWeek: "TUESDAY",
+      startTime: "11:00",
+      endTime: "12:00",
+      sessionType: "LECTURE",
+      academicYear: "2025-2026"
     }
   ]);
 
