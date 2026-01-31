@@ -3,7 +3,6 @@ import {
   createAttendance,
   getTeacherAttendance
 } from "../controllers/attendanceController.js";
-import { createDailyAttendanceReport } from "../controllers/attendanceReportController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -13,7 +12,6 @@ const router = express.Router();
 
 // Teacher only
 router.post("/", protect, allowRoles("teacher"), createAttendance);
-router.post("/daily-report", protect, allowRoles("teacher"), createDailyAttendanceReport);
 router.get("/", protect, allowRoles("teacher"), getTeacherAttendance);
 router.get(
   "/monthly",

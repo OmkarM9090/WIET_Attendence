@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import mongoose from "mongoose";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 
@@ -78,8 +77,8 @@ export const getStudents = async (req, res) => {
     const { branch, year, division, search } = req.query;
 
     const filter = {};
-    if (branch) filter.branch = new mongoose.Types.ObjectId(branch);
-    if (year) filter.year = parseInt(year);
+    if (branch) filter.branch = branch;
+    if (year) filter.year = year;
     if (division) filter.division = division;
 
     // Text / roll search across user.name, user.email, or rollNo
@@ -106,7 +105,7 @@ export const getStudents = async (req, res) => {
       .populate("userId", "name email")
       .populate("branch", "name code");
 
-    res.json({ success: true, data: students });
+    res.json(students);
   } catch (error) {
     console.error("GET STUDENTS ERROR:", error);
     res.status(500).json({ message: "Server error" });

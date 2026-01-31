@@ -15,7 +15,6 @@ import axiosInstance from "../utils/axios.js";
  * - branchId: Branch ID
  * - year: Year (e.g., 1, 2, 3)
  * - division: Division (e.g., "A", "B")
- * - academicYear: Academic Year (e.g., "2024-2025") - REQUIRED
  * - sessionType: "LECTURE" or "PRACTICAL"
  * - batch: Batch number (required only for PRACTICAL)
  * - absentStudentIds: Array of absent student IDs
@@ -26,28 +25,6 @@ export const createAttendance = async (attendanceData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to save attendance" };
-  }
-};
-
-/**
- * Generate Daily Attendance Report
- * @param {object} reportData
- * - subjectId
- * - branchId
- * - year
- * - division
- * - sessionType
- * - batch (optional)
- * - startTime (HH:mm)
- * - endTime (HH:mm)
- * - absentRollNos (array of roll numbers)
- */
-export const createDailyAttendanceReport = async (reportData) => {
-  try {
-    const response = await axiosInstance.post("/attendance/daily-report", reportData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Failed to generate daily report" };
   }
 };
 
@@ -71,7 +48,6 @@ export const getTeacherAttendance = async () => {
  * - branchId: Branch ID (required for admin, optional for teacher)
  * - year: Year
  * - division: Division
- * - academicYear: Academic Year (e.g., "2024-2025") - REQUIRED
  * - startDate: Start date (YYYY-MM-DD)
  * - endDate: End date (YYYY-MM-DD)
  */
@@ -94,7 +70,6 @@ export const getMonthlyAttendance = async (filters = {}) => {
  * - branchId: Branch ID (required)
  * - year: Year (required)
  * - division: Division (required)
- * - academicYear: Academic Year (e.g., "2024-2025") - REQUIRED
  * - startDate: Start date (required, YYYY-MM-DD)
  * - endDate: End date (required, YYYY-MM-DD)
  * - threshold: Attendance threshold (default 75)

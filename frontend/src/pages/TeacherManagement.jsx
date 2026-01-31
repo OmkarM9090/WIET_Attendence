@@ -488,7 +488,7 @@ export default function TeacherManagement() {
             </div>
 
             {/* Subject Selection */}
-            <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.success, backgroundColor: "#f0fdf4" }}>
+            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0fdf4" }}>
               <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
                 <span>📚</span> Subject
               </label>

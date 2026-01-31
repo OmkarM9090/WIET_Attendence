@@ -18,25 +18,16 @@ const MarkAttendance = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [alert, setAlert] = useState({ message: "", type: "" });
-  const [showWhatsAppPreview, setShowWhatsAppPreview] = useState(false);
-  const [whatsappMessage, setWhatsappMessage] = useState("");
 
   // Data states
   const [teacherId, setTeacherId] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [students, setStudents] = useState([]);
-  const [teacherName, setTeacherName] = useState("");
   
   // Form states
   const [selectedAssignment, setSelectedAssignment] = useState("");
-  const [date, setDate] = useState(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  });
-  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [academicYear, setAcademicYear] = useState("2024-25");
   const [sessionType, setSessionType] = useState("LECTURE");
   const [batch, setBatch] = useState("");
   const [absentStudents, setAbsentStudents] = useState(new Set());
@@ -44,7 +35,6 @@ const MarkAttendance = () => {
   const sidebarItems = [
     { path: "/teacher", label: "Dashboard", icon: "📊" },
     { path: "/teacher/mark-attendance", label: "Mark Attendance", icon: "✓" },
-    { path: "/teacher/daily-report", label: "Daily Report", icon: "📝" },
     { path: "/teacher/attendance-history", label: "View Attendance", icon: "📖" },
     { path: "/teacher/reports", label: "Reports", icon: "📄" },
   ];
@@ -63,10 +53,7 @@ const MarkAttendance = () => {
       
       if (profileData.success) {
         const teacherIdValue = profileData.data._id;
-        const teacherNameValue = profileData.data.userId?.name || "Teacher";
-        
         setTeacherId(teacherIdValue);
-        setTeacherName(teacherNameValue);
         
         // Fetch assignments
         const assignmentsResponse = await axiosInstance.get(
@@ -101,18 +88,18 @@ const MarkAttendance = () => {
     if (!assignment) return;
 
     try {
-      const response = await getStudents(
-        assignment.branch?._id,
-        assignment.year,
-        assignment.division
-      );
+      const response = await getStudents({
+        branch: assignment.branch?._id,
+        year: assignment.year,
+        division: assignment.division,
+      });
 
       if (response.success) {
         // Filter students by academic year and active status
         const filteredStudents = response.data.filter(
           (student) =>
             student.status === "active" &&
-            (!student.admissionYear || student.admissionYear <= parseInt(academicYear.split("-")[0]))
+            student.admissionYear <= academicYear.split("-")[0]
         );
         setStudents(filteredStudents);
         setAbsentStudents(new Set()); // Reset selections
@@ -150,11 +137,10 @@ const MarkAttendance = () => {
     }
   };
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ============ VALIDATION ============
+    // Validation
     if (!selectedAssignment) {
       setAlert({ message: "Please select a class", type: "error" });
       return;
@@ -180,7 +166,6 @@ const MarkAttendance = () => {
       return;
     }
 
-    // ============ PREPARE ATTENDANCE DATA ============
     const assignment = assignments.find((a) => a._id === selectedAssignment);
 
     const attendanceData = {
@@ -203,12 +188,6 @@ const MarkAttendance = () => {
       const response = await createAttendance(attendanceData);
 
       if (response.success) {
-        // Store WhatsApp message if available
-        if (response.data?.whatsappText) {
-          setWhatsappMessage(response.data.whatsappText);
-          setShowWhatsAppPreview(true);
-        }
-
         setAlert({
           message: `Attendance marked successfully! Present: ${students.length - absentStudents.size}/${students.length}`,
           type: "success",
@@ -222,7 +201,6 @@ const MarkAttendance = () => {
           setBatch("");
           setSessionType("LECTURE");
           setAlert({ message: "", type: "" });
-          setShowWhatsAppPreview(false);
         }, 2000);
       } else {
         setAlert({
@@ -270,68 +248,6 @@ const MarkAttendance = () => {
         />
       )}
 
-      {/* WhatsApp Message Preview Modal */}
-      {showWhatsAppPreview && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={() => setShowWhatsAppPreview(false)}
-        >
-          <Card className="w-full max-w-2xl max-h-96 overflow-y-auto">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 style={{ fontSize: theme.typography.h2, fontWeight: 600 }}>
-                  📱 WhatsApp Report Preview
-                </h3>
-                <button
-                  onClick={() => setShowWhatsAppPreview(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Preview Box */}
-              <div
-                className="p-4 rounded-lg border font-mono text-sm whitespace-pre-wrap"
-                style={{
-                  borderColor: theme.colors.neutral.border,
-                  backgroundColor: theme.colors.neutral.light,
-                }}
-              >
-                {whatsappMessage}
-              </div>
-
-              {/* Copy & Send Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    navigator.clipboard.writeText(whatsappMessage);
-                    setAlert({
-                      message: "Message copied to clipboard!",
-                      type: "success",
-                    });
-                  }}
-                  className="flex-1"
-                >
-                  📋 Copy Message
-                </Button>
-                <Button
-                  variant="success"
-                  onClick={() => {
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
-                    window.open(whatsappUrl, "_blank");
-                  }}
-                  className="flex-1"
-                >
-                  💬 Send on WhatsApp
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Form */}
         <div className="lg:col-span-2">
@@ -359,16 +275,15 @@ const MarkAttendance = () => {
               {/* Date and Academic Year */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormInput
-                  label="Date*"
+                  label="Date"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
                   max={new Date().toISOString().split("T")[0]}
-                  title="Only current or past dates allowed"
                 />
                 <FormInput
-                  label="Academic Year*"
+                  label="Academic Year"
                   type="text"
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
