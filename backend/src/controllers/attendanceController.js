@@ -55,6 +55,14 @@ const generateWhatsAppMessage = (
  * CREATE ATTENDANCE SESSION
  * Teacher only
  * Generates WhatsApp-ready attendance report message
+ * 
+ * ENHANCED WITH:
+ * - Substitute teacher logic
+ * - Extra lecture logic
+ * - Cancelled lecture logic
+ * - Semester boundary validation
+ * - Late admission student handling
+ * - Academic year & semester filtering
  */
 export const createAttendance = async (req, res) => {
   try {
@@ -64,30 +72,27 @@ export const createAttendance = async (req, res) => {
       branchId,
       year,
       division,
-      academicYear,  // Academic Year (e.g., "2024-2025")
-      sessionType,   // LECTURE | PRACTICAL
-      batch,         // required only for PRACTICAL
+      academicYear,       // Required: "2024-2025"
+      semester,           // Required: 1-8
+      sessionType,        // Required: LECTURE | PRACTICAL
+      batch,              // Required only for PRACTICAL
+      assignedTeacherId,  // Who should take this lecture (timetable)
+      isSubstitute,       // Is this a substitute?
+      substituteReason,   // Required if isSubstitute = true
+      isExtraLecture,     // Is this compensation lecture?
+      extraLectureReason, // Required if isExtraLecture = true
+      isCancelled,        // Is this lecture cancelled?
+      cancelReason,       // Required if isCancelled = true
       absentStudentIds
     } = req.body;
 
-    const teacherId = req.user.id;
-
-    // ============ VALIDATION FUNCTIONS ============
-    const normalizeAcademicYear = (value) => {
-      if (!value) return value;
-      const trimmed = String(value).trim();
-      const parts = trimmed.split("-");
-      if (parts.length === 2 && parts[0].length === 4 && parts[1].length === 2) {
-        return `${parts[0]}-20${parts[1]}`;
-      }
-      return trimmed;
-    };
+    const teacherId = req.user.id; // Actual teacher taking the lecture
 
     // ============ 1. VALIDATE REQUIRED FIELDS ============
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields"
+        message: "Missing required fields: date, subjectId, branchId, year, division, sessionType"
       });
     }
 
@@ -95,12 +100,99 @@ export const createAttendance = async (req, res) => {
     if (!academicYear) {
       return res.status(400).json({
         success: false,
-        message: "Academic Year is required"
+        message: "Academic Year is required (e.g., '2024-2025')"
       });
     }
 
-    // ============ 2. VALIDATE DATE (NO FUTURE ATTENDANCE) ============
-    // Use local date strings to avoid timezone issues
+    // Validate semester
+    if (!semester || semester < 1 || semester > 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Semester is required (1-8)"
+      });
+    }
+
+    // ============ 2. VALIDATE SESSION TYPE & BATCH ============
+    if (sessionType === "PRACTICAL" && !batch) {
+      return res.status(400).json({
+        success: false,
+        message: "Batch is required for practical session"
+      });
+    }
+
+    if (sessionType === "LECTURE" && batch) {
+      return res.status(400).json({
+        success: false,
+        message: "Batch should not be sent for lecture"
+      });
+    }
+
+    // ============ 3. VALIDATE CANCELLED LECTURE ============
+    if (isCancelled) {
+      if (!cancelReason || !cancelReason.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Cancel reason is required for cancelled lectures"
+        });
+      }
+
+      // For cancelled lectures, we create the record but don't count students
+      const cancelledSession = await AttendanceSession.create({
+        date,
+        academicYear,
+        semester,
+        sessionType,
+        batch: sessionType === "PRACTICAL" ? batch : null,
+        assignedTeacher: assignedTeacherId || teacherId,
+        teacher: teacherId,
+        isSubstitute: false,
+        isExtraLecture: isExtraLecture || false,
+        extraLectureReason: extraLectureReason || null,
+        isCancelled: true,
+        cancelReason,
+        subject: subjectId,
+        branch: branchId,
+        year,
+        division,
+        absentStudents: [],
+        totalStudents: 0,
+        createdBy: teacherId,
+        isLocked: false
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Cancelled lecture recorded",
+        data: cancelledSession
+      });
+    }
+
+    // ============ 4. PERMISSION & SUBSTITUTE LOGIC ============
+    const effectiveAssignedTeacher = assignedTeacherId || teacherId;
+    let isActualSubstitute = false;
+    
+    // Check if teacher is taking someone else's lecture
+    if (teacherId.toString() !== effectiveAssignedTeacher.toString()) {
+      isActualSubstitute = true;
+      
+      // Substitute must provide reason
+      if (!substituteReason || !substituteReason.trim()) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to take this lecture. Substitute reason is required."
+        });
+      }
+    }
+
+    // ============ 5. VALIDATE EXTRA LECTURE REASON ============
+    if (isExtraLecture && (!extraLectureReason || !extraLectureReason.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Extra lecture reason is required for compensation lectures"
+      });
+    }
+
+    // ============ 6. VALIDATE DATE (NO FUTURE ATTENDANCE) ============
     const getLocalDateString = (value) => {
       const d = new Date(value);
       const year = d.getFullYear();
@@ -119,31 +211,7 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // ============ 3. VALIDATE SESSION TYPE & BATCH ============
-    if (sessionType === "PRACTICAL" && !batch) {
-      return res.status(400).json({
-        success: false,
-        message: "Batch is required for practical session"
-      });
-    }
-
-    if (sessionType === "LECTURE" && batch) {
-      return res.status(400).json({
-        success: false,
-        message: "Batch should not be sent for lecture"
-      });
-    }
-
-    // ============ 4. FETCH TEACHER NAME ============
-    const teacher = await User.findById(teacherId);
-    if (!teacher) {
-      return res.status(404).json({
-        success: false,
-        message: "Teacher not found"
-      });
-    }
-
-    // ============ 5. FETCH SUBJECT NAME ============
+    // ============ 7. FETCH & VALIDATE SUBJECT ============
     const subject = await Subject.findById(subjectId);
     if (!subject) {
       return res.status(404).json({
@@ -152,7 +220,32 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // ============ 6. FETCH BRANCH NAME ============
+    // ============ 8. VALIDATE SEMESTER BOUNDARIES ============
+    // Check if attendance date falls within semester start/end dates
+    if (!subject.isWithinSemester(date)) {
+      return res.status(400).json({
+        success: false,
+        message: `Attendance date must be between ${subject.semesterStartDate.toDateString()} and ${subject.semesterEndDate.toDateString()}`
+      });
+    }
+
+    // Check if subject is active
+    if (!subject.isCurrentlyActive()) {
+      return res.status(400).json({
+        success: false,
+        message: "Subject is no longer active"
+      });
+    }
+
+    // ============ 9. FETCH TEACHER & BRANCH INFO ============
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found"
+      });
+    }
+
     const branch = await Branch.findById(branchId);
     if (!branch) {
       return res.status(404).json({
@@ -161,17 +254,29 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // ============ 7. COUNT ELIGIBLE STUDENTS ============
+    // ============ 10. COUNT ELIGIBLE STUDENTS (LATE ADMISSION LOGIC) ============
+    const normalizeAcademicYear = (value) => {
+      if (!value) return value;
+      const trimmed = String(value).trim();
+      const parts = trimmed.split("-");
+      if (parts.length === 2 && parts[0].length === 4 && parts[1].length === 2) {
+        return `${parts[0]}-20${parts[1]}`;
+      }
+      return trimmed;
+    };
+
     const normalizedAcademicYear = normalizeAcademicYear(academicYear);
+    
     const studentFilter = {
       branch: mongoose.Types.ObjectId.isValid(branchId)
         ? new mongoose.Types.ObjectId(branchId)
         : branchId,
       year: parseInt(year),
       division,
-      status: "active"
+      status: "active" // Only active students
     };
 
+    // Filter by academic year
     if (normalizedAcademicYear) {
       studentFilter.$or = [
         { academicYear: normalizedAcademicYear },
@@ -180,20 +285,25 @@ export const createAttendance = async (req, res) => {
       ];
     }
 
+    // Filter by batch for practicals
     if (sessionType === "PRACTICAL") {
       studentFilter.batch = batch;
     }
+
+    // LATE ADMISSION LOGIC: Exclude students whose admission date > session date
+    const sessionDate = new Date(date);
+    studentFilter.admissionDate = { $lte: sessionDate };
 
     const totalStudents = await Student.countDocuments(studentFilter);
 
     if (totalStudents === 0) {
       return res.status(400).json({
         success: false,
-        message: "No students found for this session"
+        message: "No eligible students found for this session (check active status, late admissions, and batch)"
       });
     }
 
-    // ============ 8. FETCH ABSENT STUDENT DETAILS ============
+    // ============ 11. FETCH ABSENT STUDENT DETAILS ============
     let absentStudentsDetails = [];
     if (absentStudentIds && absentStudentIds.length > 0) {
       absentStudentsDetails = await Student.find({
@@ -201,8 +311,8 @@ export const createAttendance = async (req, res) => {
       }).populate("userId", "name");
     }
 
-    // ============ 9. GENERATE WHATSAPP MESSAGE ============
-    const className = `${branch.name} ${year}-${division}`;
+    // ============ 12. GENERATE WHATSAPP MESSAGE ============
+    const className = `${branch.name} ${year}-${division}${sessionType === "PRACTICAL" ? ` (Batch ${batch})` : ""}`;
     const institution = "Watumull College Of Engineering And Technology";
     
     const absentForMessage = absentStudentsDetails.map((student) => ({
@@ -210,7 +320,7 @@ export const createAttendance = async (req, res) => {
       name: student.userId?.name || "N/A"
     }));
 
-    const whatsappText = generateWhatsAppMessage(
+    let whatsappText = generateWhatsAppMessage(
       institution,
       className,
       subject.name,
@@ -220,22 +330,40 @@ export const createAttendance = async (req, res) => {
       absentForMessage
     );
 
-    // ============ 10. CREATE ATTENDANCE SESSION ============
+    // Add substitute/extra lecture info to WhatsApp message
+    if (isActualSubstitute) {
+      whatsappText += `\n⚠️ Substitute Teacher: ${teacher.name}\nReason: ${substituteReason}`;
+    }
+    if (isExtraLecture) {
+      whatsappText += `\n📚 Extra Lecture\nReason: ${extraLectureReason}`;
+    }
+
+    // ============ 13. CREATE ATTENDANCE SESSION ============
     const attendance = await AttendanceSession.create({
       date,
+      academicYear,
+      semester,
+      sessionType,
+      batch: sessionType === "PRACTICAL" ? batch : null,
+      assignedTeacher: effectiveAssignedTeacher,
       teacher: teacherId,
+      isSubstitute: isActualSubstitute,
+      substituteReason: isActualSubstitute ? substituteReason : null,
+      isExtraLecture: isExtraLecture || false,
+      extraLectureReason: isExtraLecture ? extraLectureReason : null,
+      isCancelled: false,
+      cancelReason: null,
       subject: subjectId,
       branch: branchId,
       year,
       division,
-      academicYear,
-      sessionType,
-      batch: sessionType === "PRACTICAL" ? batch : null,
       absentStudents: absentStudentIds || [],
-      totalStudents
+      totalStudents,
+      createdBy: teacherId,
+      isLocked: false
     });
 
-    // ============ 11. RETURN RESPONSE WITH WHATSAPP MESSAGE ============
+    // ============ 14. RETURN RESPONSE WITH WHATSAPP MESSAGE ============
     res.status(201).json({
       success: true,
       message: "Attendance saved successfully",
@@ -251,31 +379,45 @@ export const createAttendance = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "Attendance already marked for this session"
+        message: "Attendance already marked for this session. If this is an extra lecture, set isExtraLecture=true"
       });
     }
 
     res.status(500).json({ 
       success: false,
-      message: "Server error"
+      message: "Server error",
+      error: error.message
     });
   }
 };
 
-
-
 /**
  * GET ATTENDANCE (Teacher)
+ * Fetch teacher's attendance sessions
  */
 export const getTeacherAttendance = async (req, res) => {
   try {
     const teacherId = req.user.id;
+    const { academicYear, semester } = req.query;
 
-    const attendance = await AttendanceSession.find({
+    const query = {
       teacher: teacherId
-    })
+    };
+
+    // Filter by academic year if provided
+    if (academicYear) {
+      query.academicYear = academicYear;
+    }
+
+    // Filter by semester if provided
+    if (semester) {
+      query.semester = parseInt(semester);
+    }
+
+    const attendance = await AttendanceSession.find(query)
       .populate("subject", "name code")
       .populate("branch", "name code")
+      .populate("assignedTeacher", "name")
       .sort({ date: -1 });
 
     res.json({
