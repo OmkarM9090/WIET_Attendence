@@ -1,10 +1,60 @@
 import mongoose from "mongoose";
 import AttendanceSession from "../models/AttendanceSession.js";
 import Student from "../models/Student.js";
+import Subject from "../models/Subject.js";
+import Branch from "../models/Branch.js";
+import User from "../models/User.js";
+
+/**
+ * FORMAT WHATSAPP ATTENDANCE MESSAGE
+ * Generates a formatted attendance report for WhatsApp
+ */
+const generateWhatsAppMessage = (
+  institution,
+  className,
+  subjectName,
+  date,
+  sessionType,
+  teacherName,
+  absentStudents
+) => {
+  // Format date as "Fri, 30 Jan, 2026"
+  const dateObj = new Date(date);
+  const formattedDate = dateObj.toLocaleDateString("en-IN", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  // Build the message
+  let message = `${institution}\nDaily Attendance Report\n\n`;
+  message += `Class: ${className}\n`;
+  message += `Subject: ${subjectName}\n`;
+  message += `Date: ${formattedDate}\n`;
+  message += `Session Type: ${sessionType}\n`;
+  message += `Subject Teacher: ${teacherName}\n`;
+
+  // Add absent students section
+  if (absentStudents.length > 0) {
+    message += `\nAbsent Students:\n`;
+    message += `Roll No | Name\n`;
+    message += `------- | -----\n`;
+    
+    absentStudents.forEach((student) => {
+      message += `${student.rollNo} | ${student.name}\n`;
+    });
+  } else {
+    message += `\nAbsent Students: None (All Present)\n`;
+  }
+
+  return message;
+};
 
 /**
  * CREATE ATTENDANCE SESSION
  * Teacher only
+ * Generates WhatsApp-ready attendance report message
  */
 export const createAttendance = async (req, res) => {
   try {
@@ -22,6 +72,7 @@ export const createAttendance = async (req, res) => {
 
     const teacherId = req.user.id;
 
+    // ============ VALIDATION FUNCTIONS ============
     const normalizeAcademicYear = (value) => {
       if (!value) return value;
       const trimmed = String(value).trim();
@@ -32,7 +83,7 @@ export const createAttendance = async (req, res) => {
       return trimmed;
     };
 
-    // 1️ Validate required fields
+    // ============ 1. VALIDATE REQUIRED FIELDS ============
     if (!date || !subjectId || !branchId || !year || !division || !sessionType) {
       return res.status(400).json({
         success: false,
@@ -48,7 +99,27 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // 2️ Practical requires batch
+    // ============ 2. VALIDATE DATE (NO FUTURE ATTENDANCE) ============
+    // Use local date strings to avoid timezone issues
+    const getLocalDateString = (value) => {
+      const d = new Date(value);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const inputDateStr = getLocalDateString(date);
+    const todayStr = getLocalDateString(new Date());
+
+    if (inputDateStr > todayStr) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot mark attendance for future dates"
+      });
+    }
+
+    // ============ 3. VALIDATE SESSION TYPE & BATCH ============
     if (sessionType === "PRACTICAL" && !batch) {
       return res.status(400).json({
         success: false,
@@ -56,7 +127,6 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // 3️ Lecture must NOT have batch
     if (sessionType === "LECTURE" && batch) {
       return res.status(400).json({
         success: false,
@@ -64,7 +134,34 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // 4️ Count eligible students
+    // ============ 4. FETCH TEACHER NAME ============
+    const teacher = await User.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found"
+      });
+    }
+
+    // ============ 5. FETCH SUBJECT NAME ============
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({
+        success: false,
+        message: "Subject not found"
+      });
+    }
+
+    // ============ 6. FETCH BRANCH NAME ============
+    const branch = await Branch.findById(branchId);
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found"
+      });
+    }
+
+    // ============ 7. COUNT ELIGIBLE STUDENTS ============
     const normalizedAcademicYear = normalizeAcademicYear(academicYear);
     const studentFilter = {
       branch: mongoose.Types.ObjectId.isValid(branchId)
@@ -96,7 +193,34 @@ export const createAttendance = async (req, res) => {
       });
     }
 
-    // 5️ Create attendance session
+    // ============ 8. FETCH ABSENT STUDENT DETAILS ============
+    let absentStudentsDetails = [];
+    if (absentStudentIds && absentStudentIds.length > 0) {
+      absentStudentsDetails = await Student.find({
+        _id: { $in: absentStudentIds }
+      }).populate("userId", "name");
+    }
+
+    // ============ 9. GENERATE WHATSAPP MESSAGE ============
+    const className = `${branch.name} ${year}-${division}`;
+    const institution = "Watumull College Of Engineering And Technology";
+    
+    const absentForMessage = absentStudentsDetails.map((student) => ({
+      rollNo: student.rollNo,
+      name: student.userId?.name || "N/A"
+    }));
+
+    const whatsappText = generateWhatsAppMessage(
+      institution,
+      className,
+      subject.name,
+      date,
+      sessionType,
+      teacher.name,
+      absentForMessage
+    );
+
+    // ============ 10. CREATE ATTENDANCE SESSION ============
     const attendance = await AttendanceSession.create({
       date,
       teacher: teacherId,
@@ -104,17 +228,21 @@ export const createAttendance = async (req, res) => {
       branch: branchId,
       year,
       division,
-      academicYear,  // Save academic year
+      academicYear,
       sessionType,
       batch: sessionType === "PRACTICAL" ? batch : null,
       absentStudents: absentStudentIds || [],
       totalStudents
     });
 
+    // ============ 11. RETURN RESPONSE WITH WHATSAPP MESSAGE ============
     res.status(201).json({
       success: true,
       message: "Attendance saved successfully",
-      data: attendance
+      data: {
+        ...attendance.toObject(),
+        whatsappText // Include the formatted WhatsApp message
+      }
     });
 
   } catch (error) {
@@ -129,7 +257,7 @@ export const createAttendance = async (req, res) => {
 
     res.status(500).json({ 
       success: false,
-      message: "Server error" 
+      message: "Server error"
     });
   }
 };

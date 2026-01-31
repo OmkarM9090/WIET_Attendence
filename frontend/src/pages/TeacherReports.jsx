@@ -33,6 +33,7 @@ export default function TeacherReports() {
   const sidebarItems = [
     { label: "Dashboard", path: "/teacher", icon: "🏠" },
     { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: "✓" },
+    { label: "Daily Report", path: "/teacher/daily-report", icon: "📝" },
     { label: "View Attendance", path: "/teacher/attendance-history", icon: "📋" },
     { label: "Reports", path: "/teacher/reports", icon: "📊" },
   ];

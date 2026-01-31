@@ -29,6 +29,28 @@ export const createAttendance = async (attendanceData) => {
   }
 };
 
+/**
+ * Generate Daily Attendance Report
+ * @param {object} reportData
+ * - subjectId
+ * - branchId
+ * - year
+ * - division
+ * - sessionType
+ * - batch (optional)
+ * - startTime (HH:mm)
+ * - endTime (HH:mm)
+ * - absentRollNos (array of roll numbers)
+ */
+export const createDailyAttendanceReport = async (reportData) => {
+  try {
+    const response = await axiosInstance.post("/attendance/daily-report", reportData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to generate daily report" };
+  }
+};
+
 // ============ ATTENDANCE RETRIEVAL ============
 
 /**

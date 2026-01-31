@@ -32,6 +32,18 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Batch (e.g., "A1", "B1") - optional
+    batch: {
+      type: String,
+      trim: true,
+    },
+
+    // Optional batch display name
+    batchName: {
+      type: String,
+      trim: true,
+    },
+
     // Academic Year (e.g., "2024-2025")
     academicYear: {
       type: String,
