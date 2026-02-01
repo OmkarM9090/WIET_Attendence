@@ -218,3 +218,86 @@ export const getTeachingAssignments = async (req, res) => {
 		});
 	}
 };
+
+/**
+ * GET MY TEACHING ASSIGNMENTS (For Teacher Dashboard)
+ * Fetches all active teaching assignments for logged-in teacher
+ * Used in attendance marking dropdown
+ * 
+ * Route: GET /api/teacher/my-assignments
+ * Access: Protected - Teacher only
+ */
+export const getMyTeachingAssignments = async (req, res) => {
+	try {
+		// Get teacher ID from JWT token
+		const teacherId = req.user.id;
+
+		// Get current academic year (can be dynamic or from config)
+		// For now using 2025-2026 as default
+		const currentAcademicYear = "2025-2026";
+
+		// Fetch all active teaching assignments for this teacher
+		const assignments = await TeachingAssignment.find({
+			teacherId: teacherId,
+			isActive: true,
+			academicYear: currentAcademicYear,
+		})
+			.populate("subjectId", "name code") // Get subject name and code
+			.populate("branchId", "name code") // Get branch name and code
+			.populate("batchId", "name") // Get batch name for practicals
+			.lean();
+
+		// Sort assignments by day order and time
+		const sortedAssignments = assignments.sort((a, b) => {
+			const dayA = DAY_ORDER.indexOf(a.dayOfWeek);
+			const dayB = DAY_ORDER.indexOf(b.dayOfWeek);
+			if (dayA !== dayB) {
+				return dayA - dayB;
+			}
+			const startA = toMinutes(a.startTime) ?? 0;
+			const startB = toMinutes(b.startTime) ?? 0;
+			return startA - startB;
+		});
+
+		// Format response
+		const formattedAssignments = sortedAssignments.map((assignment) => ({
+			_id: assignment._id,
+			subject: {
+				_id: assignment.subjectId?._id,
+				name: assignment.subjectId?.name || "Unknown Subject",
+				code: assignment.subjectId?.code || "N/A",
+			},
+			branch: {
+				_id: assignment.branchId?._id,
+				name: assignment.branchId?.name || "Unknown Branch",
+				code: assignment.branchId?.code || "N/A",
+			},
+			year: assignment.year,
+			division: assignment.division,
+			batch: assignment.batchId
+				? {
+						_id: assignment.batchId._id,
+						name: assignment.batchId.name,
+					}
+				: null,
+			sessionType: assignment.sessionType,
+			dayOfWeek: assignment.dayOfWeek,
+			startTime: assignment.startTime,
+			endTime: assignment.endTime,
+			academicYear: assignment.academicYear,
+		}));
+
+		res.status(200).json({
+			success: true,
+			count: formattedAssignments.length,
+			data: formattedAssignments,
+		});
+	} catch (error) {
+		console.error("GET MY TEACHING ASSIGNMENTS ERROR:", error);
+		res.status(500).json({
+			success: false,
+			message: "Failed to fetch teaching assignments",
+			error: error.message,
+		});
+	}
+};

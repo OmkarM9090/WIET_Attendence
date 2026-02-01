@@ -1183,13 +1183,98 @@ export default function TeacherManagement() {
                 </div>
                 <Table
                   columns={[
-                    { header: "Teacher", accessor: "teacherId", render: (v) => v?.name || "-" },
-                    { header: "Subject", accessor: "subjectId", render: (v) => (v ? `${v.name} (${v.code})` : "-") },
-                    { header: "Class", accessor: "branchId", render: (v, r) => `${v?.name || "N/A"} ${r.year}${r.division ? r.division : ""}` },
-                    { header: "Day", accessor: "dayOfWeek" },
-                    { header: "Time", accessor: "startTime", render: (v, r) => `${v} - ${r.endTime}` },
+                    { 
+                      header: "TEACHER", 
+                      accessor: "teacherId", 
+                      render: (v) => (
+                        <div style={{ fontWeight: "500" }}>
+                          {v?.name || <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not assigned</span>}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "SUBJECT", 
+                      accessor: "subjectId", 
+                      render: (v) => (
+                        <div>
+                          {v ? (
+                            <>
+                              <div style={{ fontWeight: "500" }}>{v.name}</div>
+                              <div style={{ fontSize: "11px", color: theme.colors.text.secondary }}>({v.code})</div>
+                            </>
+                          ) : (
+                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not assigned</span>
+                          )}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "BRANCH", 
+                      accessor: "branchId", 
+                      render: (v) => (
+                        <div>
+                          {v?.name ? (
+                            <>
+                              <div style={{ fontWeight: "500" }}>{v.name}</div>
+                              {v.code && <div style={{ fontSize: "11px", color: theme.colors.text.secondary }}>({v.code})</div>}
+                            </>
+                          ) : (
+                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>N/A</span>
+                          )}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "YEAR", 
+                      accessor: "year",
+                      render: (v) => (
+                        <div style={{ textAlign: "center", fontWeight: "600", color: theme.colors.primary }}>
+                          {v ? `Year ${v}` : "-"}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "DIV", 
+                      accessor: "division",
+                      render: (v) => (
+                        <div style={{ 
+                          textAlign: "center", 
+                          fontWeight: "700", 
+                          fontSize: "14px",
+                          color: theme.colors.primary,
+                          backgroundColor: theme.colors.primary[50],
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          display: "inline-block"
+                        }}>
+                          {v || "-"}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "DAY", 
+                      accessor: "dayOfWeek",
+                      render: (v) => (
+                        <div style={{ fontWeight: "500", textTransform: "capitalize" }}>
+                          {v ? v.charAt(0) + v.slice(1).toLowerCase() : "-"}
+                        </div>
+                      )
+                    },
+                    { 
+                      header: "TIME", 
+                      accessor: "startTime", 
+                      render: (v, r) => (
+                        <div style={{ fontFamily: "monospace", fontSize: "13px" }}>
+                          {v && r.endTime ? (
+                            `${v} - ${r.endTime}`
+                          ) : (
+                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not set</span>
+                          )}
+                        </div>
+                      )
+                    },
                     {
-                      header: "Type",
+                      header: "TYPE",
                       accessor: "sessionType",
                       render: (v) => (
                         <span
@@ -1207,20 +1292,21 @@ export default function TeacherManagement() {
                       ),
                     },
                     {
-                      header: "Actions",
+                      header: "ACTIONS",
                       accessor: "_id",
                       render: (v, row) => (
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
                           <button
                             onClick={() => handleShowDetails(row)}
+                            title="View Details"
                             style={{
-                              padding: "6px 12px",
+                              padding: "6px 10px",
                               backgroundColor: "#e0f2fe",
                               color: "#0369a1",
-                              border: "none",
-                              borderRadius: "4px",
+                              border: "1px solid #bae6fd",
+                              borderRadius: "6px",
                               cursor: "pointer",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               fontWeight: "600",
                               transition: "all 0.2s",
                             }}
@@ -1235,14 +1321,15 @@ export default function TeacherManagement() {
                           </button>
                           <button
                             onClick={() => handleEditAssignment(row)}
+                            title="Edit Assignment"
                             style={{
-                              padding: "6px 12px",
+                              padding: "6px 10px",
                               backgroundColor: "#fef3c7",
                               color: "#92400e",
-                              border: "none",
-                              borderRadius: "4px",
+                              border: "1px solid #fde68a",
+                              borderRadius: "6px",
                               cursor: "pointer",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               fontWeight: "600",
                               transition: "all 0.2s",
                             }}
@@ -1258,14 +1345,15 @@ export default function TeacherManagement() {
                           <button
                             onClick={() => handleDeleteAssignment(v)}
                             disabled={deleteAssignmentLoading === v}
+                            title="Delete Assignment"
                             style={{
-                              padding: "6px 12px",
+                              padding: "6px 10px",
                               backgroundColor: deleteAssignmentLoading === v ? "#fca5a5" : "#fee2e2",
                               color: "#991b1b",
-                              border: "none",
-                              borderRadius: "4px",
+                              border: deleteAssignmentLoading === v ? "1px solid #fca5a5" : "1px solid #fecaca",
+                              borderRadius: "6px",
                               cursor: deleteAssignmentLoading === v ? "not-allowed" : "pointer",
-                              fontSize: "12px",
+                              fontSize: "11px",
                               fontWeight: "600",
                               transition: "all 0.2s",
                             }}

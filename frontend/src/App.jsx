@@ -14,7 +14,7 @@ import TeacherManagement from "./pages/TeacherManagement";
 import StudentManagement from "./pages/StudentManagement";
 import DefaulterManagement from "./pages/DefaulterManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
-import MarkAttendance from "./pages/MarkAttendance";
+import TeacherMarkAttendance from "./pages/TeacherMarkAttendance";
 import AttendanceHistory from "./pages/AttendanceHistory";
 import TeacherReports from "./pages/TeacherReports";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -100,7 +100,7 @@ export default function App() {
             path="/teacher/mark-attendance"
             element={
               <ProtectedRoute allowedRoles={["teacher"]}>
-                <MarkAttendance />
+                <TeacherMarkAttendance />
               </ProtectedRoute>
             }
           />
