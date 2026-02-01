@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import { theme } from "../styles/theme";
 import DashboardLayout from "../components/DashboardLayout";
 import FormSelect from "../components/FormSelect";
+import FormInput from "../components/FormInput";
+import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Alert from "../components/Alert";
 import { getMyTeachingAssignments } from "../services/teacherService";
@@ -21,6 +23,10 @@ export default function TeacherMarkAttendance() {
   // State management
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [dateError, setDateError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -71,6 +77,102 @@ export default function TeacherMarkAttendance() {
     // Find selected assignment from list
     const selected = assignments.find((a) => a._id === assignmentId);
     setSelectedAssignment(selected);
+  };
+
+  /**
+   * Handle date selection change
+   * Validates that date is today or yesterday only
+   * 
+   * @param {Event} e - Change event
+   */
+  const handleDateChange = (e) => {
+    const selectedDateValue = e.target.value;
+    setSelectedDate(selectedDateValue);
+
+    // Validate date
+    const validation = validateDate(selectedDateValue);
+    if (validation.isValid) {
+      setDateError("");
+    } else {
+      setDateError(validation.error);
+    }
+  };
+
+  /**
+   * Validate if selected date is allowed (today or yesterday only)
+   * 
+   * @param {String} dateString - Date in YYYY-MM-DD format
+   * @returns {Object} - { isValid: boolean, error: string }
+   */
+  const validateDate = (dateString) => {
+    if (!dateString) {
+      return { isValid: false, error: "Please select a date" };
+    }
+
+    // Convert to Date object (midnight)
+    const selectedDate = new Date(dateString + "T00:00:00");
+    
+    // Get today at midnight
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get yesterday at midnight
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Check if date is in the future
+    if (selectedDate > today) {
+      return {
+        isValid: false,
+        error: "Cannot mark attendance for future dates. Please select today or yesterday.",
+      };
+    }
+
+    // Check if date is older than yesterday
+    if (selectedDate < yesterday) {
+      return {
+        isValid: false,
+        error: "Cannot mark attendance for dates older than yesterday. Please select today or yesterday.",
+      };
+    }
+
+    // Date is valid (today or yesterday)
+    return { isValid: true, error: "" };
+  };
+
+  /**
+   * Get min and max date for date picker
+   * Min: yesterday, Max: today
+   */
+  const getDatePickerLimits = () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    return {
+      min: yesterday.toISOString().split("T")[0],
+      max: today.toISOString().split("T")[0],
+    };
+  };
+
+  /**
+   * Handle Continue button click
+   * Proceeds to next step (attendance marking)
+   */
+  const handleContinue = () => {
+    // TODO: Step 4 - Implement attendance marking form
+    console.log("Continue to attendance marking with:", {
+      assignment: selectedAssignment,
+      date: selectedDate,
+    });
+  };
+
+  /**
+   * Check if Continue button should be enabled
+   * Requires: valid session selected + valid date
+   */
+  const isContinueEnabled = () => {
+    return selectedAssignment && selectedDate && !dateError;
   };
 
   /**
@@ -371,7 +473,7 @@ export default function TeacherMarkAttendance() {
             </div>
           ) : (
             <>
-              {/* Dropdown Section */}
+              {/* Step 1: Dropdown Section */}
               <div
                 style={{
                   backgroundColor: "white",
@@ -379,8 +481,44 @@ export default function TeacherMarkAttendance() {
                   borderRadius: "12px",
                   padding: "24px",
                   boxShadow: theme.shadows.sm,
+                  marginBottom: "20px",
                 }}
               >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <span
+                    style={{
+                      backgroundColor: theme.colors.primary,
+                      color: "white",
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    1
+                  </span>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: theme.colors.text.primary,
+                    }}
+                  >
+                    Select Teaching Session
+                  </h3>
+                </div>
+
                 <FormSelect
                   label="Assigned Sessions"
                   value={selectedAssignment?._id || ""}
@@ -410,8 +548,138 @@ export default function TeacherMarkAttendance() {
                 )}
               </div>
 
+              {/* Step 2: Date Selection */}
+              <div
+                style={{
+                  backgroundColor: "white",
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: "12px",
+                  padding: "24px",
+                  boxShadow: theme.shadows.sm,
+                  marginBottom: "20px",
+                  opacity: selectedAssignment ? 1 : 0.5,
+                  pointerEvents: selectedAssignment ? "auto" : "none",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <span
+                    style={{
+                      backgroundColor: selectedAssignment
+                        ? theme.colors.primary
+                        : theme.colors.neutral[300],
+                      color: "white",
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    2
+                  </span>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: theme.colors.text.primary,
+                    }}
+                  >
+                    Select Attendance Date
+                  </h3>
+                </div>
+
+                <FormInput
+                  label="Date"
+                  type="date"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  min={getDatePickerLimits().min}
+                  max={getDatePickerLimits().max}
+                  required
+                  disabled={!selectedAssignment}
+                />
+
+                {/* Helper text */}
+                <p
+                  style={{
+                    marginTop: "8px",
+                    fontSize: "13px",
+                    color: theme.colors.text.secondary,
+                    fontStyle: "italic",
+                  }}
+                >
+                  📅 You can mark attendance only for today or yesterday
+                </p>
+
+                {/* Date validation error */}
+                {dateError && (
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      padding: "12px 16px",
+                      backgroundColor: theme.colors.error + "10",
+                      border: `1px solid ${theme.colors.error}`,
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "start",
+                      gap: "8px",
+                    }}
+                  >
+                    <span style={{ fontSize: "16px" }}>⚠️</span>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: theme.colors.error,
+                        margin: 0,
+                        fontWeight: "500",
+                      }}
+                    >
+                      {dateError}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Session Details Card */}
               {renderSessionDetails()}
+
+              {/* Continue Button */}
+              {selectedAssignment && (
+                <div
+                  style={{
+                    marginTop: "24px",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                  }}
+                >
+                  <Button
+                    onClick={handleContinue}
+                    disabled={!isContinueEnabled()}
+                    style={{
+                      padding: "12px 32px",
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      backgroundColor: isContinueEnabled()
+                        ? theme.colors.primary
+                        : theme.colors.neutral[300],
+                      cursor: isContinueEnabled() ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    Continue to Mark Attendance →
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </>
