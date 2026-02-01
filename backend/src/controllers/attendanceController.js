@@ -5,6 +5,8 @@ import Subject from "../models/Subject.js";
 import Branch from "../models/Branch.js";
 import User from "../models/User.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
+import { validateAttendanceDate } from "../utils/dateValidator.js";
+import { generateDailyReport } from "../services/reportGenerator.js";
 
 /**
  * FORMAT WHATSAPP ATTENDANCE MESSAGE
@@ -593,6 +595,423 @@ export const getStudentsForSession = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while fetching students"
+    });
+  }
+};
+
+/**
+ * MARK ATTENDANCE + GENERATE REPORT
+ * Unified API for saving attendance and generating WhatsApp report text.
+ * 
+ * @route POST /api/attendance/mark-and-generate
+ * @access Private (Teacher only)
+ */
+export const markAndGenerateAttendance = async (req, res) => {
+  try {
+    const { teachingAssignmentId, date, absentRollNumbers } = req.body;
+    const teacherId = req.user.id;
+
+    // 1. Validate required fields
+    if (!teachingAssignmentId || !date || !Array.isArray(absentRollNumbers)) {
+      return res.status(400).json({
+        success: false,
+        message: "teachingAssignmentId, date and absentRollNumbers are required"
+      });
+    }
+
+    // 2. Date validation (today or yesterday only)
+    validateAttendanceDate(date);
+
+    // 3. Fetch TeachingAssignment
+    if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid teachingAssignmentId format"
+      });
+    }
+
+    const assignment = await TeachingAssignment.findById(teachingAssignmentId)
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .populate("batchId", "name")
+      .lean();
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Teaching assignment not found"
+      });
+    }
+
+    // Validate teacher ownership
+    if (assignment.teacherId.toString() !== teacherId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to mark attendance for this session"
+      });
+    }
+
+    // Academic year must be current
+    const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || "2025-2026";
+    if (assignment.academicYear !== currentAcademicYear) {
+      return res.status(400).json({
+        success: false,
+        message: "Attendance can only be marked for the current academic year"
+      });
+    }
+
+    // 4. Load students based on session type
+    const studentQuery = {
+      status: "active",
+      academicYear: assignment.academicYear,
+      branch: assignment.branchId,
+      year: assignment.year,
+      division: assignment.division
+    };
+
+    if (assignment.sessionType === "PRACTICAL") {
+      if (!assignment.batchId?.name) {
+        return res.status(400).json({
+          success: false,
+          message: "Batch is required for practical sessions"
+        });
+      }
+      studentQuery.$or = [
+        { batch: assignment.batchId.name },
+        { batchName: assignment.batchId.name }
+      ];
+    }
+
+    const students = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .select("rollNo userId")
+      .sort({ rollNo: 1 })
+      .lean();
+
+    if (!students.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No students found for this session"
+      });
+    }
+
+    // 5. Convert roll numbers to student IDs
+    const rollSet = new Set(absentRollNumbers.map((r) => Number(r)));
+    const rollToStudent = new Map(students.map((s) => [s.rollNo, s]));
+
+    const missingRolls = [...rollSet].filter((roll) => !rollToStudent.has(roll));
+    if (missingRolls.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid roll numbers: ${missingRolls.join(", ")}`
+      });
+    }
+
+    const absentStudentIds = [...rollSet].map((roll) => rollToStudent.get(roll)._id);
+
+    // 6. Check if attendance already exists
+    // Query must match the unique index fields: date + subject + branch + year + division + academicYear + semester + sessionType + batch
+    const sessionDate = new Date(date);
+    sessionDate.setHours(0, 0, 0, 0);
+    const nextDate = new Date(sessionDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    // Calculate semester for query
+    const month = new Date(date).getMonth();
+    const semesterBase = (assignment.year - 1) * 2;
+    const semester = month >= 6 ? semesterBase + 1 : semesterBase + 2;
+
+    // Build query matching the unique index
+    const duplicateQuery = {
+      date: { $gte: sessionDate, $lt: nextDate },
+      subject: assignment.subjectId,
+      branch: assignment.branchId,
+      year: assignment.year,
+      division: assignment.division,
+      academicYear: assignment.academicYear,
+      semester: semester,
+      sessionType: assignment.sessionType,
+      isCancelled: false // Index has partialFilterExpression
+    };
+
+    // Add batch for practical sessions
+    if (assignment.sessionType === "PRACTICAL" && assignment.batchId?.name) {
+      duplicateQuery.batch = assignment.batchId.name;
+    }
+
+    const existing = await AttendanceSession.findOne(duplicateQuery);
+
+    // If attendance already exists, return response to allow editing
+    if (existing) {
+      return res.json({
+        success: true,
+        alreadyExists: true,
+        attendanceId: existing._id,
+        message: "Attendance already marked for this session and date"
+      });
+    }
+
+    // 7. Save AttendanceSession
+    const attendance = await AttendanceSession.create({
+      teachingAssignmentId,
+      date: sessionDate,
+      academicYear: assignment.academicYear,
+      semester,
+      sessionType: assignment.sessionType,
+      batch: assignment.sessionType === "PRACTICAL" ? assignment.batchId?.name : null,
+      assignedTeacher: assignment.teacherId,
+      teacher: teacherId,
+      isSubstitute: false,
+      substituteReason: null,
+      isExtraLecture: false,
+      extraLectureReason: null,
+      isCancelled: false,
+      cancelReason: null,
+      subject: assignment.subjectId,
+      branch: assignment.branchId,
+      year: assignment.year,
+      division: assignment.division,
+      absentStudents: absentStudentIds,
+      totalStudents: students.length,
+      createdBy: teacherId
+    });
+
+    // 8. Generate WhatsApp report text
+    const teacher = await User.findById(teacherId).select("name email").lean();
+    const subject = await Subject.findById(assignment.subjectId).select("name code").lean();
+    const absentStudents = [...rollSet].map((roll) => ({
+      rollNo: roll,
+      name: rollToStudent.get(roll)?.userId?.name || ""
+    }));
+
+    const reportText = generateDailyReport(
+      {
+        ...attendance.toObject(),
+        startTime: assignment.startTime,
+        endTime: assignment.endTime
+      },
+      absentStudents,
+      teacher,
+      subject
+    );
+
+    // 9. Return response
+    res.json({
+      success: true,
+      alreadyExists: false,
+      attendance,
+      reportText
+    });
+  } catch (error) {
+    console.error("MARK AND GENERATE ERROR:", error);
+    
+    // Handle MongoDB duplicate key error (fallback if findOne missed it)
+    if (error.code === 11000) {
+      // Try to find the existing attendance to return its ID
+      try {
+        const sessionDate = new Date(req.body.date);
+        sessionDate.setHours(0, 0, 0, 0);
+        const nextDate = new Date(sessionDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        const existing = await AttendanceSession.findOne({
+          teachingAssignmentId: req.body.teachingAssignmentId,
+          date: { $gte: sessionDate, $lt: nextDate }
+        });
+        
+        return res.status(409).json({
+          success: false,
+          message: "Attendance already marked for this session and date",
+          alreadyExists: true,
+          attendanceId: existing?._id
+        });
+      } catch (findError) {
+        return res.status(409).json({
+          success: false,
+          message: "Attendance already marked for this session and date",
+          alreadyExists: true
+        });
+      }
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error"
+    });
+  }
+};
+
+/**
+ * UPDATE ATTENDANCE
+ * PUT /api/attendance/update/:attendanceId
+ * 
+ * Update existing attendance record with new absent students list
+ * Regenerates WhatsApp report and updates Excel file
+ * 
+ * Required: Only assigned teacher can edit
+ * Date must still be today or yesterday
+ * 
+ * Request body:
+ * {
+ *   absentRollNumbers: [9, 12, 15]
+ * }
+ * 
+ * Response:
+ * {
+ *   success: true,
+ *   attendance: {...updated attendance session},
+ *   reportText: "..."
+ * }
+ */
+export const updateAttendance = async (req, res) => {
+  try {
+    const { attendanceId } = req.params;
+    const { absentRollNumbers } = req.body;
+    const teacherId = req.user.id;
+
+    // 1. Validate required fields
+    if (!attendanceId || !Array.isArray(absentRollNumbers)) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceId and absentRollNumbers array are required"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(attendanceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendanceId format"
+      });
+    }
+
+    // 2. Fetch existing attendance session
+    const attendance = await AttendanceSession.findById(attendanceId).lean();
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance session not found"
+      });
+    }
+
+    // 3. Verify teacher ownership and authorization
+    if (attendance.teacher.toString() !== teacherId && attendance.assignedTeacher.toString() !== teacherId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to edit this attendance"
+      });
+    }
+
+    // 4. Date validation (must be today or yesterday)
+    const attendanceDate = new Date(attendance.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (attendanceDate < yesterday || attendanceDate > today) {
+      return res.status(400).json({
+        success: false,
+        message: "Can only edit attendance for today or yesterday"
+      });
+    }
+
+    // 5. Fetch teaching assignment details
+    const assignment = await TeachingAssignment.findById(attendance.teachingAssignmentId)
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .populate("batchId", "name")
+      .lean();
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Teaching assignment not found"
+      });
+    }
+
+    // 6. Load students and validate roll numbers
+    const studentQuery = {
+      status: "active",
+      academicYear: attendance.academicYear,
+      branch: attendance.branch,
+      year: attendance.year,
+      division: attendance.division
+    };
+
+    if (attendance.sessionType === "PRACTICAL") {
+      if (attendance.batch) {
+        studentQuery.$or = [
+          { batch: attendance.batch },
+          { batchName: attendance.batch }
+        ];
+      }
+    }
+
+    const students = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .select("rollNo userId")
+      .sort({ rollNo: 1 })
+      .lean();
+
+    // 7. Convert roll numbers to student IDs
+    const rollSet = new Set(absentRollNumbers.map((r) => Number(r)));
+    const rollToStudent = new Map(students.map((s) => [s.rollNo, s]));
+
+    // Validate roll numbers exist
+    const missingRolls = [...rollSet].filter((roll) => !rollToStudent.has(roll));
+    if (missingRolls.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid roll numbers: ${missingRolls.join(", ")}`
+      });
+    }
+
+    const absentStudentIds = [...rollSet].map((roll) => rollToStudent.get(roll)._id);
+
+    // 8. Update attendance session
+    const updatedAttendance = await AttendanceSession.findByIdAndUpdate(
+      attendanceId,
+      {
+        absentStudents: absentStudentIds,
+        totalStudents: students.length,
+        updatedAt: new Date()
+      },
+      { new: true }
+    ).lean();
+
+    // 9. Generate updated WhatsApp report text
+    const teacher = await User.findById(teacherId).select("name email").lean();
+    const subject = await Subject.findById(assignment.subjectId).select("name code").lean();
+    const absentStudents = [...rollSet].map((roll) => ({
+      rollNo: roll,
+      name: rollToStudent.get(roll)?.userId?.name || ""
+    }));
+
+    const reportText = generateDailyReport(
+      {
+        ...updatedAttendance,
+        startTime: assignment.startTime,
+        endTime: assignment.endTime
+      },
+      absentStudents,
+      teacher,
+      subject
+    );
+
+    // 10. Return updated attendance and report
+    res.json({
+      success: true,
+      attendance: updatedAttendance,
+      reportText,
+      message: "Attendance updated successfully"
+    });
+
+  } catch (error) {
+    console.error("UPDATE ATTENDANCE ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error"
     });
   }
 };

@@ -94,6 +94,12 @@ const attendanceSessionSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Link to timetable assignment (for duplicate prevention and reporting)
+    teachingAssignmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TeachingAssignment",
+    },
+
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
