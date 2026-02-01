@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { theme } from "../styles/theme";
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
@@ -7,13 +7,14 @@ import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
+import axiosInstance from "../utils/axios";
+import LoadingSpinner from "../components/LoadingSpinner";
 import {
   getBranches,
   getSubjects,
   createTeacher,
   updateTeacher,
   deleteTeacher,
-  assignTeacher,
   getTeachers,
   getTeachingAssignments,
   updateTeachingAssignment,
@@ -41,7 +42,6 @@ export default function TeacherManagement() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createSuccess, setCreateSuccess] = useState("");
   const [createError, setCreateError] = useState("");
-  const [lastCreatedTeacherId, setLastCreatedTeacherId] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Edit Teacher state
@@ -49,22 +49,37 @@ export default function TeacherManagement() {
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Edit Assignment state
-  const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
+  // Timetable Assignment state
+  const [batches, setBatches] = useState([]);
+  const [activeTab, setActiveTab] = useState("view"); // "timetable" or "view"
+  const [ttFormData, setTtFormData] = useState({
+    teacherId: "",
+    branchId: "",
+    semester: "",
+    subjectId: "",
+    year: "",
+    division: "",
+    sessionType: "LECTURE",
+    batchId: "",
+    dayOfWeek: "MONDAY",
+    startTime: "",
+    endTime: "",
+    academicYear: "",
+  });
+  const [ttValidationErrors, setTtValidationErrors] = useState({});
+  const [ttSubmitting, setTtSubmitting] = useState(false);
+  const [ttSuccess, setTtSuccess] = useState("");
+  const [ttError, setTtError] = useState("");
+  const [ttDuplicateWarning, setTtDuplicateWarning] = useState("");
+  
+  // Edit/Delete Assignment state
   const [editingAssignment, setEditingAssignment] = useState(null);
-  const [savingAssignmentEdit, setSavingAssignmentEdit] = useState(false);
-  const [editAssignmentSubjects, setEditAssignmentSubjects] = useState([]);
-
-  // Assign Teacher state
-  const [aTeacherId, setATeacherId] = useState("");
-  const [aBranch, setABranch] = useState("");
-  const [aSemester, setASemester] = useState("");
-  const [aSubject, setASubject] = useState("");
-  const [aYear, setAYear] = useState("");
-  const [aDivision, setADivision] = useState("");
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [assignSuccess, setAssignSuccess] = useState("");
-  const [assignError, setAssignError] = useState("");
+  const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
+  const [editAssignmentData, setEditAssignmentData] = useState(null);
+  const [editAssignmentLoading, setEditAssignmentLoading] = useState(false);
+  const [deleteAssignmentLoading, setDeleteAssignmentLoading] = useState(null);
+  const [detailsModalData, setDetailsModalData] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const sidebarItems = [
     { label: "Dashboard", path: "/admin", icon: "🏠" },
@@ -80,9 +95,6 @@ export default function TeacherManagement() {
       setLoadingTeachers(true);
       const data = await getTeachers(searchTerm || null);
       setTeachers(data);
-      if (data.length && !aTeacherId) {
-        setATeacherId(data[0]._id);
-      }
     } catch (err) {
       setTeachers([]);
     } finally {
@@ -94,12 +106,264 @@ export default function TeacherManagement() {
     try {
       setLoadingAssignments(true);
       const data = await getTeachingAssignments();
-      setAssignments(data);
+      console.log("Fetched assignments - Type:", typeof data, "Is Array:", Array.isArray(data), "Data:", data);
+      
+      // Ensure we have an array
+      const assignmentsArray = Array.isArray(data) ? data : (data?.data ? data.data : []);
+      setAssignments(assignmentsArray);
+      
+      if (assignmentsArray.length > 0) {
+        console.log("Sample assignment:", assignmentsArray[0]);
+      }
     } catch (err) {
+      console.error("Error fetching assignments:", err);
       setAssignments([]);
+      setTtError(`Failed to load assignments: ${err.message || err}`);
     } finally {
       setLoadingAssignments(false);
     }
+  };
+
+  // Timetable Assignment Functions
+  const DAY_OPTIONS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const SESSION_TYPES = ["LECTURE", "PRACTICAL"];
+  const YEAR_OPTIONS = [1, 2, 3, 4];
+  const DIVISION_OPTIONS = ["A", "B", "C"];
+  
+  const timeToMinutes = (timeStr) => {
+    if (!timeStr) return null;
+    const [h, m] = String(timeStr).split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    return h * 60 + m;
+  };
+
+  const handleTtChange = (e) => {
+    const { name, value } = e.target;
+    setTtFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      
+      // Auto-set year based on semester (1-2=FE, 3-4=SE, 5-6=TE, 7-8=BE)
+      if (name === "semester") {
+        const sem = Number(value);
+        if (sem >= 1 && sem <= 2) next.year = "1";
+        else if (sem >= 3 && sem <= 4) next.year = "2";
+        else if (sem >= 5 && sem <= 6) next.year = "3";
+        else if (sem >= 7 && sem <= 8) next.year = "4";
+      }
+      
+      // Clear batch if switching to LECTURE
+      if (name === "sessionType" && value === "LECTURE") {
+        next.batchId = "";
+      }
+      return next;
+    });
+    setTtValidationErrors((prev) => ({ ...prev, [name]: "" }));
+    setTtDuplicateWarning(""); // Clear duplicate warning on field change
+  };
+
+  const validateTtForm = () => {
+    const errors = {};
+    if (!ttFormData.teacherId) errors.teacherId = "Teacher is required";
+    if (!ttFormData.branchId) errors.branchId = "Branch is required";
+    if (!ttFormData.semester) errors.semester = "Semester is required";
+    if (!ttFormData.subjectId) errors.subjectId = "Subject is required";
+    if (!ttFormData.year) errors.year = "Year is required";
+    if (!ttFormData.division) errors.division = "Division is required";
+    if (!ttFormData.dayOfWeek) errors.dayOfWeek = "Day of week is required";
+    if (!ttFormData.startTime) errors.startTime = "Start time is required";
+    if (!ttFormData.endTime) errors.endTime = "End time is required";
+    if (!ttFormData.academicYear) errors.academicYear = "Academic year is required";
+    if (ttFormData.sessionType === "PRACTICAL" && !ttFormData.batchId) {
+      errors.batchId = "Batch is required for PRACTICAL sessions";
+    }
+    if (ttFormData.startTime && ttFormData.endTime) {
+      const start = timeToMinutes(ttFormData.startTime);
+      const end = timeToMinutes(ttFormData.endTime);
+      if (start !== null && end !== null && end <= start) {
+        errors.endTime = "End time must be after start time";
+      }
+    }
+    if (ttFormData.academicYear) {
+      const yearRegex = /^\d{4}-\d{4}$/;
+      if (!yearRegex.test(ttFormData.academicYear)) {
+        errors.academicYear = "Format must be YYYY-YYYY (e.g., 2025-2026)";
+      }
+    }
+    setTtValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const checkForDuplicateAssignment = () => {
+    if (!Array.isArray(assignments) || assignments.length === 0) return false;
+
+    const isDuplicate = assignments.some((a) => {
+      // For LECTURE: batchId should be null/undefined
+      // For PRACTICAL: batchId should match
+      const formBatchId = ttFormData.sessionType === "PRACTICAL" ? ttFormData.batchId : null;
+      const assignmentBatchId = a.batchId ? (typeof a.batchId === "string" ? a.batchId : a.batchId._id) : null;
+      
+      // Match the unique index: teacherId, subjectId, branchId, year, division, batchId, dayOfWeek, startTime, academicYear
+      return (
+        (a.teacherId?._id || a.teacherId) === ttFormData.teacherId &&
+        (a.subjectId?._id || a.subjectId) === ttFormData.subjectId &&
+        (a.branchId?._id || a.branchId) === ttFormData.branchId &&
+        String(a.year) === String(ttFormData.year) &&
+        a.division === ttFormData.division &&
+        String(assignmentBatchId) === String(formBatchId) &&
+        a.dayOfWeek === ttFormData.dayOfWeek &&
+        a.startTime === ttFormData.startTime &&
+        a.academicYear === ttFormData.academicYear
+      );
+    });
+
+    return isDuplicate;
+  };
+
+  const handleTtSubmit = async (e) => {
+    e.preventDefault();
+    setTtError("");
+    setTtSuccess("");
+    setTtDuplicateWarning("");
+    
+    if (!validateTtForm()) {
+      setTtError("Please fix the validation errors");
+      return;
+    }
+
+    // Check for duplicate before submission
+    const hasDuplicate = checkForDuplicateAssignment();
+    console.log("Checking for duplicate:", {
+      formData: ttFormData,
+      assignmentsCount: Array.isArray(assignments) ? assignments.length : 0,
+      hasDuplicate,
+      assignments: Array.isArray(assignments) ? assignments.map(a => ({
+        teacherId: a.teacherId?._id || a.teacherId,
+        subjectId: a.subjectId?._id || a.subjectId,
+        branchId: a.branchId?._id || a.branchId,
+        year: a.year,
+        division: a.division,
+        dayOfWeek: a.dayOfWeek,
+        startTime: a.startTime,
+        endTime: a.endTime,
+        sessionType: a.sessionType,
+        academicYear: a.academicYear,
+        batchId: a.batchId?._id || a.batchId
+      })) : []
+    });
+    
+    if (hasDuplicate) {
+      setTtDuplicateWarning("⚠️ This assignment already exists! Check the View All tab or modify the details.");
+      return;
+    }
+
+    setTtSubmitting(true);
+    try {
+      await axiosInstance.post("/admin/assign-teacher", {
+        teacherId: ttFormData.teacherId,
+        subjectId: ttFormData.subjectId,
+        branchId: ttFormData.branchId,
+        year: Number(ttFormData.year),
+        division: ttFormData.division,
+        batchId: ttFormData.sessionType === "PRACTICAL" ? ttFormData.batchId : undefined,
+        dayOfWeek: ttFormData.dayOfWeek,
+        startTime: ttFormData.startTime,
+        endTime: ttFormData.endTime,
+        sessionType: ttFormData.sessionType,
+        academicYear: ttFormData.academicYear,
+      });
+      // Reset form
+      setTtFormData({
+        teacherId: "",
+        branchId: "",
+        semester: "",
+        subjectId: "",
+        year: "",
+        division: "",
+        sessionType: "LECTURE",
+        batchId: "",
+        dayOfWeek: "MONDAY",
+        startTime: "",
+        endTime: "",
+        academicYear: "",
+      });
+      // Refresh assignments
+      await fetchAssignments();
+      // Show success and switch tab
+      setTtSuccess("✅ Timetable assignment created successfully!");
+      setActiveTab("view");
+      // Clear success after 3 seconds
+      setTimeout(() => setTtSuccess(""), 3000);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to create assignment";
+      setTtError(`❌ ${errorMsg}`);
+      console.error("Assignment creation error:", err);
+    } finally {
+      setTtSubmitting(false);
+    }
+  };
+
+  const handleEditAssignment = (assignment) => {
+    setEditingAssignment(assignment);
+    setEditAssignmentData({
+      teacherId: assignment.teacherId?._id || assignment.teacherId,
+      subjectId: assignment.subjectId?._id || assignment.subjectId,
+      branchId: assignment.branchId?._id || assignment.branchId,
+      year: assignment.year,
+      division: assignment.division,
+      batchId: assignment.batchId?._id || assignment.batchId || "",
+      dayOfWeek: assignment.dayOfWeek,
+      startTime: assignment.startTime,
+      endTime: assignment.endTime,
+      sessionType: assignment.sessionType,
+      academicYear: assignment.academicYear,
+    });
+    setIsEditAssignmentOpen(true);
+  };
+
+  const handleUpdateAssignment = async () => {
+    if (!editingAssignment || !editAssignmentData) return;
+    
+    setEditAssignmentLoading(true);
+    try {
+      await updateTeachingAssignment(editingAssignment._id, {
+        ...editAssignmentData,
+        batchId: editAssignmentData.sessionType === "PRACTICAL" ? editAssignmentData.batchId : undefined,
+      });
+      
+      await fetchAssignments();
+      setTtSuccess("✅ Assignment updated successfully!");
+      setIsEditAssignmentOpen(false);
+      setTimeout(() => setTtSuccess(""), 3000);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to update assignment";
+      setTtError(`❌ ${errorMsg}`);
+      console.error("Update error:", err);
+    } finally {
+      setEditAssignmentLoading(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (assignmentId) => {
+    if (!window.confirm("Are you sure you want to delete this assignment?")) return;
+    
+    setDeleteAssignmentLoading(assignmentId);
+    try {
+      await deleteTeachingAssignment(assignmentId);
+      await fetchAssignments();
+      setTtSuccess("✅ Assignment deleted successfully!");
+      setTimeout(() => setTtSuccess(""), 3000);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || "Failed to delete assignment";
+      setTtError(`❌ ${errorMsg}`);
+      console.error("Delete error:", err);
+    } finally {
+      setDeleteAssignmentLoading(null);
+    }
+  };
+
+  const handleShowDetails = (assignment) => {
+    setDetailsModalData(assignment);
+    setIsDetailsOpen(true);
   };
 
   useEffect(() => {
@@ -116,46 +380,23 @@ export default function TeacherManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch subjects when branch or semester changes in timetable form
   useEffect(() => {
-    // Refetch when search changes
-    fetchTeachers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
-
-  // Fetch subjects when branch or semester changes
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      if (!aBranch || !aSemester) {
+    const fetchTtSubjects = async () => {
+      if (!ttFormData.branchId || !ttFormData.semester) {
         setSubjects([]);
-        setASubject("");
+        setTtFormData((prev) => ({ ...prev, subjectId: "" }));
         return;
       }
       try {
-        const data = await getSubjects(aBranch, aSemester);
+        const data = await getSubjects(ttFormData.branchId, ttFormData.semester);
         setSubjects(data);
       } catch (err) {
         setSubjects([]);
       }
     };
-    fetchSubjects();
-  }, [aBranch, aSemester]);
-
-  // Fetch subjects for editing assignment
-  useEffect(() => {
-    const fetchEditSubjects = async () => {
-      if (!editingAssignment?.branch || !editingAssignment?.semester) {
-        setEditAssignmentSubjects([]);
-        return;
-      }
-      try {
-        const data = await getSubjects(editingAssignment.branch, editingAssignment.semester);
-        setEditAssignmentSubjects(data);
-      } catch (err) {
-        setEditAssignmentSubjects([]);
-      }
-    };
-    fetchEditSubjects();
-  }, [editingAssignment?.branch, editingAssignment?.semester]);
+    fetchTtSubjects();
+  }, [ttFormData.branchId, ttFormData.semester]);
 
   const handleCreateTeacher = async (e) => {
     e.preventDefault();
@@ -174,7 +415,6 @@ export default function TeacherManagement() {
 
       const res = await createTeacher(payload);
       setCreateSuccess(res.message || "Teacher created successfully");
-      setLastCreatedTeacherId(res.teacher?._id || "");
 
       await fetchTeachers();
 
@@ -192,44 +432,6 @@ export default function TeacherManagement() {
     }
   };
 
-  const handleAssignTeacher = async (e) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!aTeacherId || !aBranch || !aSemester || !aSubject || !aYear || !aDivision) {
-      setAssignError("All fields are required");
-      return;
-    }
-    
-    try {
-      setAssignLoading(true);
-      setAssignError("");
-      setAssignSuccess("");
-
-      const payload = {
-        teacher: aTeacherId,
-        subject: aSubject,
-        branch: aBranch,
-        year: Number(aYear),
-        division: aDivision,
-      };
-
-      const res = await assignTeacher(payload);
-      setAssignSuccess(res.message || "Teacher assigned successfully");
-
-      await fetchAssignments();
-
-      // reset minimal
-      setASubject("");
-      setAYear("");
-      setADivision("");
-    } catch (err) {
-      setAssignError(err.message || "Failed to assign teacher");
-    } finally {
-      setAssignLoading(false);
-    }
-  };
-
   const openEditModal = (teacher) => {
     setEditingTeacher({
       id: teacher._id,
@@ -239,71 +441,6 @@ export default function TeacherManagement() {
       designation: teacher.designation || "",
     });
     setIsEditOpen(true);
-  };
-
-  const openEditAssignmentModal = async (assignment) => {
-    setEditingAssignment({
-      id: assignment._id,
-      teacher: assignment.teacher?._id || "",
-      branch: assignment.branch?._id || "",
-      semester: Math.ceil((assignment.year * 2) - 1),
-      subject: assignment.subject?._id || "",
-      year: assignment.year,
-      division: assignment.division,
-    });
-    setIsEditAssignmentOpen(true);
-    
-    if (assignment.branch?._id) {
-      const semester = Math.ceil((assignment.year * 2) - 1);
-      try {
-        const data = await getSubjects(assignment.branch._id, semester);
-        setEditAssignmentSubjects(data);
-      } catch (err) {
-        setEditAssignmentSubjects([]);
-      }
-    }
-  };
-
-  const handleEditAssignmentSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!editingAssignment) return;
-    try {
-      setSavingAssignmentEdit(true);
-      setAssignError("");
-      setAssignSuccess("");
-
-      const payload = {
-        teacher: editingAssignment.teacher,
-        subject: editingAssignment.subject,
-        branch: editingAssignment.branch,
-        year: Number(editingAssignment.year),
-        division: editingAssignment.division,
-      };
-
-      await updateTeachingAssignment(editingAssignment.id, payload);
-      setAssignSuccess("Assignment updated successfully");
-      setIsEditAssignmentOpen(false);
-      setEditingAssignment(null);
-      await fetchAssignments();
-    } catch (err) {
-      setAssignError(err.message || "Failed to update assignment");
-    } finally {
-      setSavingAssignmentEdit(false);
-    }
-  };
-
-  const handleDeleteAssignment = async (assignment) => {
-    const ok = window.confirm(`Delete assignment for ${assignment.teacher?.userId?.name || "this teacher"}? This cannot be undone.`);
-    if (!ok) return;
-    try {
-      setAssignError("");
-      setAssignSuccess("");
-      await deleteTeachingAssignment(assignment._id);
-      setAssignSuccess("Assignment deleted successfully");
-      await fetchAssignments();
-    } catch (err) {
-      setAssignError(err.message || "Failed to delete assignment");
-    }
   };
 
   const handleEditSubmit = async (e) => {
@@ -350,26 +487,36 @@ export default function TeacherManagement() {
   return (
     <DashboardLayout
       title="Teachers Management"
-      subtitle="Create teachers and assign them to classes"
+      subtitle="Create and manage teachers"
       sidebarItems={sidebarItems}
     >
-      {/* Alerts */}
-      <div className="mb-4 space-y-2">
-        {createError && (
-          <Alert message={createError} type="error" onClose={() => setCreateError("")} />
-        )}
-        {createSuccess && (
-          <Alert message={createSuccess} type="success" onClose={() => setCreateSuccess("")} />
-        )}
-        {assignError && (
-          <Alert message={assignError} type="error" onClose={() => setAssignError("")} />
-        )}
-        {assignSuccess && (
-          <Alert message={assignSuccess} type="success" onClose={() => setAssignSuccess("")} />
-        )}
-      </div>
+      {/* Alerts Container */}
+      {(createError || createSuccess || ttError || ttSuccess) && (
+        <div className="mb-6 space-y-2">
+          {(createError || ttError) && (
+            <Alert 
+              message={createError || ttError} 
+              type="error" 
+              onClose={() => {
+                setCreateError("");
+                setTtError("");
+              }} 
+            />
+          )}
+          {(createSuccess || ttSuccess) && (
+            <Alert 
+              message={createSuccess || ttSuccess} 
+              type="success" 
+              onClose={() => {
+                setCreateSuccess("");
+                setTtSuccess("");
+              }} 
+            />
+          )}
+        </div>
+      )}
 
-      {/* Top action bar */}
+      {/* Header Section */}
       <div
         className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border p-6 md:flex-row md:items-center"
         style={{
@@ -379,11 +526,11 @@ export default function TeacherManagement() {
         }}
       >
         <div>
-          <h2 className="text-lg font-bold" style={{ color: theme.colors.primary[600] }}>
-            👨‍🏫 Manage Teachers
+          <h2 className="text-xl font-bold" style={{ color: theme.colors.primary[600] }}>
+            👨‍🏫 Teachers
           </h2>
           <p className="mt-1 text-sm" style={{ color: theme.colors.text.secondary }}>
-            Create, search, and assign teachers to classes
+            Manage teacher profiles and timetable assignments
           </p>
         </div>
 
@@ -392,7 +539,7 @@ export default function TeacherManagement() {
             <FormInput
               label=""
               name="search"
-              placeholder="🔍 Search teachers..."
+              placeholder="🔍 Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -401,181 +548,16 @@ export default function TeacherManagement() {
         </div>
       </div>
 
-      {/* Main content area */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Assign Teacher Card */}
-        <section
-          className="rounded-xl border p-8"
-          style={{
-            borderColor: theme.colors.border,
-            backgroundColor: theme.colors.background,
-            boxShadow: theme.shadows.md,
-          }}
-        >
-          <div className="mb-8 flex items-center gap-3">
-            <span className="text-3xl">📋</span>
-            <div>
-              <h3 className="text-xl font-bold" style={{ color: theme.colors.text.primary }}>
-                Assign to Class
-              </h3>
-              <p className="text-xs" style={{ color: theme.colors.text.secondary }}>
-                Link teachers to subjects and classes
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleAssignTeacher} className="space-y-6">
-            {/* Teacher Selection */}
-            <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.primary[50] }}>
-              <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                <span>👨‍🏫</span> Select Teacher
-              </label>
-              <FormSelect
-                label=""
-                name="aTeacherId"
-                value={aTeacherId}
-                onChange={(e) => setATeacherId(e.target.value)}
-                options={[
-                  { label: loadingTeachers ? "Loading..." : "Choose a teacher", value: "" },
-                  ...teachers.map((t) => ({
-                    label: `${t.userId?.name || "Unnamed"} • ${t.userId?.email || "no email"}`,
-                    value: t._id,
-                  })),
-                ]}
-                required
-              />
-            </div>
-
-            {/* Branch & Semester Row */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.neutral[50] }}>
-                <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                  <span>🌿</span> Branch
-                </label>
-                <FormSelect
-                  label=""
-                  name="aBranch"
-                  value={aBranch}
-                  onChange={(e) => setABranch(e.target.value)}
-                  options={[{ label: "Select Branch", value: "" }, ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id }))]}
-                  required
-                />
-              </div>
-
-              <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.neutral[50] }}>
-                <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                  <span>📅</span> Semester
-                </label>
-                <FormSelect
-                  label=""
-                  name="aSemester"
-                  value={aSemester}
-                  onChange={(e) => setASemester(e.target.value)}
-                  options={[
-                    { label: "Select Semester", value: "" },
-                    { label: "1", value: 1 },
-                    { label: "2", value: 2 },
-                    { label: "3", value: 3 },
-                    { label: "4", value: 4 },
-                    { label: "5", value: 5 },
-                    { label: "6", value: 6 },
-                    { label: "7", value: 7 },
-                    { label: "8", value: 8 },
-                  ]}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Subject Selection */}
-            <div className="rounded-lg p-4" style={{ backgroundColor: "#f0fdf4" }}>
-              <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                <span>📚</span> Subject
-              </label>
-              <FormSelect
-                label=""
-                name="aSubject"
-                value={aSubject}
-                onChange={(e) => setASubject(e.target.value)}
-                options={[{ label: "Select Subject", value: "" }, ...subjects.map((s) => ({ label: `${s.name} (${s.code})`, value: s._id }))]}
-                required
-              />
-            </div>
-
-            {/* Year & Division Row */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.neutral[50] }}>
-                <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                  <span>🎓</span> Year
-                </label>
-                <FormSelect
-                  label=""
-                  name="aYear"
-                  value={aYear}
-                  onChange={(e) => setAYear(e.target.value)}
-                  options={[
-                    { label: "Select Year", value: "" },
-                    { label: "FE (1st Year)", value: 1 },
-                    { label: "SE (2nd Year)", value: 2 },
-                    { label: "TE (3rd Year)", value: 3 },
-                    { label: "BE (4th Year)", value: 4 },
-                  ]}
-                  required
-                />
-              </div>
-
-              <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.neutral[50] }}>
-                <label className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                  <span>🏷️</span> Division
-                </label>
-                <FormSelect
-                  label=""
-                  name="aDivision"
-                  value={aDivision}
-                  onChange={(e) => setADivision(e.target.value)}
-                  options={[
-                    { label: "Select Division", value: "" },
-                    { label: "A", value: "A" },
-                    { label: "B", value: "B" },
-                    { label: "C", value: "C" },
-                  ]}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-8 flex gap-3">
-              <Button
-                type="submit"
-                disabled={assignLoading}
-                style={{ width: "100%" }}
-              >
-                {assignLoading ? "Assigning..." : "✨ Assign Teacher"}
-              </Button>
-            </div>
-
-            {/* Info Box */}
-            <div className="rounded-lg border-l-4 p-4" style={{ borderColor: theme.colors.info, backgroundColor: "#f0f9ff" }}>
-              <p className="flex items-start gap-2 text-xs" style={{ color: theme.colors.text.secondary }}>
-                <span className="mt-0.5">ℹ️</span>
-                <span><strong>Tip:</strong> Subject options are automatically filtered based on your Branch and Semester selection.</span>
-              </p>
-            </div>
-          </form>
-        </section>
-      </div>
-
       {/* Teachers Table Section */}
-      <div className="mt-10">
+      <div className="mb-10 rounded-xl border p-6" style={{ borderColor: theme.colors.border, boxShadow: theme.shadows.md }}>
         <div className="mb-6 flex items-center gap-3">
           <span className="text-2xl">👥</span>
           <div>
-            <h4 className="text-xl font-bold" style={{ color: theme.colors.text.primary }}>
+            <h4 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>
               All Teachers
             </h4>
             <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
-              Manage and track all teachers in the system
+              View and manage teacher information
             </p>
           </div>
         </div>
@@ -586,14 +568,17 @@ export default function TeacherManagement() {
             { header: "Department", accessor: "department", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
             { header: "Designation", accessor: "designation" },
           ]}
-          data={teachers}
+          data={teachers.filter((t) =>
+            (t.userId?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+            (t.userId?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+          )}
           emptyMessage={loadingTeachers ? "Loading teachers..." : "No teachers found"}
           actions={(row) => (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => openEditModal(row)}>
+              <Button variant="outline" size="sm" onClick={() => openEditModal(row)}>
                 Edit
               </Button>
-              <Button variant="danger" onClick={() => handleDeleteTeacher(row)}>
+              <Button variant="danger" size="sm" onClick={() => handleDeleteTeacher(row)}>
                 Delete
               </Button>
             </div>
@@ -728,147 +713,880 @@ export default function TeacherManagement() {
         )}
       </Modal>
 
-      {/* Edit Assignment Modal */}
-      <Modal
-        isOpen={isEditAssignmentOpen}
-        onClose={() => setIsEditAssignmentOpen(false)}
-        title="✏️ Edit Teaching Assignment"
-        size="lg"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditAssignmentOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditAssignmentSubmit} disabled={savingAssignmentEdit}>
-              {savingAssignmentEdit ? "Saving..." : "Save Changes"}
-            </Button>
+      {/* Timetable Assignments Section */}
+      <div className="mt-12 rounded-xl border p-6" style={{ borderColor: theme.colors.border, boxShadow: theme.shadows.md }}>
+        <div className="mb-8 flex items-center gap-3">
+          <span className="text-2xl">🗓️</span>
+          <div>
+            <h4 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>
+              Timetable Assignments
+            </h4>
+            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+              Create and manage teacher timetable schedules
+            </p>
           </div>
-        }
-      >
-        {editingAssignment && (
-          <form onSubmit={handleEditAssignmentSubmit}>
-            <FormSelect
-              label="Teacher"
-              name="editAssignmentTeacher"
-              value={editingAssignment.teacher}
-              onChange={(e) => setEditingAssignment({ ...editingAssignment, teacher: e.target.value })}
-              options={[
-                { label: loadingTeachers ? "Loading..." : "Select Teacher", value: "" },
-                ...teachers.map((t) => ({
-                  label: `${t.userId?.name || "Unnamed"} (${t.userId?.email || "no email"})`,
-                  value: t._id,
-                })),
-              ]}
-              required
-            />
+        </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Tabs */}
+        <div style={{ display: "flex", borderBottom: `2px solid ${theme.colors.border}`, marginBottom: "24px", gap: "8px" }}>
+          <button
+            onClick={() => {
+              setActiveTab("timetable");
+              setTtError("");
+              setTtSuccess("");
+            }}
+            style={{
+              padding: "12px 24px",
+              fontSize: "14px",
+              fontWeight: activeTab === "timetable" ? "600" : "500",
+              color: activeTab === "timetable" ? theme.colors.primary : theme.colors.text.secondary,
+              borderBottom: activeTab === "timetable" ? `3px solid ${theme.colors.primary}` : "none",
+              borderTop: "none",
+              borderLeft: "none",
+              borderRight: "none",
+              cursor: "pointer",
+              backgroundColor: "transparent",
+              transition: "all 0.2s",
+            }}
+          >
+            ➕ Create Assignment
+          </button>
+          <button
+            onClick={() => setActiveTab("view")}
+            style={{
+              padding: "12px 24px",
+              fontSize: "14px",
+              fontWeight: activeTab === "view" ? "600" : "500",
+              color: activeTab === "view" ? theme.colors.primary : theme.colors.text.secondary,
+              borderBottom: activeTab === "view" ? `3px solid ${theme.colors.primary}` : "none",
+              borderTop: "none",
+              borderLeft: "none",
+              borderRight: "none",
+              cursor: "pointer",
+              backgroundColor: "transparent",
+              transition: "all 0.2s",
+            }}
+          >
+            📋 View All ({(Array.isArray(assignments) ? assignments.length : 0)})
+          </button>
+        </div>
+
+        {/* Create Timetable Tab */}
+        {activeTab === "timetable" && (
+          <div>
+            <div
+              style={{
+                backgroundColor: theme.colors.primary[50],
+                borderRadius: "8px",
+                border: `1px solid ${theme.colors.primary[100]}`,
+                padding: "16px",
+                marginBottom: "24px",
+              }}
+            >
+              <p style={{ fontSize: "14px", color: theme.colors.text.primary, margin: "0" }}>
+                <strong>💡 Tip:</strong> Fill out all fields to create a new timetable assignment. The system will prevent duplicate assignments automatically.
+              </p>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "white",
+                borderRadius: "12px",
+                border: `1px solid ${theme.colors.border}`,
+                padding: "24px",
+                maxWidth: "600px",
+              }}
+            >
+              {/* Form Feedback Messages */}
+              {ttDuplicateWarning && (
+                <div style={{ marginBottom: "16px" }}>
+                  <Alert
+                    type="warning"
+                    message="Duplicate Assignment Detected"
+                    description={ttDuplicateWarning}
+                  />
+                </div>
+              )}
+              {ttError && (
+                <div style={{ marginBottom: "16px" }}>
+                  <Alert
+                    type="error"
+                    message="Error"
+                    description={ttError}
+                  />
+                </div>
+              )}
+              {ttSuccess && (
+                <div style={{ marginBottom: "16px" }}>
+                  <Alert
+                    type="success"
+                    message="Success"
+                    description={ttSuccess}
+                  />
+                </div>
+              )}
+
+              <form onSubmit={handleTtSubmit} style={{ display: "grid", gap: "16px" }}>
+                <div>
+                  <FormSelect
+                    label="Teacher"
+                    name="teacherId"
+                    value={ttFormData.teacherId}
+                    onChange={handleTtChange}
+                    options={[
+                      { value: "", label: "Select teacher" },
+                      ...teachers.map((t) => ({
+                        value: t.userId?._id || t._id,
+                        label: `${t.userId?.name || "Unknown"} (${t.userId?.email || ""})`,
+                      })),
+                    ]}
+                    required
+                  />
+                  {ttValidationErrors.teacherId && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.teacherId}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelect
+                    label="Branch"
+                    name="branchId"
+                    value={ttFormData.branchId}
+                    onChange={handleTtChange}
+                    options={[
+                      { value: "", label: "Select branch" },
+                      ...branches.map((b) => ({ value: b._id, label: `${b.name} (${b.code})` })),
+                    ]}
+                    required
+                  />
+                  {ttValidationErrors.branchId && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.branchId}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelect
+                    label="Semester"
+                    name="semester"
+                    value={ttFormData.semester}
+                    onChange={handleTtChange}
+                    options={[
+                      { value: "", label: "Select semester" },
+                      { value: 1, label: "1" },
+                      { value: 2, label: "2" },
+                      { value: 3, label: "3" },
+                      { value: 4, label: "4" },
+                      { value: 5, label: "5" },
+                      { value: 6, label: "6" },
+                      { value: 7, label: "7" },
+                      { value: 8, label: "8" },
+                    ]}
+                    required
+                  />
+                  {ttValidationErrors.semester && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.semester}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormSelect
+                    label="Subject"
+                    name="subjectId"
+                    value={ttFormData.subjectId}
+                    onChange={handleTtChange}
+                    options={[
+                      { value: "", label: "Select subject" },
+                      ...subjects.map((s) => ({ value: s._id, label: `${s.name} (${s.code})` })),
+                    ]}
+                    required
+                  />
+                  {ttValidationErrors.subjectId && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.subjectId}
+                    </p>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                      Year <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "6px",
+                        backgroundColor: "#f3f4f6",
+                        border: `1px solid ${ttFormData.year ? "#3b82f6" : "#d1d5db"}`,
+                        fontSize: "14px",
+                        color: ttFormData.year ? "#1f2937" : "#9ca3af",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>
+                        {ttFormData.year ? `Year ${ttFormData.year} (${ttFormData.semester ? `Sem ${ttFormData.semester}` : ""})` : "Select semester first"}
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#6b7280" }}>Auto-calculated</span>
+                    </div>
+                  </div>
+                  <div>
+                    <FormSelect
+                      label="Division"
+                      name="division"
+                      value={ttFormData.division}
+                      onChange={handleTtChange}
+                      options={[
+                        { value: "", label: "Select division" },
+                        ...DIVISION_OPTIONS.map((d) => ({ value: d, label: d })),
+                      ]}
+                      required
+                    />
+                    {ttValidationErrors.division && (
+                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                        {ttValidationErrors.division}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <FormSelect
+                    label="Session Type"
+                    name="sessionType"
+                    value={ttFormData.sessionType}
+                    onChange={handleTtChange}
+                    options={SESSION_TYPES.map((s) => ({ value: s, label: s }))}
+                    required
+                  />
+                </div>
+
+                {ttFormData.sessionType === "PRACTICAL" && (
+                  <div>
+                    <FormSelect
+                      label="Batch"
+                      name="batchId"
+                      value={ttFormData.batchId}
+                      onChange={handleTtChange}
+                      options={[
+                        { value: "", label: "Select batch" },
+                        ...batches.map((b) => ({ value: b._id, label: b.name })),
+                      ]}
+                      required
+                    />
+                    {ttValidationErrors.batchId && (
+                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                        {ttValidationErrors.batchId}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <FormSelect
+                      label="Day"
+                      name="dayOfWeek"
+                      value={ttFormData.dayOfWeek}
+                      onChange={handleTtChange}
+                      options={DAY_OPTIONS.map((d) => ({ value: d, label: d }))}
+                      required
+                    />
+                    {ttValidationErrors.dayOfWeek && (
+                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                        {ttValidationErrors.dayOfWeek}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <FormInput
+                      label="Start Time"
+                      name="startTime"
+                      type="time"
+                      value={ttFormData.startTime}
+                      onChange={handleTtChange}
+                      required
+                    />
+                    {ttValidationErrors.startTime && (
+                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                        {ttValidationErrors.startTime}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <FormInput
+                    label="End Time"
+                    name="endTime"
+                    type="time"
+                    value={ttFormData.endTime}
+                    onChange={handleTtChange}
+                    required
+                  />
+                  {ttValidationErrors.endTime && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.endTime}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <FormInput
+                    label="Academic Year"
+                    name="academicYear"
+                    type="text"
+                    placeholder="2025-2026"
+                    value={ttFormData.academicYear}
+                    onChange={handleTtChange}
+                    required
+                  />
+                  {ttValidationErrors.academicYear && (
+                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      {ttValidationErrors.academicYear}
+                    </p>
+                  )}
+                </div>
+
+                <Button 
+                  type="submit" 
+                  loading={ttSubmitting} 
+                  disabled={ttSubmitting || !!ttDuplicateWarning} 
+                  style={{ width: "100%" }}
+                  title={ttDuplicateWarning ? "Cannot submit - duplicate assignment detected" : ""}
+                >
+                  {ttSubmitting ? "Creating..." : ttDuplicateWarning ? "Fix Duplicate to Submit" : "Create Assignment"}
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* View All Timetable Tab */}
+        {activeTab === "view" && (
+          <div>
+            <div
+              style={{
+                backgroundColor: theme.colors.primary[50],
+                borderRadius: "8px",
+                border: `1px solid ${theme.colors.primary[100]}`,
+                padding: "16px",
+                marginBottom: "24px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <p style={{ fontSize: "14px", color: theme.colors.text.primary, margin: "0" }}>
+                <strong>📋 Info:</strong> All timetable assignments are listed below. Click on any assignment to view details, edit, or delete it.
+              </p>
+              <button
+                onClick={() => {
+                  console.log("Manual refresh clicked");
+                  fetchAssignments();
+                }}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "white",
+                  color: theme.colors.primary,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  transition: "all 0.2s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = theme.colors.primary[50];
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = "white";
+                }}
+                title="Manually refresh the assignments list"
+              >
+                🔄 Reload Now
+              </button>
+            </div>
+            {/* Success/Error Messages for View Tab */}
+            {ttSuccess && (
+              <div style={{ marginBottom: "16px" }}>
+                <Alert
+                  type="success"
+                  message="Success"
+                  description={ttSuccess}
+                  onClose={() => setTtSuccess("")}
+                />
+              </div>
+            )}
+            {ttError && (
+              <div style={{ marginBottom: "16px" }}>
+                <Alert
+                  type="error"
+                  message="Error"
+                  description={ttError}
+                  onClose={() => setTtError("")}
+                />
+              </div>
+            )}
+
+            {loadingAssignments ? (
+              <LoadingSpinner />
+            ) : !Array.isArray(assignments) || assignments.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: theme.colors.text.secondary }}>
+                <p style={{ fontSize: "40px", marginBottom: "12px" }}>📭</p>
+                <p>No timetable assignments yet</p>
+                <p style={{ fontSize: "13px", marginTop: "8px", color: theme.colors.text.secondary }}>
+                  Start by creating one using the "Create Assignment" tab
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "12px", backgroundColor: theme.colors.neutral[50], borderRadius: "8px" }}>
+                  <p style={{ fontSize: "14px", color: theme.colors.text.secondary }}>
+                    Total Assignments: <strong style={{ color: theme.colors.text.primary }}>{assignments.length}</strong>
+                  </p>
+                  <button
+                    onClick={fetchAssignments}
+                    disabled={loadingAssignments}
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "#e0e7ff",
+                      color: "#4338ca",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: loadingAssignments ? "not-allowed" : "pointer",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseOver={(e) => {
+                      if (!loadingAssignments) {
+                        e.target.style.backgroundColor = "#c7d2fe";
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!loadingAssignments) {
+                        e.target.style.backgroundColor = "#e0e7ff";
+                      }
+                    }}
+                  >
+                    {loadingAssignments ? "⏳ Refreshing..." : "🔄 Refresh"}
+                  </button>
+                </div>
+                <Table
+                  columns={[
+                    { header: "Teacher", accessor: "teacherId", render: (v) => v?.name || "-" },
+                    { header: "Subject", accessor: "subjectId", render: (v) => (v ? `${v.name} (${v.code})` : "-") },
+                    { header: "Class", accessor: "branchId", render: (v, r) => `${v?.name || "N/A"} ${r.year}${r.division ? r.division : ""}` },
+                    { header: "Day", accessor: "dayOfWeek" },
+                    { header: "Time", accessor: "startTime", render: (v, r) => `${v} - ${r.endTime}` },
+                    {
+                      header: "Type",
+                      accessor: "sessionType",
+                      render: (v) => (
+                        <span
+                          style={{
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            backgroundColor: v === "PRACTICAL" ? "#fef3c7" : "#dbeafe",
+                            color: v === "PRACTICAL" ? "#92400e" : "#1e40af",
+                          }}
+                        >
+                          {v}
+                        </span>
+                      ),
+                    },
+                    {
+                      header: "Actions",
+                      accessor: "_id",
+                      render: (v, row) => (
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          <button
+                            onClick={() => handleShowDetails(row)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#e0f2fe",
+                              color: "#0369a1",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              transition: "all 0.2s",
+                            }}
+                            onMouseOver={(e) => {
+                              e.target.style.backgroundColor = "#bae6fd";
+                            }}
+                            onMouseOut={(e) => {
+                              e.target.style.backgroundColor = "#e0f2fe";
+                            }}
+                          >
+                            👁️ View
+                          </button>
+                          <button
+                            onClick={() => handleEditAssignment(row)}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#fef3c7",
+                              color: "#92400e",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              transition: "all 0.2s",
+                            }}
+                            onMouseOver={(e) => {
+                              e.target.style.backgroundColor = "#fde68a";
+                            }}
+                            onMouseOut={(e) => {
+                              e.target.style.backgroundColor = "#fef3c7";
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAssignment(v)}
+                            disabled={deleteAssignmentLoading === v}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: deleteAssignmentLoading === v ? "#fca5a5" : "#fee2e2",
+                              color: "#991b1b",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: deleteAssignmentLoading === v ? "not-allowed" : "pointer",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              transition: "all 0.2s",
+                            }}
+                            onMouseOver={(e) => {
+                              if (deleteAssignmentLoading !== v) {
+                                e.target.style.backgroundColor = "#fecaca";
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (deleteAssignmentLoading !== v) {
+                                e.target.style.backgroundColor = "#fee2e2";
+                              }
+                            }}
+                          >
+                            {deleteAssignmentLoading === v ? "⏳ Deleting..." : "🗑️ Delete"}
+                          </button>
+                        </div>
+                      ),
+                    },
+                  ]}
+                  data={Array.isArray(assignments) ? assignments : []}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Details Modal */}
+        <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Assignment Details">
+          {detailsModalData && (
+            <div style={{ display: "grid", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Teacher
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.teacherId?.name || "-"}
+                  </p>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary }}>
+                    {detailsModalData.teacherId?.email}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Subject
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.subjectId?.name}
+                  </p>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary }}>
+                    Code: {detailsModalData.subjectId?.code}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Class
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.branchId?.name} - Year {detailsModalData.year} Division {detailsModalData.division}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Academic Year
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.academicYear}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Day
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.dayOfWeek}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Time
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.startTime} - {detailsModalData.endTime}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                    Session Type
+                  </p>
+                  <span
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "4px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      backgroundColor: detailsModalData.sessionType === "PRACTICAL" ? "#fef3c7" : "#dbeafe",
+                      color: detailsModalData.sessionType === "PRACTICAL" ? "#92400e" : "#1e40af",
+                      display: "inline-block",
+                    }}
+                  >
+                    {detailsModalData.sessionType}
+                  </span>
+                </div>
+                {detailsModalData.batchId && (
+                  <div>
+                    <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
+                      Batch
+                    </p>
+                    <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                      {detailsModalData.batchId?.name || "-"}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+                <Button
+                  onClick={() => {
+                    handleEditAssignment(detailsModalData);
+                    setIsDetailsOpen(false);
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  ✏️ Edit
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleDeleteAssignment(detailsModalData._id);
+                    setIsDetailsOpen(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#fee2e2",
+                    color: "#991b1b",
+                    border: "none",
+                  }}
+                >
+                  🗑️ Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Edit Assignment Modal */}
+        <Modal
+          isOpen={isEditAssignmentOpen}
+          onClose={() => setIsEditAssignmentOpen(false)}
+          title="Edit Assignment"
+        >
+          {editAssignmentData && (
+            <div style={{ display: "grid", gap: "16px" }}>
+              <FormSelect
+                label="Teacher"
+                value={editAssignmentData.teacherId}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, teacherId: e.target.value }))
+                }
+                options={[
+                  { value: "", label: "Select teacher" },
+                  ...teachers.map((t) => ({
+                    value: t.userId?._id || t._id,
+                    label: `${t.userId?.name || "Unknown"} (${t.userId?.email || ""})`,
+                  })),
+                ]}
+              />
+
               <FormSelect
                 label="Branch"
-                name="editAssignmentBranch"
-                value={editingAssignment.branch}
-                onChange={(e) => {
-                  setEditingAssignment({ ...editingAssignment, branch: e.target.value, subject: "" });
-                }}
+                value={editAssignmentData.branchId}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, branchId: e.target.value }))
+                }
                 options={[
-                  { label: "Select Branch", value: "" },
-                  ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
+                  { value: "", label: "Select branch" },
+                  ...branches.map((b) => ({ value: b._id, label: b.name })),
                 ]}
-                required
               />
-              <FormSelect
-                label="Semester"
-                name="editAssignmentSemester"
-                value={editingAssignment.semester}
-                onChange={(e) => {
-                  setEditingAssignment({ ...editingAssignment, semester: e.target.value, subject: "" });
-                }}
-                options={[
-                  { label: "Select Semester", value: "" },
-                  { label: "1", value: 1 },
-                  { label: "2", value: 2 },
-                  { label: "3", value: 3 },
-                  { label: "4", value: 4 },
-                  { label: "5", value: 5 },
-                  { label: "6", value: 6 },
-                  { label: "7", value: 7 },
-                  { label: "8", value: 8 },
-                ]}
-                required
-              />
-            </div>
 
-            <FormSelect
-              label="Subject"
-              name="editAssignmentSubject"
-              value={editingAssignment.subject}
-              onChange={(e) => setEditingAssignment({ ...editingAssignment, subject: e.target.value })}
-              options={[
-                { label: "Select Subject", value: "" },
-                ...editAssignmentSubjects.map((s) => ({ label: `${s.name} (${s.code})`, value: s._id })),
-              ]}
-              required
-            />
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormSelect
                 label="Year"
-                name="editAssignmentYear"
-                value={editingAssignment.year}
-                onChange={(e) => setEditingAssignment({ ...editingAssignment, year: e.target.value })}
+                value={editAssignmentData.year}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, year: e.target.value }))
+                }
                 options={[
-                  { label: "Select Year", value: "" },
-                  { label: "FE (1)", value: 1 },
-                  { label: "SE (2)", value: 2 },
-                  { label: "TE (3)", value: 3 },
-                  { label: "BE (4)", value: 4 },
+                  { value: "", label: "Select year" },
+                  { value: "1", label: "Year 1" },
+                  { value: "2", label: "Year 2" },
+                  { value: "3", label: "Year 3" },
+                  { value: "4", label: "Year 4" },
                 ]}
-                required
               />
+
               <FormSelect
                 label="Division"
-                name="editAssignmentDivision"
-                value={editingAssignment.division}
-                onChange={(e) => setEditingAssignment({ ...editingAssignment, division: e.target.value })}
+                value={editAssignmentData.division}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, division: e.target.value }))
+                }
                 options={[
-                  { label: "Select Division", value: "" },
-                  { label: "A", value: "A" },
-                  { label: "B", value: "B" },
-                  { label: "C", value: "C" },
+                  { value: "", label: "Select division" },
+                  { value: "A", label: "A" },
+                  { value: "B", label: "B" },
+                  { value: "C", label: "C" },
                 ]}
-                required
               />
-            </div>
-          </form>
-        )}
-      </Modal>
 
-      {/* Teaching Assignments Table */}
-      <div className="mt-8">
-        <h4 className="mb-3 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-          Teaching Assignments
-        </h4>
-        <Table
-          columns={[
-            { header: "Teacher", accessor: "teacher", render: (val) => val?.userId?.name || "-" },
-            { header: "Subject", accessor: "subject", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
-            { header: "Branch", accessor: "branch", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
-            { header: "Year", accessor: "year" },
-            { header: "Division", accessor: "division" },
-          ]}
-          data={assignments}
-          emptyMessage={loadingAssignments ? "Loading assignments..." : "No assignments found"}
-          actions={(assignment) => (
-            <>
-              <Button variant="outline" onClick={() => openEditAssignmentModal(assignment)}>
-                Edit
-              </Button>
-              <Button variant="outline" onClick={() => handleDeleteAssignment(assignment)}>
-                Delete
-              </Button>
-            </>
+              <FormSelect
+                label="Subject"
+                value={editAssignmentData.subjectId}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, subjectId: e.target.value }))
+                }
+                options={[
+                  { value: "", label: "Select subject" },
+                  ...subjects.map((s) => ({ value: s._id, label: `${s.name} (${s.code})` })),
+                ]}
+              />
+
+              <FormSelect
+                label="Session Type"
+                value={editAssignmentData.sessionType}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, sessionType: e.target.value, batchId: e.target.value === "LECTURE" ? "" : prev.batchId }))
+                }
+                options={[
+                  { value: "LECTURE", label: "Lecture" },
+                  { value: "PRACTICAL", label: "Practical" },
+                ]}
+              />
+
+              {editAssignmentData.sessionType === "PRACTICAL" && (
+                <FormSelect
+                  label="Batch"
+                  value={editAssignmentData.batchId}
+                  onChange={(e) =>
+                    setEditAssignmentData((prev) => ({ ...prev, batchId: e.target.value }))
+                  }
+                  options={[
+                    { value: "", label: "Select batch" },
+                    ...batches.map((b) => ({ value: b._id, label: b.name })),
+                  ]}
+                />
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <FormSelect
+                  label="Day"
+                  value={editAssignmentData.dayOfWeek}
+                  onChange={(e) =>
+                    setEditAssignmentData((prev) => ({ ...prev, dayOfWeek: e.target.value }))
+                  }
+                  options={["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map((d) => ({
+                    value: d,
+                    label: d,
+                  }))}
+                />
+
+                <FormInput
+                  label="Start Time"
+                  type="time"
+                  value={editAssignmentData.startTime}
+                  onChange={(e) =>
+                    setEditAssignmentData((prev) => ({ ...prev, startTime: e.target.value }))
+                  }
+                />
+              </div>
+
+              <FormInput
+                label="End Time"
+                type="time"
+                value={editAssignmentData.endTime}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, endTime: e.target.value }))
+                }
+              />
+
+              <FormInput
+                label="Academic Year"
+                type="text"
+                placeholder="2025-2026"
+                value={editAssignmentData.academicYear}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({ ...prev, academicYear: e.target.value }))
+                }
+              />
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <Button
+                  onClick={handleUpdateAssignment}
+                  loading={editAssignmentLoading}
+                  style={{ flex: 1 }}
+                >
+                  {editAssignmentLoading ? "Updating..." : "Update Assignment"}
+                </Button>
+                <Button
+                  onClick={() => setIsEditAssignmentOpen(false)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.colors.neutral[100],
+                    color: theme.colors.text.primary,
+                    border: "none",
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           )}
-        />
+        </Modal>
       </div>
     </DashboardLayout>
   );

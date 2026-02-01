@@ -7,6 +7,9 @@
 import { theme } from "../styles/theme";
 
 export default function Table({ columns, data, actions, emptyMessage = "No data available" }) {
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
+  
   return (
     <div
       className="overflow-hidden rounded-lg border"
@@ -47,7 +50,7 @@ export default function Table({ columns, data, actions, emptyMessage = "No data 
 
           {/* Table Body */}
           <tbody className="divide-y" style={{ borderColor: theme.colors.border }}>
-            {data.length === 0 ? (
+            {safeData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + (actions ? 1 : 0)}
@@ -61,7 +64,7 @@ export default function Table({ columns, data, actions, emptyMessage = "No data 
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIndex) => (
+              safeData.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
                   className="transition-colors"

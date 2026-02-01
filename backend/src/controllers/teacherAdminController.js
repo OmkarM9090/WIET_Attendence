@@ -108,18 +108,16 @@ export const assignTeacher = async (req, res) => {
 export const getTeachingAssignments = async (_req, res) => {
   try {
     const assignments = await TeachingAssignment.find()
-      .populate({
-        path: "teacher",
-        populate: { path: "userId", select: "name email" },
-      })
-      .populate("subject", "name code")
-      .populate("branch", "name code")
+      .populate("teacherId", "name email")
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .populate("batchId", "name code")
       .sort({ createdAt: -1 });
 
-    res.json(assignments);
+    res.json({ data: assignments });
   } catch (error) {
     console.error("GET TEACHING ASSIGNMENTS ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Error fetching teaching assignments" });
   }
 };
 

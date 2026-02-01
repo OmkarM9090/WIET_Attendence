@@ -236,7 +236,7 @@ export const assignTeacher = async (assignmentData) => {
 export const getTeachingAssignments = async () => {
   try {
     const response = await axiosInstance.get("/admin/teaching-assignments");
-    return response.data;
+    return Array.isArray(response.data) ? response.data : response.data?.data || [];
   } catch (error) {
     throw error.response?.data || { message: "Failed to fetch teaching assignments" };
   }
