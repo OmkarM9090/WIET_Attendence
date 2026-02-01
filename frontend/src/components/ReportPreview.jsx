@@ -6,7 +6,7 @@
 import { theme } from "../styles/theme";
 import Button from "./Button";
 
-export default function ReportPreview({ reportText, onCopy, onShare }) {
+export default function ReportPreview({ reportText, onCopy, onShare, onUpdateExcel, isUpdatingExcel, attendanceId }) {
   return (
     <div
       style={{
@@ -53,6 +53,18 @@ export default function ReportPreview({ reportText, onCopy, onShare }) {
           justifyContent: "flex-end",
         }}
       >
+        {attendanceId && onUpdateExcel && (
+          <Button 
+            onClick={onUpdateExcel}
+            disabled={isUpdatingExcel}
+            style={{
+              backgroundColor: isUpdatingExcel ? theme.colors.neutral[300] : theme.colors.success,
+              color: theme.colors.surface,
+            }}
+          >
+            {isUpdatingExcel ? "📊 Updating..." : "📊 Update Excel"}
+          </Button>
+        )}
         <Button onClick={onCopy}>Copy</Button>
         <Button onClick={onShare}>Share WhatsApp</Button>
       </div>

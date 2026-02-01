@@ -7,6 +7,7 @@ import User from "../models/User.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
 import { validateAttendanceDate } from "../utils/dateValidator.js";
 import { generateDailyReport } from "../services/reportGenerator.js";
+import { updateMonthlyAttendanceExcel } from "../utils/updateMonthlyAttendanceExcel.js";
 
 /**
  * FORMAT WHATSAPP ATTENDANCE MESSAGE
@@ -795,7 +796,21 @@ export const markAndGenerateAttendance = async (req, res) => {
       subject
     );
 
-    // 9. Return response
+    // 9. Update Monthly Excel Attendance Sheet
+    // This runs asynchronously and won't block the API response
+    updateMonthlyAttendanceExcel(attendance.toObject())
+      .then((result) => {
+        if (result.success) {
+          console.log(`📊 Excel updated: ${result.message}`);
+        } else {
+          console.error(`📊 Excel update failed: ${result.error}`);
+        }
+      })
+      .catch((error) => {
+        console.error("📊 Excel update error:", error.message);
+      });
+
+    // 10. Return response
     res.json({
       success: true,
       alreadyExists: false,
@@ -999,7 +1014,21 @@ export const updateAttendance = async (req, res) => {
       subject
     );
 
-    // 10. Return updated attendance and report
+    // 10. Update Monthly Excel Attendance Sheet
+    // This runs asynchronously and won't block the API response
+    updateMonthlyAttendanceExcel(updatedAttendance)
+      .then((result) => {
+        if (result.success) {
+          console.log(`📊 Excel updated: ${result.message}`);
+        } else {
+          console.error(`📊 Excel update failed: ${result.error}`);
+        }
+      })
+      .catch((error) => {
+        console.error("📊 Excel update error:", error.message);
+      });
+
+    // 11. Return updated attendance and report
     res.json({
       success: true,
       attendance: updatedAttendance,
@@ -1012,6 +1041,90 @@ export const updateAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Server error"
+    });
+  }
+};
+
+/**
+ * MANUAL EXCEL UPDATE
+ * POST /api/attendance/update-excel/:attendanceId
+ * 
+ * Manually triggers Excel update for a specific attendance session
+ * Useful when teacher wants to force Excel generation or regeneration
+ */
+export const manualExcelUpdate = async (req, res) => {
+  try {
+    const { attendanceId } = req.params;
+    const teacherId = req.user.id;
+
+    // 1. Validate attendance ID
+    if (!mongoose.Types.ObjectId.isValid(attendanceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendanceId format"
+      });
+    }
+
+    // 2. Fetch attendance session with populated fields
+    const attendance = await AttendanceSession.findById(attendanceId)
+      .populate("subject", "name code")
+      .populate("branch", "name code")
+      .populate("teacher", "name")
+      .lean();
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance session not found"
+      });
+    }
+
+    // 3. Verify teacher authorization
+    if (
+      attendance.teacher._id.toString() !== teacherId &&
+      attendance.assignedTeacher.toString() !== teacherId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to update Excel for this session"
+      });
+    }
+
+    // 4. Prepare attendance object for Excel update
+    // Convert populated fields back to IDs for the utility function
+    const attendanceForExcel = {
+      ...attendance,
+      subject: attendance.subject._id,
+      branch: attendance.branch._id,
+      teacher: attendance.teacher._id
+    };
+
+    // 5. Trigger Excel update
+    console.log(`📊 Manual Excel update requested for attendance: ${attendanceId}`);
+    
+    const result = await updateMonthlyAttendanceExcel(attendanceForExcel);
+
+    // 6. Return result
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: result.message,
+        filePath: result.filePath,
+        skipped: result.skipped || false
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: result.message || "Excel update failed",
+        error: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error("MANUAL EXCEL UPDATE ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while updating Excel"
     });
   }
 };

@@ -4,7 +4,8 @@ import {
   getTeacherAttendance,
   getStudentsForSession,
   markAndGenerateAttendance,
-  updateAttendance
+  updateAttendance,
+  manualExcelUpdate
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
@@ -28,6 +29,13 @@ router.put(
   protect,
   allowRoles("teacher"),
   updateAttendance
+);
+// POST route for manual Excel update
+router.post(
+  "/update-excel/:attendanceId",
+  protect,
+  allowRoles("teacher"),
+  manualExcelUpdate
 );
 router.get(
   "/students-for-session",

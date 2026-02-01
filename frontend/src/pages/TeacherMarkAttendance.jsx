@@ -56,6 +56,8 @@ export default function TeacherMarkAttendance() {
   const [savingReport, setSavingReport] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportError, setReportError] = useState("");
+  const [isUpdatingExcel, setIsUpdatingExcel] = useState(false);
+  const [savedAttendanceId, setSavedAttendanceId] = useState(null);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -356,6 +358,7 @@ export default function TeacherMarkAttendance() {
       // New attendance created successfully
       if (response.data?.success) {
         setReportText(response.data.reportText || "");
+        setSavedAttendanceId(response.data.attendance?._id || null);
         setReportError(""); // Clear any previous errors
       } else {
         setReportError(response.data?.message || "Failed to save attendance");
@@ -414,6 +417,7 @@ export default function TeacherMarkAttendance() {
 
       if (response.data?.success) {
         setReportText(response.data.reportText || "");
+        setSavedAttendanceId(existingAttendanceId);
         setIsEditingExisting(true);
         setReportError("");
       } else {
@@ -428,6 +432,49 @@ export default function TeacherMarkAttendance() {
       setShowEditModal(true); // Show modal again if update fails
     } finally {
       setSavingReport(false);
+    }
+  };
+
+  /**
+   * Handle manual Excel update
+   * Called when user clicks "Update Excel" button
+   */
+  const handleUpdateExcel = async () => {
+    try {
+      setIsUpdatingExcel(true);
+      setReportError("");
+
+      if (!savedAttendanceId) {
+        setReportError("No attendance session to update Excel for");
+        return;
+      }
+
+      const response = await axiosInstance.post(
+        `/attendance/update-excel/${savedAttendanceId}`
+      );
+
+      if (response.data?.success) {
+        if (response.data.skipped) {
+          setReportError("Excel update skipped (cancelled/holiday session)");
+        } else {
+          setReportError(""); // Clear error to show success
+          // Show success message briefly
+          const successMsg = "✅ Excel file updated successfully!";
+          setReportError(successMsg);
+          setTimeout(() => {
+            setReportError("");
+          }, 3000);
+        }
+      } else {
+        setReportError(response.data?.message || "Failed to update Excel");
+      }
+    } catch (err) {
+      console.error("Excel update error:", err);
+      setReportError(
+        err.response?.data?.message || "Failed to update Excel file"
+      );
+    } finally {
+      setIsUpdatingExcel(false);
     }
   };
 
@@ -1354,6 +1401,9 @@ export default function TeacherMarkAttendance() {
                   reportText={reportText}
                   onCopy={handleCopyReport}
                   onShare={handleShareWhatsApp}
+                  onUpdateExcel={handleUpdateExcel}
+                  isUpdatingExcel={isUpdatingExcel}
+                  attendanceId={savedAttendanceId}
                 />
               )}
             </>
