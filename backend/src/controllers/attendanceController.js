@@ -4,6 +4,7 @@ import Student from "../models/Student.js";
 import Subject from "../models/Subject.js";
 import Branch from "../models/Branch.js";
 import User from "../models/User.js";
+import TeachingAssignment from "../models/TeachingAssignment.js";
 
 /**
  * FORMAT WHATSAPP ATTENDANCE MESSAGE
@@ -429,6 +430,169 @@ export const getTeacherAttendance = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: "Server error" 
+    });
+  }
+};
+
+/**
+ * GET STUDENTS FOR SESSION
+ * Fetches the list of students for a teaching session
+ * Based on session type (LECTURE or PRACTICAL)
+ * 
+ * @route GET /api/attendance/students-for-session
+ * @access Private (Teacher only)
+ */
+export const getStudentsForSession = async (req, res) => {
+  try {
+    const { teachingAssignmentId } = req.query;
+    const teacherId = req.user.id;
+
+    // Validate required parameter
+    if (!teachingAssignmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Teaching assignment ID is required"
+      });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid teaching assignment ID format"
+      });
+    }
+
+    // Fetch teaching assignment
+    const assignment = await TeachingAssignment.findById(teachingAssignmentId)
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .populate("batchId", "name");
+
+    // Check if assignment exists
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Teaching assignment not found"
+      });
+    }
+
+    // Verify teacher authorization
+    // Teacher must own this assignment
+    if (assignment.teacherId.toString() !== teacherId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to access this teaching assignment"
+      });
+    }
+
+    // Verify assignment is active
+    if (!assignment.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "This teaching assignment is not active"
+      });
+    }
+
+    // Build student query based on session type
+    let studentQuery = {
+      status: "active",
+      academicYear: assignment.academicYear
+    };
+
+    if (assignment.sessionType === "PRACTICAL") {
+      // PRACTICAL: Filter by branch, year, division, and batch name
+      if (!assignment.batchId) {
+        return res.status(400).json({
+          success: false,
+          message: "Batch information is required for practical sessions"
+        });
+      }
+
+      studentQuery.branch = assignment.branchId;
+      studentQuery.year = assignment.year;
+      studentQuery.division = assignment.division;
+
+      const batchName = assignment.batchId?.name;
+      if (batchName) {
+        studentQuery.$or = [{ batch: batchName }, { batchName }];
+      }
+    } else {
+      // LECTURE: Filter by branch, year, division
+      studentQuery.branch = assignment.branchId;
+      studentQuery.year = assignment.year;
+      studentQuery.division = assignment.division;
+    }
+
+    // Fetch students and sort by roll number
+    const students = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .populate("branch", "name code")
+      .select("rollNo userId branch year division batch batchName academicYear status")
+      .sort({ rollNo: 1 });
+
+    // Resolve missing user details if populate didn't return a user document
+    const missingUserIds = students
+      .filter((student) => student.userId && !student.userId.name)
+      .map((student) => student.userId.toString());
+
+    let userMap = new Map();
+    if (missingUserIds.length > 0) {
+      const users = await User.find({ _id: { $in: missingUserIds } })
+        .select("name email")
+        .lean();
+
+      userMap = new Map(
+        users.map((user) => [user._id.toString(), user])
+      );
+    }
+
+    // Format response
+    const formattedStudents = students.map((student) => {
+      const userIdValue = student.userId && student.userId._id
+        ? student.userId._id.toString()
+        : student.userId?.toString();
+
+      const fallbackUser = userIdValue ? userMap.get(userIdValue) : null;
+      const name = student.userId?.name || fallbackUser?.name || "";
+      const email = student.userId?.email || fallbackUser?.email || "";
+
+      return {
+        _id: student._id,
+        rollNo: student.rollNo,
+        name,
+        email,
+        branch: student.branch?.name,
+        branchCode: student.branch?.code,
+        year: student.year,
+        division: student.division,
+        batch: student.batchName || student.batch || "",
+        academicYear: student.academicYear
+      };
+    });
+
+    res.json({
+      success: true,
+      count: formattedStudents.length,
+      sessionType: assignment.sessionType,
+      sessionDetails: {
+        subject: assignment.subjectId?.name,
+        subjectCode: assignment.subjectId?.code,
+        branch: assignment.branchId?.name,
+        year: assignment.year,
+        division: assignment.division,
+        batch: assignment.batchId?.name,
+        dayOfWeek: assignment.dayOfWeek,
+        startTime: assignment.startTime,
+        endTime: assignment.endTime
+      },
+      data: formattedStudents
+    });
+  } catch (error) {
+    console.error("GET STUDENTS FOR SESSION ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching students"
     });
   }
 };

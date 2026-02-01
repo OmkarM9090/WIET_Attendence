@@ -1,7 +1,8 @@
 import express from "express";
 import {
   createAttendance,
-  getTeacherAttendance
+  getTeacherAttendance,
+  getStudentsForSession
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
@@ -13,6 +14,12 @@ const router = express.Router();
 // Teacher only
 router.post("/", protect, allowRoles("teacher"), createAttendance);
 router.get("/", protect, allowRoles("teacher"), getTeacherAttendance);
+router.get(
+  "/students-for-session",
+  protect,
+  allowRoles("teacher"),
+  getStudentsForSession
+);
 router.get(
   "/monthly",
   protect,

@@ -1,12 +1,23 @@
 /**
  * TEACHER MARK ATTENDANCE PAGE
- * Step 2: Select Assigned Teaching Session from dropdown
+ * 
+ * Step 1-4 Complete:
+ * - Step 1: Select assigned teaching session from dropdown
+ * - Step 2: Select date (today or yesterday only) 
+ * - Step 3: Date validation with error handling
+ * - Step 4: Auto-load student list for selected session
  * 
  * Features:
  * - Dropdown showing all assigned teaching sessions
  * - Format: Branch - Subject (Year Division) Time SessionType
  * - Display selected session details in card
- * - No attendance marking yet (Step 3)
+ * - Date picker with today/yesterday restriction
+ * - Student list with checkbox selection for absent students
+ * - Quick add by roll numbers (comma/space separated)
+ * - Real-time present/absent count
+ * - Different student lists for LECTURE vs PRACTICAL sessions
+ * 
+ * Next: Step 5 - Save attendance to backend
  */
 
 import { useEffect, useState } from "react";
@@ -18,6 +29,7 @@ import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Alert from "../components/Alert";
 import { getMyTeachingAssignments } from "../services/teacherService";
+import axiosInstance from "../utils/axios";
 
 export default function TeacherMarkAttendance() {
   // State management
@@ -29,6 +41,13 @@ export default function TeacherMarkAttendance() {
   const [dateError, setDateError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Student state
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [studentError, setStudentError] = useState("");
+  const [selectedAbsentStudents, setSelectedAbsentStudents] = useState([]);
+  const [rollNumberInput, setRollNumberInput] = useState("");
 
   // Sidebar navigation items
   const sidebarItems = [
@@ -44,6 +63,21 @@ export default function TeacherMarkAttendance() {
   useEffect(() => {
     fetchAssignments();
   }, []);
+
+  /**
+   * Fetch students when session and valid date are selected
+   */
+  useEffect(() => {
+    if (selectedAssignment && selectedDate && !dateError) {
+      fetchStudentsForSession();
+    } else {
+      // Clear students if session or date becomes invalid
+      setStudents([]);
+      setSelectedAbsentStudents([]);
+      setRollNumberInput("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAssignment, selectedDate, dateError]);
 
   /**
    * Fetch all active teaching assignments for logged-in teacher
@@ -173,6 +207,84 @@ export default function TeacherMarkAttendance() {
    */
   const isContinueEnabled = () => {
     return selectedAssignment && selectedDate && !dateError;
+  };
+
+  /**
+   * Fetch students for selected teaching session
+   * Calls backend API with teachingAssignmentId
+   */
+  const fetchStudentsForSession = async () => {
+    try {
+      setLoadingStudents(true);
+      setStudentError("");
+
+      const response = await axiosInstance.get(
+        "/attendance/students-for-session",
+        {
+          params: {
+            teachingAssignmentId: selectedAssignment._id,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setStudents(response.data.data || []);
+      } else {
+        setStudentError(response.data.message || "Failed to fetch students");
+      }
+    } catch (err) {
+      console.error("Error fetching students:", err);
+      setStudentError(
+        err.response?.data?.message || "Failed to fetch students for this session"
+      );
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  /**
+   * Toggle student absent status
+   * @param {String} studentId - Student ID to toggle
+   */
+  const toggleAbsentStudent = (studentId) => {
+    setSelectedAbsentStudents((prev) => {
+      if (prev.includes(studentId)) {
+        return prev.filter((id) => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
+  };
+
+  /**
+   * Add students by roll numbers
+   * Parses comma/space separated roll numbers
+   */
+  const handleAddRollNumbers = () => {
+    if (!rollNumberInput.trim()) return;
+
+    // Parse roll numbers (support comma and space separation)
+    const rollNumbers = rollNumberInput
+      .split(/[,\s]+/)
+      .map((roll) => roll.trim())
+      .filter((roll) => roll);
+
+    // Find students with matching roll numbers
+    const matchingStudents = students.filter((student) =>
+      rollNumbers.includes(student.rollNo.toString())
+    );
+
+    // Add to absent list
+    const newAbsentIds = matchingStudents
+      .map((s) => s._id)
+      .filter((id) => !selectedAbsentStudents.includes(id));
+
+    if (newAbsentIds.length > 0) {
+      setSelectedAbsentStudents((prev) => [...prev, ...newAbsentIds]);
+    }
+
+    // Clear input
+    setRollNumberInput("");
   };
 
   /**
@@ -652,6 +764,374 @@ export default function TeacherMarkAttendance() {
 
               {/* Session Details Card */}
               {renderSessionDetails()}
+
+              {/* Step 3: Student List */}
+              {selectedAssignment && selectedDate && !dateError && (
+                <div
+                  style={{
+                    marginTop: "24px",
+                    backgroundColor: "white",
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: "12px",
+                    padding: "24px",
+                    boxShadow: theme.shadows.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        backgroundColor: theme.colors.primary,
+                        color: "white",
+                        width: "28px",
+                        height: "28px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      3
+                    </span>
+                    <h3
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: theme.colors.text.primary,
+                      }}
+                    >
+                      Student List
+                    </h3>
+                  </div>
+
+                  {/* Student Error */}
+                  {studentError && (
+                    <div style={{ marginBottom: "16px" }}>
+                      <Alert
+                        type="error"
+                        message="Error"
+                        description={studentError}
+                      />
+                    </div>
+                  )}
+
+                  {/* Loading Students */}
+                  {loadingStudents ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <LoadingSpinner />
+                      <p
+                        style={{
+                          marginTop: "12px",
+                          color: theme.colors.text.secondary,
+                        }}
+                      >
+                        Loading students...
+                      </p>
+                    </div>
+                  ) : students.length === 0 && !studentError ? (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px 20px",
+                        backgroundColor: theme.colors.neutral[50],
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <p style={{ fontSize: "48px", marginBottom: "12px" }}>
+                        📚
+                      </p>
+                      <p
+                        style={{
+                          fontSize: "14px",
+                          color: theme.colors.text.secondary,
+                        }}
+                      >
+                        No students found for this session
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Roll Number Input */}
+                      <div
+                        style={{
+                          marginBottom: "20px",
+                          padding: "16px",
+                          backgroundColor: theme.colors.neutral[50],
+                          borderRadius: "8px",
+                          border: `1px solid ${theme.colors.border}`,
+                        }}
+                      >
+                        <label
+                          style={{
+                            display: "block",
+                            fontSize: "14px",
+                            fontWeight: "600",
+                            color: theme.colors.text.primary,
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Quick Add Absent Students by Roll Numbers
+                        </label>
+                        <div style={{ display: "flex", gap: "12px" }}>
+                          <FormInput
+                            placeholder="Enter roll numbers (e.g., 12 34 35 or 12, 34, 35)"
+                            value={rollNumberInput}
+                            onChange={(e) => setRollNumberInput(e.target.value)}
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            onClick={handleAddRollNumbers}
+                            disabled={!rollNumberInput.trim()}
+                            style={{
+                              padding: "0 24px",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Add to Absent List
+                          </Button>
+                        </div>
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: theme.colors.text.secondary,
+                            marginTop: "8px",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          💡 Separate roll numbers with commas or spaces
+                        </p>
+                      </div>
+
+                      {/* Student Count Summary */}
+                      <div
+                        style={{
+                          marginBottom: "16px",
+                          padding: "12px 16px",
+                          backgroundColor: theme.colors.info + "10",
+                          borderRadius: "8px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              color: theme.colors.text.primary,
+                            }}
+                          >
+                            Total Students: {students.length}
+                          </span>
+                          {selectedAssignment.sessionType === "PRACTICAL" && (
+                            <span
+                              style={{
+                                marginLeft: "12px",
+                                fontSize: "13px",
+                                color: theme.colors.text.secondary,
+                              }}
+                            >
+                              (Batch: {selectedAssignment.batch?.name})
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              color: theme.colors.error,
+                              fontWeight: "600",
+                            }}
+                          >
+                            Absent: {selectedAbsentStudents.length}
+                          </span>
+                          <span
+                            style={{
+                              marginLeft: "12px",
+                              fontSize: "14px",
+                              color: theme.colors.success,
+                              fontWeight: "600",
+                            }}
+                          >
+                            Present: {students.length - selectedAbsentStudents.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Student List */}
+                      <div
+                        style={{
+                          maxHeight: "400px",
+                          overflowY: "auto",
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: "8px",
+                        }}
+                      >
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead
+                            style={{
+                              backgroundColor: theme.colors.neutral[100],
+                              position: "sticky",
+                              top: 0,
+                              zIndex: 1,
+                            }}
+                          >
+                            <tr>
+                              <th
+                                style={{
+                                  padding: "12px 16px",
+                                  textAlign: "left",
+                                  fontSize: "13px",
+                                  fontWeight: "600",
+                                  color: theme.colors.text.primary,
+                                  borderBottom: `2px solid ${theme.colors.border}`,
+                                }}
+                              >
+                                Absent
+                              </th>
+                              <th
+                                style={{
+                                  padding: "12px 16px",
+                                  textAlign: "left",
+                                  fontSize: "13px",
+                                  fontWeight: "600",
+                                  color: theme.colors.text.primary,
+                                  borderBottom: `2px solid ${theme.colors.border}`,
+                                }}
+                              >
+                                Roll No
+                              </th>
+                              <th
+                                style={{
+                                  padding: "12px 16px",
+                                  textAlign: "left",
+                                  fontSize: "13px",
+                                  fontWeight: "600",
+                                  color: theme.colors.text.primary,
+                                  borderBottom: `2px solid ${theme.colors.border}`,
+                                }}
+                              >
+                                Name
+                              </th>
+                              {selectedAssignment.sessionType === "PRACTICAL" && (
+                                <th
+                                  style={{
+                                    padding: "12px 16px",
+                                    textAlign: "left",
+                                    fontSize: "13px",
+                                    fontWeight: "600",
+                                    color: theme.colors.text.primary,
+                                    borderBottom: `2px solid ${theme.colors.border}`,
+                                  }}
+                                >
+                                  Batch
+                                </th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {students.map((student, index) => {
+                              const isAbsent = selectedAbsentStudents.includes(
+                                student._id
+                              );
+                              return (
+                                <tr
+                                  key={student._id}
+                                  style={{
+                                    backgroundColor:
+                                      index % 2 === 0
+                                        ? "white"
+                                        : theme.colors.neutral[50],
+                                    transition: "background-color 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      theme.colors.neutral[100];
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      index % 2 === 0
+                                        ? "white"
+                                        : theme.colors.neutral[50];
+                                  }}
+                                >
+                                  <td
+                                    style={{
+                                      padding: "12px 16px",
+                                      borderBottom: `1px solid ${theme.colors.border}`,
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isAbsent}
+                                      onChange={() =>
+                                        toggleAbsentStudent(student._id)
+                                      }
+                                      style={{
+                                        width: "18px",
+                                        height: "18px",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "12px 16px",
+                                      fontSize: "14px",
+                                      fontWeight: "600",
+                                      color: theme.colors.text.primary,
+                                      borderBottom: `1px solid ${theme.colors.border}`,
+                                    }}
+                                  >
+                                    {student.rollNo ?? "--"}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "12px 16px",
+                                      fontSize: "14px",
+                                      color: isAbsent
+                                        ? theme.colors.error
+                                        : theme.colors.text.primary,
+                                      textDecoration: isAbsent
+                                        ? "line-through"
+                                        : "none",
+                                      borderBottom: `1px solid ${theme.colors.border}`,
+                                    }}
+                                  >
+                                    {student.name || "Unnamed Student"}
+                                  </td>
+                                  {selectedAssignment.sessionType ===
+                                    "PRACTICAL" && (
+                                    <td
+                                      style={{
+                                        padding: "12px 16px",
+                                        fontSize: "14px",
+                                        color: theme.colors.text.secondary,
+                                        borderBottom: `1px solid ${theme.colors.border}`,
+                                      }}
+                                    >
+                                      {student.batch || "N/A"}
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Continue Button */}
               {selectedAssignment && (
