@@ -163,7 +163,7 @@ export default function AdminDashboard() {
 
           {/* Welcome Section */}
           <div
-            className="mb-8 rounded-lg p-6"
+            className="mb-10 rounded-lg p-6"
             style={{
               background: `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[600]} 100%)`,
               color: theme.colors.text.inverse,
