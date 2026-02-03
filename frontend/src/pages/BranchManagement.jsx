@@ -428,7 +428,7 @@ export default function BranchManagement() {
 
           <div className="text-center">
             <p
-              className="text-sm"
+              className="text-sm font-medium"
               style={{ color: theme.colors.text.primary }}
             >
               Are you sure you want to delete the branch{" "}
