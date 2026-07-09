@@ -3,6 +3,7 @@ import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
 import { getTeacherProfile, getTeacherAssignments } from "../controllers/teacherController.js";
 import { getMyTeachingAssignments } from "../controllers/teacherAssignmentController.js";
+import { getDashboardStats } from "../controllers/teacherDashboardController.js";
 
 const router = express.Router();
 
@@ -14,5 +15,8 @@ router.get("/assignments/:teacherId", protect, allowRoles("teacher"), getTeacher
 
 // Get my teaching assignments for attendance marking
 router.get("/my-assignments", protect, allowRoles("teacher"), getMyTeachingAssignments);
+
+// Get teacher dashboard stats
+router.get("/dashboard-stats", protect, allowRoles("teacher"), getDashboardStats);
 
 export default router;

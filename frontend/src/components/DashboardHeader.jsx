@@ -1,50 +1,27 @@
-/**
- * DASHBOARD HEADER COMPONENT
- * Top navigation bar with user info and logout
- * Shows user name, role, and profile actions
- */
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { theme } from "../styles/theme";
-import Button from "./Button";
+import { LogOut, User, ChevronDown } from "lucide-react";
 
 export default function DashboardHeader({ title, subtitle }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
 
-  /**
-   * Handle user logout
-   */
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
   return (
-    <header
-      className="sticky top-0 z-10 flex items-center justify-between px-8 py-4"
-      style={{
-        backgroundColor: theme.colors.background,
-        borderBottom: `1px solid ${theme.colors.border}`,
-        boxShadow: theme.shadows.sm,
-      }}
-    >
+    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
       {/* Page Title */}
       <div>
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: theme.colors.text.primary }}
-        >
+        <h1 className="text-2xl font-bold text-slate-800">
           {title}
         </h1>
         {subtitle && (
-          <p
-            className="mt-1 text-sm"
-            style={{ color: theme.colors.text.secondary }}
-          >
+          <p className="mt-1 text-sm text-slate-500 font-medium">
             {subtitle}
           </p>
         )}
@@ -53,17 +30,11 @@ export default function DashboardHeader({ title, subtitle }) {
       {/* User Profile Section */}
       <div className="flex items-center gap-4">
         {/* User Info */}
-        <div className="text-right">
-          <p
-            className="text-sm font-semibold"
-            style={{ color: theme.colors.text.primary }}
-          >
+        <div className="text-right hidden sm:block">
+          <p className="text-sm font-bold text-slate-700">
             {user?.name || "User"}
           </p>
-          <p
-            className="text-xs capitalize"
-            style={{ color: theme.colors.text.secondary }}
-          >
+          <p className="text-xs font-medium text-slate-400 capitalize">
             {user?.role || "Guest"}
           </p>
         </div>
@@ -72,71 +43,54 @@ export default function DashboardHeader({ title, subtitle }) {
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex h-10 w-10 items-center justify-center rounded-full font-semibold transition-all"
-            style={{
-              backgroundColor: theme.colors.primary[500],
-              color: theme.colors.text.inverse,
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.primary[600];
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.primary[500];
-            }}
+            className="flex items-center gap-2 p-1 pr-2 rounded-full border border-slate-100 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            {user?.name?.charAt(0).toUpperCase() || "U"}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-bold shadow-sm">
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <ChevronDown size={16} className="text-slate-400" />
           </button>
 
           {/* Dropdown Menu */}
           {showDropdown && (
             <>
-              {/* Backdrop to close dropdown */}
               <div
                 className="fixed inset-0 z-10"
                 onClick={() => setShowDropdown(false)}
               />
 
-              {/* Dropdown Content */}
-              <div
-                className="absolute right-0 mt-2 w-48 rounded-lg py-2 z-20"
-                style={{
-                  backgroundColor: theme.colors.background,
-                  boxShadow: theme.shadows.lg,
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <div className="px-4 py-3 border-b" style={{ borderColor: theme.colors.border }}>
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: theme.colors.text.primary }}
-                  >
+              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-slate-100 z-20 overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 sm:hidden">
+                  <p className="text-sm font-bold text-slate-700">
                     {user?.name}
                   </p>
-                  <p
-                    className="text-xs capitalize"
-                    style={{ color: theme.colors.text.secondary }}
-                  >
+                  <p className="text-xs font-medium text-slate-400 capitalize">
                     {user?.role}
                   </p>
                 </div>
 
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors"
-                  style={{
-                    color: theme.colors.error,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.hover;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  <span>🚪</span>
-                  <span>Logout</span>
-                </button>
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      // Add profile navigation if needed
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors"
+                  >
+                    <User size={16} />
+                    <span>My Profile</span>
+                  </button>
+                  
+                  <div className="h-px bg-slate-100 my-1 mx-2"></div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
               </div>
             </>
           )}

@@ -20,36 +20,29 @@ export default function Sidebar({ items, onClose }) {
 
   return (
     <aside
-      className="flex h-full flex-col"
+      className="flex h-full flex-col shadow-xl z-20"
       style={{
         width: "280px",
-        backgroundColor: theme.colors.background,
-        borderRight: `1px solid ${theme.colors.border}`,
+        backgroundColor: "#1E293B",
+        borderRight: `1px solid rgba(255,255,255,0.05)`,
       }}
     >
       {/* Logo/Brand Section */}
       <div
         className="flex items-center gap-3 p-6"
-        style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+        style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}
       >
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-lg"
-          style={{ backgroundColor: theme.colors.primary[500] }}
+          className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-500/30"
         >
           <span className="text-xl">📚</span>
         </div>
         <div>
-          <h2
-            className="text-lg font-bold"
-            style={{ color: theme.colors.text.primary }}
-          >
-            WIET Attendance
+          <h2 className="text-lg font-bold text-white tracking-wide">
+            WIET System
           </h2>
-          <p
-            className="text-xs"
-            style={{ color: theme.colors.text.secondary }}
-          >
-            Management System
+          <p className="text-xs text-slate-400 font-medium">
+            Attendance Manager
           </p>
         </div>
       </div>
@@ -65,25 +58,22 @@ export default function Sidebar({ items, onClose }) {
                 <Link
                   to={item.path}
                   onClick={onClose}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all"
+                  className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all duration-300"
                   style={{
-                    backgroundColor: active
-                      ? theme.colors.primary[50]
-                      : "transparent",
-                    color: active
-                      ? theme.colors.primary[600]
-                      : theme.colors.text.secondary,
-                    fontWeight: active ? 600 : 400,
-                    transition: theme.transitions.base,
+                    backgroundColor: active ? "rgba(79, 70, 229, 0.15)" : "transparent",
+                    color: active ? "#818cf8" : "#94a3b8",
+                    fontWeight: active ? 600 : 500,
                   }}
                   onMouseEnter={(e) => {
                     if (!active) {
-                      e.currentTarget.style.backgroundColor = theme.colors.hover;
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                      e.currentTarget.style.color = "#f1f5f9";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!active) {
                       e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "#94a3b8";
                     }
                   }}
                 >
@@ -109,14 +99,11 @@ export default function Sidebar({ items, onClose }) {
 
       {/* Footer */}
       <div
-        className="p-4"
-        style={{ borderTop: `1px solid ${theme.colors.border}` }}
+        className="p-4 mt-auto"
+        style={{ borderTop: `1px solid rgba(255,255,255,0.05)` }}
       >
-        <p
-          className="text-center text-xs"
-          style={{ color: theme.colors.text.secondary }}
-        >
-          © 2025 WIET System
+        <p className="text-center text-xs text-slate-500 font-medium tracking-wide">
+          © 2026 WIET SYSTEM
         </p>
       </div>
     </aside>

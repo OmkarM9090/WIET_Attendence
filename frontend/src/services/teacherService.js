@@ -35,3 +35,17 @@ export const getTeacherProfile = async () => {
     throw error.response?.data || { message: "Failed to fetch teacher profile" };
   }
 };
+
+/**
+ * Get dashboard statistics for teacher
+ * @returns {Promise<Object>} Dashboard statistics
+ */
+export const getDashboardStats = async () => {
+  try {
+    const response = await axiosInstance.get("/teacher/dashboard-stats");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch dashboard stats" };
+  }
+};
+
