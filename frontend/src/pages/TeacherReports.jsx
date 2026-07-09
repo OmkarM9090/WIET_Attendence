@@ -44,11 +44,11 @@ export default function TeacherReports() {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const profileRes = await axiosInstance.get("/api/teacher/me");
+      const profileRes = await axiosInstance.get("/teacher/me");
       const teacherId = profileRes.data?.data?._id || profileRes.data?._id;
 
       if (teacherId) {
-        const assignmentsRes = await axiosInstance.get(`/api/teacher/assignments/${teacherId}`);
+        const assignmentsRes = await axiosInstance.get(`/teacher/assignments/${teacherId}`);
         const data = assignmentsRes.data?.data || assignmentsRes.data || [];
         setAssignments(Array.isArray(data) ? data : []);
       }

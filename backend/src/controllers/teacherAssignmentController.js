@@ -232,16 +232,19 @@ export const getMyTeachingAssignments = async (req, res) => {
 		// Get teacher ID from JWT token
 		const teacherId = req.user.id;
 
-		// Get current academic year (can be dynamic or from config)
-		// For now using 2025-2026 as default
-		const currentAcademicYear = "2025-2026";
-
-		// Fetch all active teaching assignments for this teacher
-		const assignments = await TeachingAssignment.find({
+		// We will fetch all active assignments for this teacher
+		// regardless of hardcoded academic year, to avoid missing data.
+		const query = {
 			teacherId: teacherId,
 			isActive: true,
-			academicYear: currentAcademicYear,
-		})
+		};
+
+		if (req.query.academicYear) {
+			query.academicYear = req.query.academicYear;
+		}
+
+		// Fetch all active teaching assignments for this teacher
+		const assignments = await TeachingAssignment.find(query)
 			.populate("subjectId", "name code") // Get subject name and code
 			.populate("branchId", "name code") // Get branch name and code
 			.populate("batchId", "name") // Get batch name for practicals

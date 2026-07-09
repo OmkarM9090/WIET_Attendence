@@ -32,7 +32,7 @@ export default function StudentDashboard() {
       setError("");
 
       // Fetch student attendance
-      const response = await axiosInstance.get("/api/student/attendance");
+      const response = await axiosInstance.get("/student/attendance");
       const data = Array.isArray(response.data) ? response.data : response.data?.data || [];
       setAttendanceData(data);
 
