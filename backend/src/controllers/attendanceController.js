@@ -8,6 +8,7 @@ import TeachingAssignment from "../models/TeachingAssignment.js";
 import { validateAttendanceDate } from "../utils/dateValidator.js";
 import { generateDailyReport } from "../services/reportGenerator.js";
 import { updateMonthlyAttendanceExcel } from "../utils/updateMonthlyAttendanceExcel.js";
+import { parseAttendanceExcel } from "../utils/excelParser.js";
 
 /**
  * FORMAT WHATSAPP ATTENDANCE MESSAGE
@@ -1214,5 +1215,138 @@ export const getSessionDetails = async (req, res) => {
   } catch (error) {
     console.error("GET SESSION DETAILS ERROR:", error);
     res.status(500).json({ success: false, message: "Server error fetching details" });
+  }
+};
+
+/**
+ * IMPORT ATTENDANCE FROM EXCEL
+ * Reads an uploaded Excel file and syncs it with MongoDB (Two-way sync)
+ * 
+ * @route POST /api/attendance/import-excel
+ * @access Private (Admin)
+ */
+
+export const importAttendanceExcel = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Excel file is required" });
+    }
+
+    const {
+      academicYear,
+      subjectId,
+      branchId,
+      year,
+      division,
+      sessionType,
+      batch
+    } = req.body;
+
+    if (!academicYear || !subjectId || !branchId || !year || !division || !sessionType) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required metadata fields (academicYear, subjectId, branchId, year, division, sessionType)"
+      });
+    }
+
+    // 1. Parse Excel file
+    const attendanceData = await parseAttendanceExcel(req.file.buffer);
+
+    // 2. Fetch all students for this class
+    const studentQuery = {
+      status: "active",
+      branch: branchId,
+      year: parseInt(year),
+      division,
+      academicYear
+    };
+
+    if (sessionType === "PRACTICAL" && batch) {
+      studentQuery.$or = [{ batch }, { batchName: batch }];
+    }
+
+    const students = await Student.find(studentQuery).select("rollNo _id").lean();
+    if (students.length === 0) {
+      return res.status(400).json({ success: false, message: "No students found for this class" });
+    }
+
+    const rollToId = new Map(students.map((s) => [s.rollNo, s._id]));
+
+    let updatedSessions = 0;
+    let newSessions = 0;
+
+    // 3. Process each date column
+    for (const dateStr of attendanceData.dates) {
+      const records = attendanceData.records[dateStr];
+      const sessionDate = new Date(dateStr);
+      sessionDate.setHours(0, 0, 0, 0);
+      const nextDate = new Date(sessionDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      // Find absent student IDs
+      const absentStudentIds = records.absent
+        .map(roll => rollToId.get(roll))
+        .filter(id => id !== undefined);
+
+      // Check if session exists
+      const duplicateQuery = {
+        date: { $gte: sessionDate, $lt: nextDate },
+        subject: subjectId,
+        branch: branchId,
+        year: year,
+        division: division,
+        academicYear: academicYear,
+        sessionType: sessionType
+      };
+
+      if (sessionType === "PRACTICAL" && batch) {
+        duplicateQuery.batch = batch;
+      }
+
+      const existingSession = await AttendanceSession.findOne(duplicateQuery);
+
+      if (existingSession) {
+        // Update existing session
+        existingSession.absentStudents = absentStudentIds;
+        existingSession.totalStudents = students.length;
+        await existingSession.save();
+        updatedSessions++;
+      } else {
+        // Create new session
+        const month = sessionDate.getMonth();
+        const semesterBase = (year - 1) * 2;
+        const semester = month >= 6 ? semesterBase + 1 : semesterBase + 2;
+
+        await AttendanceSession.create({
+          date: sessionDate,
+          academicYear,
+          semester,
+          sessionType,
+          batch: sessionType === "PRACTICAL" ? batch : null,
+          assignedTeacher: req.user.id, // default to admin
+          teacher: req.user.id,
+          subject: subjectId,
+          branch: branchId,
+          year,
+          division,
+          absentStudents: absentStudentIds,
+          totalStudents: students.length,
+          createdBy: req.user.id
+        });
+        newSessions++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Excel data imported and synced successfully",
+      updatedSessions,
+      newSessions,
+      totalDatesProcessed: attendanceData.dates.length
+    });
+
+  } catch (error) {
+    console.error("IMPORT EXCEL ERROR:", error);
+    res.status(500).json({ success: false, message: "Error importing Excel", error: error.message });
   }
 };

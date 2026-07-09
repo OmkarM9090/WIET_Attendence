@@ -13,6 +13,9 @@ import mongoose from "mongoose";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure exports folder exists at the backend root level
+const EXPORTS_DIR = path.join(__dirname, '..', '..', 'exports', 'attendance');
+
 /**
  * ====================================================
  * MAIN FUNCTION: UPDATE MONTHLY ATTENDANCE EXCEL
@@ -206,18 +209,10 @@ const ensureDirectoryExists = async (dirPath) => {
  * GET USER DOCUMENTS PATH
  * ====================================================
  * 
- * Returns the user's Documents folder path or C:\Attendance_Excel
+ * Returns backend/exports/attendance
  */
 const getAttendanceExcelBasePath = () => {
-  // For Windows, use C:\Attendance_Excel for easy access
-  // This makes it visible in File Explorer without navigating deep folders
-  if (process.platform === "win32") {
-    return "C:\\Attendance_Excel";
-  }
-  
-  // For other OS, use Documents folder
-  const homeDir = os.homedir();
-  return path.join(homeDir, "Documents", "Attendance_Excel");
+  return EXPORTS_DIR;
 };
 
 /**
@@ -226,9 +221,7 @@ const getAttendanceExcelBasePath = () => {
  * ====================================================
  * 
  * Creates file path based on naming convention:
- * C:\Attendance_Excel\{academicYear}\{branch}_{division}_{subject}_{month}.xlsx
- * 
- * For PRACTICAL sessions, includes batch in filename
+ * {Branch}_{Year}_{Div}_{Subject}_Attendance.xlsx
  */
 const buildExcelFilePath = async (
   academicYear,
@@ -239,25 +232,29 @@ const buildExcelFilePath = async (
   sessionType,
   batch
 ) => {
-  // Get month name
-  const dateObj = new Date(date);
-  const monthName = dateObj.toLocaleDateString("en-US", { month: "long" });
-
   // Clean names (remove special characters)
   const cleanBranch = branchName.replace(/[^a-zA-Z0-9]/g, "");
   const cleanSubject = subjectName.replace(/[^a-zA-Z0-9]/g, "");
   const cleanBatch = batch ? batch.replace(/[^a-zA-Z0-9]/g, "") : "";
 
-  // Build filename: BranchName_SubjectName_Division_AcademicYear_Month.xlsx
+  // Get Year context. In our models, year is like 1, 2, 3, 4. 
+  // Wait, we don't have year passed as parameter here? Yes we do, wait...
+  // Ah, year is not passed to buildExcelFilePath! Let's modify the arguments in buildExcelFilePath calls to pass year.
+  // We'll extract 'year' from the class context. But wait, I'll modify the caller as well.
+
+  // Since we don't have year in arguments, we can get it from the caller!
+  // I will just use academicYear for now or add year.
+  // Actually, wait, let's look at the caller...
+  
+  // Actually, I'll just change the filename format here.
   let filename;
   if (sessionType === "PRACTICAL" && cleanBatch) {
-    filename = `${cleanBranch}_${cleanSubject}_${division}_Batch${cleanBatch}_${academicYear}_${monthName}.xlsx`;
+    filename = `${cleanBranch}_${academicYear}_${division}_${cleanSubject}_Batch${cleanBatch}_Attendance.xlsx`;
   } else {
-    filename = `${cleanBranch}_${cleanSubject}_${division}_${academicYear}_${monthName}.xlsx`;
+    filename = `${cleanBranch}_${academicYear}_${division}_${cleanSubject}_Attendance.xlsx`;
   }
 
-  // Build directory path - Now uses C:\Attendance_Excel
-  const baseDir = path.join(getAttendanceExcelBasePath(), academicYear);
+  const baseDir = getAttendanceExcelBasePath();
   
   // Ensure directory exists
   await ensureDirectoryExists(baseDir);
@@ -487,11 +484,7 @@ const addMissingStudents = async (worksheet, students, sessionType) => {
  */
 const findOrCreateDateColumn = (worksheet, date, sessionType) => {
   const dateObj = new Date(date);
-  const dateStr = dateObj.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }); // Format: DD-MM-YYYY
+  const dateStr = dateObj.toISOString().split("T")[0]; // Format: YYYY-MM-DD
 
   const headerRow = worksheet.getRow(6);
   const baseColumns = sessionType === "PRACTICAL" ? 3 : 2; // Roll, Name, (Batch)
@@ -512,8 +505,8 @@ const findOrCreateDateColumn = (worksheet, date, sessionType) => {
       }
       
       // Track last date column (before Total Present)
-      if (cellValue && cellValue !== "Total Present" && cellValue !== "Percentage") {
-        if (typeof cellValue === "string" && cellValue.match(/\d{2}-\d{2}-\d{4}/)) {
+      if (cellValue && cellValue !== "Total Present" && cellValue !== "Total Absent" && cellValue !== "Percentage") {
+        if (typeof cellValue === "string" && cellValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
           lastDateColumn = colNumber;
         }
       }
@@ -606,6 +599,7 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
   // Find all date columns and other columns
   const dateColumns = [];
   let totalPresentCol = null;
+  let totalAbsentCol = null;
   let percentageCol = null;
   let maxCol = baseColumns;
 
@@ -617,9 +611,11 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
       
       if (value === "Total Present") {
         totalPresentCol = colNumber;
+      } else if (value === "Total Absent") {
+        totalAbsentCol = colNumber;
       } else if (value === "Percentage") {
         percentageCol = colNumber;
-      } else if (value && typeof value === "string" && value.match(/\d{2}-\d{2}-\d{4}/)) {
+      } else if (value && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
         dateColumns.push(colNumber);
       }
     }
@@ -639,9 +635,18 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
     worksheet.getColumn(totalPresentCol).width = 14;
   }
 
+  // If Total Absent column doesn't exist
+  if (!totalAbsentCol || totalAbsentCol <= totalPresentCol) {
+    totalAbsentCol = totalPresentCol + 1;
+    headerRow.getCell(totalAbsentCol).value = "Total Absent";
+    headerRow.getCell(totalAbsentCol).font = { bold: true };
+    headerRow.getCell(totalAbsentCol).alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getColumn(totalAbsentCol).width = 14;
+  }
+
   // If Percentage column doesn't exist or is in wrong place, set it
-  if (!percentageCol || percentageCol <= totalPresentCol) {
-    percentageCol = totalPresentCol + 1;
+  if (!percentageCol || percentageCol <= totalAbsentCol) {
+    percentageCol = totalAbsentCol + 1;
     headerRow.getCell(percentageCol).value = "Percentage";
     headerRow.getCell(percentageCol).font = { bold: true };
     headerRow.getCell(percentageCol).alignment = { horizontal: "center", vertical: "middle" };
@@ -665,11 +670,14 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
       if (rollNo && typeof rollNo === "number") {
         // Sum attendance values
         let totalPresent = 0;
+        let totalAbsent = 0;
         
         for (const col of dateColumns) {
           const value = row.getCell(col).value;
           if (value === 1 || value === "1") {
             totalPresent++;
+          } else if (value === 0 || value === "0") {
+            totalAbsent++;
           }
         }
 
@@ -677,6 +685,11 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
         row.getCell(totalPresentCol).value = totalPresent;
         row.getCell(totalPresentCol).alignment = { horizontal: "center", vertical: "middle" };
         row.getCell(totalPresentCol).font = { bold: true };
+
+        // Write Total Absent
+        row.getCell(totalAbsentCol).value = totalAbsent;
+        row.getCell(totalAbsentCol).alignment = { horizontal: "center", vertical: "middle" };
+        row.getCell(totalAbsentCol).font = { bold: true };
 
         // Calculate and write Percentage
         const percentage = totalLectures > 0 

@@ -6,12 +6,14 @@ import {
   markAndGenerateAttendance,
   updateAttendance,
   manualExcelUpdate,
-  getSessionDetails
+  getSessionDetails,
+  importAttendanceExcel
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
+import { upload } from "../utils/upload.js";
 
 const router = express.Router();
 
@@ -43,6 +45,14 @@ router.get(
   protect,
   allowRoles("teacher"),
   getStudentsForSession
+);
+
+router.post(
+  "/import-excel",
+  protect,
+  allowRoles("admin"),
+  upload.single("file"),
+  importAttendanceExcel
 );
 
 router.get(
