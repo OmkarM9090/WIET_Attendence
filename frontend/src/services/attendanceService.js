@@ -128,3 +128,16 @@ export const exportDefaultersExcel = async (filters) => {
     throw error.response?.data || { message: "Failed to export Excel" };
   }
 };
+
+/**
+ * Get detailed session information including all students' attendance status
+ * @param {string} sessionId - ID of the attendance session
+ */
+export const getSessionDetails = async (sessionId) => {
+  try {
+    const response = await axiosInstance.get(`/attendance/session/${sessionId}/details`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch session details" };
+  }
+};

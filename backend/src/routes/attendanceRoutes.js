@@ -5,7 +5,8 @@ import {
   getStudentsForSession,
   markAndGenerateAttendance,
   updateAttendance,
-  manualExcelUpdate
+  manualExcelUpdate,
+  getSessionDetails
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
@@ -43,6 +44,14 @@ router.get(
   allowRoles("teacher"),
   getStudentsForSession
 );
+
+router.get(
+  "/session/:sessionId/details",
+  protect,
+  allowRoles("admin", "teacher"),
+  getSessionDetails
+);
+
 router.get(
   "/monthly",
   protect,

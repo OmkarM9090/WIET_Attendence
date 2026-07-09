@@ -1129,3 +1129,90 @@ export const manualExcelUpdate = async (req, res) => {
   }
 };
 
+/**
+ * GET SESSION DETAILS
+ * Fetch detailed info for a specific attendance session including all students
+ * @route GET /api/attendance/session/:sessionId/details
+ */
+export const getSessionDetails = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    // 1. Fetch attendance session with populated refs
+    const session = await AttendanceSession.findById(sessionId)
+      .populate("subject", "name code")
+      .populate("branch", "name code")
+      .lean();
+
+    if (!session) {
+      return res.status(404).json({ success: false, message: "Session not found" });
+    }
+
+    // 2. Fetch all eligible students for this session
+    const studentFilter = {
+      branch: session.branch._id,
+      year: session.year,
+      division: session.division,
+      status: "active",
+      admissionDate: { $lte: session.date }
+    };
+
+    if (session.academicYear) {
+      studentFilter.$or = [
+        { academicYear: session.academicYear },
+        { academicYear: { $exists: false } }
+      ];
+    }
+
+    if (session.sessionType === "PRACTICAL" && session.batch) {
+      studentFilter.batch = session.batch;
+    }
+
+    const students = await Student.find(studentFilter)
+      .populate("userId", "name")
+      .sort({ rollNo: 1 })
+      .lean();
+
+    // 3. Format the students array with present/absent status
+    const absentSet = new Set(session.absentStudents.map(id => id.toString()));
+    
+    let presentCount = 0;
+    let absentCount = 0;
+
+    const attendanceRecords = students.map(student => {
+      const isAbsent = absentSet.has(student._id.toString());
+      if (isAbsent) absentCount++;
+      else presentCount++;
+
+      return {
+        rollNo: student.rollNo,
+        studentName: student.userId?.name || "Unknown",
+        status: isAbsent ? "absent" : "present"
+      };
+    });
+
+    // 4. Return formatted response
+    res.json({
+      success: true,
+      session: {
+        date: session.date,
+        subject: session.subject,
+        batch: {
+          name: session.batch || null,
+          branch: session.branch.name,
+          year: session.year,
+          division: session.division
+        },
+        type: session.sessionType,
+        totalStudents: students.length, // use actual count
+        presentCount,
+        absentCount
+      },
+      attendanceRecords
+    });
+
+  } catch (error) {
+    console.error("GET SESSION DETAILS ERROR:", error);
+    res.status(500).json({ success: false, message: "Server error fetching details" });
+  }
+};

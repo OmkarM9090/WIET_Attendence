@@ -8,6 +8,7 @@ import FormInput from "../components/FormInput";
 import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Alert from "../components/Alert";
+import AttendanceDetailPanel from "../components/AttendanceDetailPanel";
 import { theme } from "../styles/theme";
 import { getTeacherAttendance } from "../services/attendanceService";
 
@@ -15,6 +16,7 @@ export default function AttendanceHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sessions, setSessions] = useState([]);
+  const [expandedSessionId, setExpandedSessionId] = useState(null);
 
   const [filters, setFilters] = useState({
     subjectId: "",
@@ -224,34 +226,52 @@ export default function AttendanceHistory() {
                     : 0;
 
                   return (
-                    <tr
-                      key={session._id}
-                      style={{ borderBottom: `1px solid ${theme.colors.border}` }}
-                    >
-                      <td className="px-4 py-3 text-sm" style={{ color: theme.colors.text.primary }}>
-                        {new Date(session.date).toLocaleDateString("en-IN")}
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: theme.colors.text.primary }}>
-                        {session.subject?.name || "N/A"} ({session.subject?.code || ""})
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: theme.colors.text.primary }}>
-                        {session.branch?.code || session.branch?.name || ""} {session.year}-{session.division}
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: theme.colors.text.primary }}>
-                        {session.sessionType}
-                      </td>
-                      <td
-                        className="px-4 py-3 text-sm font-medium"
-                        style={{
-                          color: percentage >= 75 ? theme.colors.success : theme.colors.error,
+                    <React.Fragment key={session._id}>
+                      <tr
+                        onClick={() => setExpandedSessionId(expandedSessionId === session._id ? null : session._id)}
+                        className="hover:bg-indigo-50 transition-colors cursor-pointer group"
+                        style={{ 
+                          borderBottom: expandedSessionId === session._id ? 'none' : `1px solid ${theme.colors.border}`,
+                          backgroundColor: expandedSessionId === session._id ? '#f0fdf4' : 'transparent'
                         }}
                       >
-                        {present}/{session.totalStudents} ({percentage}%)
-                      </td>
-                      <td className="px-4 py-3 text-sm" style={{ color: theme.colors.text.primary }}>
-                        {absent}
-                      </td>
-                    </tr>
+                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                          {new Date(session.date).toLocaleDateString("en-IN")}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                          {session.subject?.name || "N/A"} ({session.subject?.code || ""})
+                        </td>
+                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                          {session.branch?.code || session.branch?.name || ""} {session.year}-{session.division}
+                        </td>
+                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                          {session.sessionType}
+                        </td>
+                        <td
+                          className="px-4 py-3 text-sm font-medium group-hover:text-indigo-900 transition-colors"
+                          style={{
+                            color: percentage >= 75 ? theme.colors.success : theme.colors.error,
+                          }}
+                        >
+                          {present}/{session.totalStudents} ({percentage}%)
+                        </td>
+                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                          {absent}
+                        </td>
+                      </tr>
+                      {expandedSessionId === session._id && (
+                        <tr>
+                          <td colSpan="6" className="p-0 border-b border-indigo-100">
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                              <AttendanceDetailPanel 
+                                sessionId={session._id} 
+                                onClose={() => setExpandedSessionId(null)} 
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
