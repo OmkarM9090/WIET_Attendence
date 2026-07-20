@@ -223,6 +223,11 @@ export default function StudentManagement() {
     },
     { header: "Year", accessor: "year" },
     { header: "Division", accessor: "division" },
+    { 
+      header: "Batch", 
+      accessor: "batch",
+      render: (val) => val ? val.name || val : "-"
+    },
     { header: "Academic Year", accessor: "academicYear" },
     { header: "Admission Year", accessor: "admissionYear" },
     { header: "Status", accessor: "status" },

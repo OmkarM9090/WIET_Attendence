@@ -37,7 +37,7 @@ export const uploadStudentsExcel = async (req, res) => {
 
     let rowNum = 2; // Row 1 is header
     for (const s of students) {
-      const { errors, branch } = await validateStudentRow(s);
+      const { errors, branch, batch } = await validateStudentRow(s);
       
       if (errors.length > 0) {
         failedRows.push({
@@ -64,7 +64,7 @@ export const uploadStudentsExcel = async (req, res) => {
           branch: branch._id,
           year: s.year,
           division: s.division.toUpperCase(),
-          batch: s.batch || undefined,
+          batch: batch ? batch._id : undefined,
           academicYear: autoAcademicYear,
           admissionDate: new Date()
         });

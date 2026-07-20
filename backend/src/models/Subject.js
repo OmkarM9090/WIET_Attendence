@@ -63,9 +63,36 @@ const subjectSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    
+    // Soft Delete fields
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   },
   { timestamps: true }
 );
+
+/**
+ * CASCADE DELETE HOOKS
+ * Hard deletion: When a subject is permanently deleted, clean up references.
+ */
+subjectSchema.pre("findOneAndDelete", async function (next) {
+  const subjectId = this.getQuery()["_id"];
+  if (subjectId) {
+    try {
+      const TeachingAssignment = mongoose.model("TeachingAssignment");
+      const AttendanceSession = mongoose.model("AttendanceSession");
+
+      console.log(`[CASCADE] Hard deleting records for Subject: ${subjectId}`);
+      
+      await TeachingAssignment.deleteMany({ subject: subjectId });
+      await AttendanceSession.deleteMany({ subject: subjectId });
+    } catch (err) {
+      console.error(`[CASCADE ERROR] Failed to cascade delete for Subject: ${subjectId}`, err);
+    }
+  }
+  next();
+});
 
 /**
  * INDEXES (VERY IMPORTANT)

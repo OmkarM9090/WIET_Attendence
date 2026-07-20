@@ -40,6 +40,30 @@ export const getBranches = async () => {
 // ============ SUBJECT MANAGEMENT ============
 
 /**
+ * Get branch deletion counts (for cascade warning)
+ */
+export const getBranchDeleteCount = async (id) => {
+  try {
+    const response = await axiosInstance.get(`/admin/branches/${id}/delete-count`);
+    return response.data?.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch deletion counts" };
+  }
+};
+
+/**
+ * Delete a branch
+ */
+export const deleteBranch = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/admin/branches/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete branch" };
+  }
+};
+
+/**
  * Create a new subject
  * @param {string} name - Subject name
  * @param {string} code - Subject code

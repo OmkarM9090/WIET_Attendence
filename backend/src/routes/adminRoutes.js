@@ -4,6 +4,8 @@ import {
   getBranches,
   createSubject,
   getSubjects,
+  getBranchDeleteCount,
+  deleteBranch,
 } from "../controllers/adminController.js";
 import {
   createTeachingAssignment,
@@ -17,6 +19,8 @@ const router = express.Router();
 // BRANCH
 router.post("/branches", protect, allowRoles("admin"), createBranch);
 router.get("/branches", protect, allowRoles("admin"), getBranches);
+router.get("/branches/:id/delete-count", protect, allowRoles("admin"), getBranchDeleteCount);
+router.delete("/branches/:id", protect, allowRoles("admin"), deleteBranch);
 
 // SUBJECT
 router.post("/subjects", protect, allowRoles("admin"), createSubject);

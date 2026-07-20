@@ -21,19 +21,19 @@ const attendanceSessionSchema = new mongoose.Schema(
       max: 8,
     },
 
-    // Session type: LECTURE or PRACTICAL
+    // Session type: LECTURE, PRACTICAL, or LAB
     sessionType: {
       type: String,
-      enum: ["LECTURE", "PRACTICAL"],
+      enum: ["LECTURE", "PRACTICAL", "LAB"],
       required: true,
     },
 
-    // Batch: Required only for PRACTICAL sessions
+    // Batch: Required only for PRACTICAL/LAB sessions
     batch: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
       required: function () {
-        return this.sessionType === "PRACTICAL";
+        return ["PRACTICAL", "LAB"].includes(this.sessionType);
       },
     },
 
@@ -142,6 +142,11 @@ const attendanceSessionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Soft Delete fields
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   },
   { timestamps: true }
 );

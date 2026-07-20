@@ -34,14 +34,9 @@ const studentSchema = new mongoose.Schema(
 
     // Batch (e.g., "A1", "B1") - optional for lectures, required for practicals
     batch: {
-      type: String,
-      trim: true,
-    },
-
-    // Optional batch display name
-    batchName: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      required: false,
     },
 
     // Academic Year (e.g., "2024-2025")
@@ -71,6 +66,11 @@ const studentSchema = new mongoose.Schema(
     admissionYear: {
       type: Number,
     },
+    
+    // Soft Delete fields
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   },
   { timestamps: true }
 );

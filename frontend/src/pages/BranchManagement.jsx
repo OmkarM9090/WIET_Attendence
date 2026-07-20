@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import { theme } from "../styles/theme";
 
 // Services
-import { getBranches, createBranch } from "../services/adminService";
+import { getBranches, createBranch, deleteBranch, getBranchDeleteCount } from "../services/adminService";
 
 // Components
 import DashboardLayout from "../components/DashboardLayout";
@@ -49,6 +49,9 @@ export default function BranchManagement() {
 
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteCounts, setDeleteCounts] = useState(null);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleteLoadingCounts, setDeleteLoadingCounts] = useState(false);
 
   /**
    * Fetch all branches on mount
@@ -167,8 +170,20 @@ export default function BranchManagement() {
   /**
    * Handle delete confirmation
    */
-  const handleDeleteConfirm = (branch) => {
+  const handleDeleteConfirm = async (branch) => {
     setDeleteConfirm(branch);
+    setDeleteInput("");
+    setDeleteCounts(null);
+    setDeleteLoadingCounts(true);
+    
+    try {
+      const counts = await getBranchDeleteCount(branch._id);
+      setDeleteCounts(counts);
+    } catch (err) {
+      setFormError("Failed to load deletion impact counts");
+    } finally {
+      setDeleteLoadingCounts(false);
+    }
   };
 
   /**
@@ -176,19 +191,24 @@ export default function BranchManagement() {
    */
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    if (deleteInput !== "DELETE") {
+      setFormError("Please type DELETE to confirm");
+      return;
+    }
 
     setFormLoading(true);
+    setFormError("");
 
     try {
-      // Delete functionality would go here
-      // await deleteBranch(deleteConfirm._id);
-      setSuccess("Branch deleted successfully!");
+      await deleteBranch(deleteConfirm._id);
+      setSuccess("Branch soft deleted successfully!");
       setDeleteConfirm(null);
+      setDeleteInput("");
       fetchBranches(); // Refresh list
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.message || "Delete failed");
+      setFormError(err.message || "Delete failed");
     } finally {
       setFormLoading(false);
     }
@@ -434,12 +454,46 @@ export default function BranchManagement() {
               Are you sure you want to delete the branch{" "}
               <strong>{deleteConfirm?.name}</strong>?
             </p>
+            
+            {deleteLoadingCounts ? (
+              <div className="mt-4 flex justify-center py-4">
+                <LoadingSpinner size="sm" />
+              </div>
+            ) : deleteCounts ? (
+              <div className="mt-4 rounded-lg bg-red-50 p-4 text-left text-sm text-red-800">
+                <p className="mb-2 font-semibold">Yeh action soft delete karega:</p>
+                <ul className="list-inside list-disc space-y-1">
+                  <li>{deleteCounts.students} Students</li>
+                  <li>{deleteCounts.subjects} Subjects</li>
+                  <li>{deleteCounts.batches} Batches</li>
+                  <li>{deleteCounts.assignments} Teaching Assignments</li>
+                  <li>{deleteCounts.sessions} Attendance Sessions</li>
+                </ul>
+              </div>
+            ) : null}
+
             <p
-              className="mt-2 text-xs"
-              style={{ color: theme.colors.text.secondary }}
+              className="mt-4 text-xs font-semibold"
+              style={{ color: theme.colors.error }}
             >
-              This action cannot be undone. All associated data will be removed.
+              Kya aap sure hain? Type 'DELETE' to confirm.
             </p>
+            
+            <div className="mt-2">
+              <input
+                type="text"
+                placeholder="Type DELETE"
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                className="w-full rounded-md border p-2 text-center text-sm font-semibold uppercase focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                style={{ borderColor: theme.colors.border }}
+                disabled={formLoading}
+              />
+            </div>
+            
+            {formError && (
+              <p className="mt-2 text-xs text-red-500">{formError}</p>
+            )}
           </div>
         </div>
       </Modal>
