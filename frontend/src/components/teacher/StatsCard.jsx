@@ -9,16 +9,16 @@ const StatsCard = ({ title, value, subtitle, icon, color = 'indigo' }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-slate-100">
+    <div className="bg-white rounded-2xl shadow-sm hover:shadow transition-shadow p-5 border border-slate-100/60">
       <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-slate-800 tabular-nums">{value}</h3>
+        <div className="space-y-1">
+          <p className="text-[13px] font-semibold tracking-wide text-slate-500 uppercase">{title}</p>
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">{value}</h3>
           {subtitle && (
-            <p className="text-xs text-slate-400 mt-2">{subtitle}</p>
+            <p className="text-xs font-medium text-slate-400">{subtitle}</p>
           )}
         </div>
-        <div className={`p-3 rounded-full ${colorMap[color] || colorMap.indigo}`}>
+        <div className={`p-2.5 rounded-xl shadow-sm ${colorMap[color] || colorMap.indigo}`}>
           {icon}
         </div>
       </div>

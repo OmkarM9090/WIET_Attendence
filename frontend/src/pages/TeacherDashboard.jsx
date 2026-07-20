@@ -80,10 +80,12 @@ export default function TeacherDashboard() {
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
         
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold mb-2">👋 Welcome back, {user?.name || 'Teacher'}!</h1>
-            <p className="text-indigo-100 font-medium">Today is {todayStr}</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1 sm:mb-2">
+              👋 Welcome back, {user?.name?.split(' ')[0] || 'Teacher'}!
+            </h1>
+            <p className="text-indigo-100 font-medium text-sm sm:text-base">Today is {todayStr}</p>
           </div>
           <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
             <BookOpen size={200} />
@@ -98,7 +100,7 @@ export default function TeacherDashboard() {
         )}
 
         {/* Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <StatsCard 
             title="Today's Sessions" 
             value={data.todaySessions} 

@@ -17,10 +17,10 @@ export default function FormSelect({
         value={value}
         onChange={onChange}
         required={required}
-        className="w-full rounded-lg border border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-h-[44px]"
+        className="w-full max-w-full overflow-hidden text-ellipsis rounded-lg border border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-h-[44px]"
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} className="text-ellipsis max-w-full overflow-hidden">
             {option.label}
           </option>
         ))}

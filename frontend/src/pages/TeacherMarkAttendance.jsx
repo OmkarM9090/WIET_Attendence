@@ -506,16 +506,16 @@ export default function TeacherMarkAttendance() {
    * @returns {String} Formatted label
    */
   const formatDropdownLabel = (assignment) => {
-    const branch = assignment.branch?.name || "Unknown Branch";
-    const subject = assignment.subject?.name || "Unknown Subject";
-    const year = assignment.year ? `Year ${assignment.year}` : "";
-    const division = assignment.division || "";
-    const time = `${assignment.startTime}–${assignment.endTime}`;
-    const sessionType =
-      assignment.sessionType === "PRACTICAL" ? "Practical" : "Lecture";
-    const batch = assignment.batch ? ` Batch ${assignment.batch.name}` : "";
+    const branchCode = assignment.branch?.code || assignment.branch?.name || "Unknown";
+    const subjectName = assignment.subject?.name || "Unknown Subject";
+    const yearMap = { 1: "FE", 2: "SE", 3: "TE", 4: "BE" };
+    const yearStr = assignment.year ? (yearMap[assignment.year] || `Y${assignment.year}`) : "";
+    const divStr = assignment.division || "";
+    const time = `${assignment.startTime}-${assignment.endTime}`;
+    const type = assignment.sessionType === "PRACTICAL" ? "Prac" : "Lec";
+    const batch = assignment.batch ? ` (B: ${assignment.batch.name})` : "";
 
-    return `${branch} - ${subject} (${year} ${division}) ${time} ${sessionType}${batch}`;
+    return `${branchCode} • ${subjectName} • ${yearStr}-${divStr} • ${time} • ${type}${batch}`;
   };
 
   /**
@@ -561,156 +561,65 @@ export default function TeacherMarkAttendance() {
           📋 Selected Session Details
         </h3>
 
-        <div style={{ display: "grid", gap: "16px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
           {/* Subject */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Subject:
-            </span>
-            <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-              {subject?.name} ({subject?.code})
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Subject:</span>
+            <span className="text-sm font-medium text-slate-900">{subject?.name} ({subject?.code})</span>
           </div>
 
           {/* Branch */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Branch:
-            </span>
-            <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-              {branch?.name}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Branch:</span>
+            <span className="text-sm font-medium text-slate-900">{branch?.name}</span>
           </div>
 
           {/* Class */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Class:
-            </span>
-            <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-              Year {year} Division {division}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Class:</span>
+            <span className="text-sm font-medium text-slate-900">Year {year} Division {division}</span>
           </div>
 
           {/* Batch (if practical) */}
           {batch && (
-            <div style={{ display: "flex", gap: "12px" }}>
-              <span
-                style={{
-                  width: "140px",
-                  fontWeight: "600",
-                  color: theme.colors.text.secondary,
-                }}
-              >
-                Batch:
-              </span>
-              <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-                {batch.name}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+              <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Batch:</span>
+              <span className="text-sm font-medium text-slate-900">{batch.name}</span>
             </div>
           )}
 
           {/* Day */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Day of Week:
-            </span>
-            <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-              {dayOfWeek}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Day of Week:</span>
+            <span className="text-sm font-medium text-slate-900">{dayOfWeek}</span>
           </div>
 
           {/* Time Slot */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Time Slot:
-            </span>
-            <span
-              style={{
-                color: theme.colors.text.primary,
-                fontWeight: "500",
-                fontFamily: "monospace",
-              }}
-            >
-              {startTime} – {endTime}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Time Slot:</span>
+            <span className="text-sm font-medium text-slate-900 font-mono">{startTime} – {endTime}</span>
           </div>
 
           {/* Session Type */}
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Session Type:
-            </span>
-            <span
-              style={{
-                padding: "6px 12px",
-                borderRadius: "6px",
-                fontSize: "13px",
-                fontWeight: "600",
-                backgroundColor:
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Session Type:</span>
+            <div>
+              <span
+                className={`inline-block px-3 py-1 rounded-md text-xs font-semibold ${
                   sessionType === "PRACTICAL"
-                    ? theme.colors.warning + "20"
-                    : theme.colors.info + "20",
-                color:
-                  sessionType === "PRACTICAL"
-                    ? theme.colors.warning
-                    : theme.colors.info,
-              }}
-            >
-              {sessionType}
-            </span>
+                    ? "bg-amber-50 text-amber-600 border border-amber-200"
+                    : "bg-blue-50 text-blue-600 border border-blue-200"
+                }`}
+              >
+                {sessionType}
+              </span>
+            </div>
           </div>
 
           {/* Academic Year */}
-          <div style={{ display: "flex", gap: "12px" }}>
-            <span
-              style={{
-                width: "140px",
-                fontWeight: "600",
-                color: theme.colors.text.secondary,
-              }}
-            >
-              Academic Year:
-            </span>
-            <span style={{ color: theme.colors.text.primary, fontWeight: "500" }}>
-              {academicYear}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Academic Year:</span>
+            <span className="text-sm font-medium text-slate-900">{academicYear}</span>
           </div>
         </div>
       </div>
@@ -723,30 +632,7 @@ export default function TeacherMarkAttendance() {
       subtitle="Select your teaching session to mark attendance"
       sidebarItems={sidebarItems}
     >
-      {/* Header Section */}
-      <div
-        style={{
-          marginBottom: "24px",
-          padding: "20px",
-          backgroundColor: theme.colors.primary[50],
-          border: `1px solid ${theme.colors.primary[100]}`,
-          borderRadius: "12px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "600",
-            color: theme.colors.primary[700],
-            marginBottom: "8px",
-          }}
-        >
-          🎯 Select Your Teaching Session
-        </h2>
-        <p style={{ fontSize: "14px", color: theme.colors.text.secondary }}>
-          Choose the class and time slot for which you want to mark attendance
-        </p>
-      </div>
+
 
       {/* Error Alert */}
       {error && (
@@ -796,16 +682,7 @@ export default function TeacherMarkAttendance() {
           ) : (
             <>
               {/* Step 1: Dropdown Section */}
-              <div
-                style={{
-                  backgroundColor: "white",
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: "12px",
-                  padding: "24px",
-                  boxShadow: theme.shadows.sm,
-                  marginBottom: "20px",
-                }}
-              >
+              <div className="bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm mb-5">
                 <div
                   style={{
                     display: "flex",
@@ -872,13 +749,8 @@ export default function TeacherMarkAttendance() {
 
               {/* Step 2: Date Selection */}
               <div
+                className="bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm mb-5 transition-opacity duration-200"
                 style={{
-                  backgroundColor: "white",
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: "12px",
-                  padding: "24px",
-                  boxShadow: theme.shadows.sm,
-                  marginBottom: "20px",
                   opacity: selectedAssignment ? 1 : 0.5,
                   pointerEvents: selectedAssignment ? "auto" : "none",
                 }}
@@ -977,16 +849,7 @@ export default function TeacherMarkAttendance() {
 
               {/* Step 3: Student List */}
               {selectedAssignment && selectedDate && !dateError && (
-                <div
-                  style={{
-                    marginTop: "24px",
-                    backgroundColor: "white",
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: "12px",
-                    padding: "24px",
-                    boxShadow: theme.shadows.sm,
-                  }}
-                >
+                <div className="mt-6 bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm">
                   <div
                     style={{
                       display: "flex",

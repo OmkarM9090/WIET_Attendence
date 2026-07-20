@@ -26,33 +26,24 @@ export default function StatsCard({ title, value, icon, trend, color = "primary"
 
   return (
     <div
-      className="rounded-lg p-6 transition-all"
-      style={{
-        backgroundColor: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
-        boxShadow: theme.shadows.sm,
-      }}
+      className="rounded-2xl p-5 transition-all bg-white border border-slate-100/60 hover:shadow shadow-sm"
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = theme.shadows.md;
         e.currentTarget.style.transform = "translateY(-2px)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = theme.shadows.sm;
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       <div className="flex items-start justify-between">
         {/* Left: Title and Value */}
-        <div className="flex-1">
+        <div className="flex-1 space-y-1">
           <p
-            className="text-sm font-medium"
-            style={{ color: theme.colors.text.secondary }}
+            className="text-[13px] font-semibold tracking-wide uppercase text-slate-500"
           >
             {title}
           </p>
           <p
-            className="mt-2 text-3xl font-bold"
-            style={{ color: theme.colors.text.primary }}
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800"
           >
             {value}
           </p>

@@ -14,7 +14,7 @@ export default function DashboardHeader({ title, subtitle, onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8 py-4 bg-white border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+    <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-8 py-4 bg-white border-b border-slate-100 shadow-sm">
       {/* Left side: Hamburger (mobile) + Page Title */}
       <div className="flex items-center gap-3">
         <button
