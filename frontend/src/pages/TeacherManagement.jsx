@@ -1708,11 +1708,6 @@ export default function TeacherManagement() {
                 type="text"
                 placeholder="2025-2026"
                 value={editAssignmentData.academicYear}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, academicYear: e.target.value }))
-                }
-              />
-
               <div style={{ display: "flex", gap: "12px" }}>
                 <Button
                   onClick={handleUpdateAssignment}
@@ -1742,6 +1737,7 @@ export default function TeacherManagement() {
         isOpen={isResultModalOpen} 
         onClose={() => setIsResultModalOpen(false)} 
         result={uploadResult} 
+        type="teacher"
       />
 
       {/* Data Preview Overlay */}
