@@ -7,6 +7,8 @@ export default function FormInput({
   onChange,
   required = false,
   disabled = false,
+  min,
+  max,
   className = "",
   style = {},
 }) {
@@ -24,6 +26,8 @@ export default function FormInput({
         onChange={onChange}
         required={required}
         disabled={disabled}
+        min={min}
+        max={max}
         className={`w-full rounded-lg border border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100 disabled:text-gray-500 min-h-[44px] ${className}`}
         style={style}
       />

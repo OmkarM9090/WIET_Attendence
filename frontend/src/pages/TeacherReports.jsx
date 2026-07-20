@@ -141,11 +141,11 @@ export default function TeacherReports() {
   }
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
-      <DashboardHeader
-        title="Attendance Reports"
-        subtitle="Generate detailed attendance reports for your classes"
-      />
+    <DashboardLayout 
+      title="Attendance Reports"
+      subtitle="Generate detailed attendance reports for your classes"
+      sidebarItems={sidebarItems}
+    >
 
       {error && (
         <div className="mb-4">

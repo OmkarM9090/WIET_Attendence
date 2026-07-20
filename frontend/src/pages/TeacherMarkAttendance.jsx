@@ -1188,10 +1188,6 @@ export default function TeacherMarkAttendance() {
 
                       {/* Student List */}
                       <div
-                        style={{
-                          maxHeight: "400px",
-                          overflowY: "auto",
-                      <div
                         className="overflow-x-auto w-full"
                         style={{
                           maxHeight: "400px",

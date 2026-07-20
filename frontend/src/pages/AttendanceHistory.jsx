@@ -114,11 +114,11 @@ export default function AttendanceHistory() {
   }
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
-      <DashboardHeader
-        title="Attendance History"
-        subtitle="Review your past attendance sessions"
-      />
+    <DashboardLayout 
+      title="Attendance History"
+      subtitle="Review your past attendance sessions"
+      sidebarItems={sidebarItems}
+    >
 
       {error && (
         <div className="mb-4">
