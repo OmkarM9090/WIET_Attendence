@@ -6,6 +6,8 @@ import {
   getSubjects,
   getBranchDeleteCount,
   deleteBranch,
+  downloadStudentTemplate,
+  downloadTeacherTemplate
 } from "../controllers/adminController.js";
 import {
   createTeachingAssignment,
@@ -39,5 +41,9 @@ router.get(
   allowRoles("admin"),
   getTeachingAssignments
 );
+
+// TEMPLATE DOWNLOADS
+router.get("/download-student-template", protect, allowRoles("admin"), downloadStudentTemplate);
+router.get("/download-teacher-template", protect, allowRoles("admin"), downloadTeacherTemplate);
 
 export default router;

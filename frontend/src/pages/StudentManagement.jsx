@@ -8,6 +8,8 @@ import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
 import UploadResultModal from "../components/UploadResultModal";
+import ExcelFormatGuide from "../components/admin/ExcelFormatGuide";
+import DataPreviewTable from "../components/admin/DataPreviewTable";
 import axiosInstance from "../utils/axios";
 import {
   getBranches,
@@ -54,6 +56,7 @@ export default function StudentManagement() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Edit modal
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -157,23 +160,6 @@ export default function StudentManagement() {
       setError(err.message || "Failed to create student");
     } finally {
       setCreating(false);
-    }
-  };
-
-  const handleDownloadTemplate = async () => {
-    try {
-      const response = await axiosInstance.get('/admin/download-student-template', {
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'Student_Upload_Template.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      setError("Failed to download template");
     }
   };
 
@@ -301,15 +287,8 @@ export default function StudentManagement() {
       subtitle="Create, upload, and filter students"
       sidebarItems={sidebarItems}
     >
-      {/* Upload Instructions for Mobile */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-        <p className="font-semibold text-blue-900">📱 Mobile/Excel Upload Instructions</p>
-        <ul className="list-disc pl-5 text-sm text-blue-800 mt-2">
-          <li>File .xlsx format mein save karo (WPS/MS Excel → Save As → xlsx).</li>
-          <li>Google Sheets se: File → Download → Microsoft Excel (.xlsx).</li>
-          <li>Headers change mat karo. Year 1-4 hona chahiye.</li>
-        </ul>
-      </div>
+      {/* Upload Instructions and Format Guide */}
+      <ExcelFormatGuide type="student" />
 
       {/* Page header actions */}
       <div
@@ -321,29 +300,29 @@ export default function StudentManagement() {
             + Create Student
           </Button>
 
-          <Button variant="outline" onClick={handleDownloadTemplate}>
-            📥 Download Template
-          </Button>
-
           <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
             <label
               className="cursor-pointer rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-100 transition"
               style={{ borderColor: theme.colors.border, color: theme.colors.text.primary, backgroundColor: theme.colors.surface }}
             >
-              Choose File
+              Choose File for Preview
               <input
                 type="file"
                 accept=".xlsx,.xls"
-                onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setUploadFile(file);
+                    setShowPreview(true);
+                  }
+                  e.target.value = null; // reset so same file can be selected again
+                }}
                 className="hidden"
               />
             </label>
             <span className="text-sm px-2 max-w-[150px] truncate" style={{ color: theme.colors.text.secondary }}>
-              {uploadFile ? uploadFile.name : "No file chosen"}
+              {uploadFile && !showPreview ? uploadFile.name : "No file chosen"}
             </span>
-            <Button variant="outline" onClick={handleUpload} disabled={!uploadFile || uploading}>
-              {uploading ? "Uploading..." : "Upload Excel"}
-            </Button>
           </div>
 
           <Button variant="outline" onClick={refetchStudents}>
@@ -654,6 +633,27 @@ export default function StudentManagement() {
         onClose={() => setIsResultModalOpen(false)} 
         result={uploadResult} 
       />
+
+      {/* Data Preview Overlay */}
+      {showPreview && uploadFile && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex items-center justify-center">
+          <div className="w-full max-w-6xl w-full">
+            <DataPreviewTable 
+              file={uploadFile} 
+              type="student" 
+              onCancel={() => {
+                setShowPreview(false);
+                setUploadFile(null);
+              }}
+              onConfirm={async (file) => {
+                // Actually trigger upload
+                await handleUpload();
+                setShowPreview(false);
+              }} 
+            />
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

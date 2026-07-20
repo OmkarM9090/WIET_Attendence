@@ -216,6 +216,30 @@ export const createTeacher = async (teacherData) => {
 };
 
 /**
+ * Upload teachers via Excel file
+ * @param {File} file - Excel file containing teacher data
+ */
+export const uploadTeachersExcel = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await axiosInstance.post(
+      "/admin/teachers/upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to upload teachers" };
+  }
+};
+
+/**
  * Update a teacher
  */
 export const updateTeacher = async (id, teacherData) => {

@@ -7,12 +7,16 @@ import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
+import ExcelFormatGuide from "../components/admin/ExcelFormatGuide";
+import DataPreviewTable from "../components/admin/DataPreviewTable";
+import UploadResultModal from "../components/UploadResultModal";
 import axiosInstance from "../utils/axios";
 import LoadingSpinner from "../components/LoadingSpinner";
 import {
   getBranches,
   getSubjects,
   createTeacher,
+  uploadTeachersExcel,
   updateTeacher,
   deleteTeacher,
   getTeachers,
@@ -48,6 +52,13 @@ export default function TeacherManagement() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Upload state
+  const [uploadFile, setUploadFile] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Timetable Assignment state
   const [batches, setBatches] = useState([]);
@@ -470,6 +481,29 @@ export default function TeacherManagement() {
     }
   };
 
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      setCreateError("Please select an Excel file to upload");
+      return;
+    }
+    try {
+      setUploading(true);
+      setCreateError("");
+      setCreateSuccess("");
+      
+      const { data } = await uploadTeachersExcel(uploadFile);
+      
+      setUploadResult(data);
+      setIsResultModalOpen(true);
+      setUploadFile(null);
+      await fetchTeachers();
+    } catch (err) {
+      setCreateError(err.message || "Failed to upload Excel");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDeleteTeacher = async (teacher) => {
     const ok = window.confirm(`Delete teacher ${teacher.userId?.name || ""}? This cannot be undone.`);
     if (!ok) return;
@@ -535,6 +569,30 @@ export default function TeacherManagement() {
         </div>
 
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+          <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-lg border border-primary-200">
+            <label
+              className="cursor-pointer rounded-md border border-primary-200 px-3 py-2 text-sm font-medium hover:bg-primary-50 transition text-primary-700"
+            >
+              Choose File for Preview
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setUploadFile(file);
+                    setShowPreview(true);
+                  }
+                  e.target.value = null; // reset so same file can be selected again
+                }}
+                className="hidden"
+              />
+            </label>
+            <span className="text-sm px-2 max-w-[150px] truncate text-slate-500">
+              {uploadFile && !showPreview ? uploadFile.name : "No file chosen"}
+            </span>
+          </div>
+
           <div className="w-full max-w-xs">
             <FormInput
               label=""
@@ -547,6 +605,9 @@ export default function TeacherManagement() {
           <Button onClick={() => setIsCreateOpen(true)}>+ Add Teacher</Button>
         </div>
       </div>
+
+      {/* Upload Instructions and Format Guide */}
+      <ExcelFormatGuide type="teacher" />
 
       {/* Teachers Table Section */}
       <div className="mb-10 rounded-xl border p-6" style={{ borderColor: theme.colors.border, boxShadow: theme.shadows.md }}>
@@ -1675,7 +1736,33 @@ export default function TeacherManagement() {
             </div>
           )}
         </Modal>
-      </div>
+
+      {/* Upload Result Modal */}
+      <UploadResultModal 
+        isOpen={isResultModalOpen} 
+        onClose={() => setIsResultModalOpen(false)} 
+        result={uploadResult} 
+      />
+
+      {/* Data Preview Overlay */}
+      {showPreview && uploadFile && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex items-center justify-center">
+          <div className="w-full max-w-6xl w-full">
+            <DataPreviewTable 
+              file={uploadFile} 
+              type="teacher" 
+              onCancel={() => {
+                setShowPreview(false);
+                setUploadFile(null);
+              }}
+              onConfirm={async (file) => {
+                await handleUpload();
+                setShowPreview(false);
+              }} 
+            />
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

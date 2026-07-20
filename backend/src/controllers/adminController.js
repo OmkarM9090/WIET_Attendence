@@ -1,5 +1,6 @@
 import Branch from "../models/Branch.js";
 import Subject from "../models/Subject.js";
+import { generateStudentTemplate, generateTeacherTemplate } from "../utils/templateGenerator.js";
 
 /* CREATE BRANCH */
 export const createBranch = async (req, res) => {
@@ -143,5 +144,55 @@ export const deleteBranch = async (req, res) => {
     res.json({ success: true, message: "Branch and associated data soft deleted successfully." });
   } catch (error) {
     res.status(500).json({ message: "Server error during deletion" });
+  }
+};
+
+export const downloadStudentTemplate = async (req, res) => {
+  try {
+    const branches = await Branch.find({ isDeleted: false });
+    const workbook = await generateStudentTemplate(branches);
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=student_upload_template_${timestamp}.xlsx`
+    );
+    
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  } catch (error) {
+    console.error("Template generation error:", error);
+    res.status(500).json({ success: false, message: 'Template download failed' });
+  }
+};
+
+export const downloadTeacherTemplate = async (req, res) => {
+  try {
+    const branches = await Branch.find({ isDeleted: false });
+    const workbook = await generateTeacherTemplate(branches);
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=teacher_upload_template_${timestamp}.xlsx`
+    );
+    
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  } catch (error) {
+    console.error("Template generation error:", error);
+    res.status(500).json({ success: false, message: 'Template download failed' });
   }
 };
