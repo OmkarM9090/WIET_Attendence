@@ -7,6 +7,8 @@ import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
+import UploadResultModal from "../components/UploadResultModal";
+import axiosInstance from "../utils/axios";
 import {
   getBranches,
   getStudents,
@@ -50,6 +52,8 @@ export default function StudentManagement() {
   // Upload Excel
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
   // Edit modal
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -156,6 +160,23 @@ export default function StudentManagement() {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await axiosInstance.get('/admin/download-student-template', {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Student_Upload_Template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      setError("Failed to download template");
+    }
+  };
+
   const handleUpload = async () => {
     if (!uploadFile) {
       setError("Please select an Excel file to upload");
@@ -165,9 +186,15 @@ export default function StudentManagement() {
       setUploading(true);
       setError("");
       setSuccess("");
-      const res = await uploadStudentsExcel(uploadFile);
-      const msg = `${res.message || "Upload completed"} (Created: ${res.created || 0}, Skipped: ${res.skipped || 0})`;
-      setSuccess(msg);
+      
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      const { data } = await axiosInstance.post("/admin/students/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      setUploadResult(data);
+      setIsResultModalOpen(true);
       setUploadFile(null);
       await refetchStudents();
     } catch (err) {
@@ -269,6 +296,16 @@ export default function StudentManagement() {
       subtitle="Create, upload, and filter students"
       sidebarItems={sidebarItems}
     >
+      {/* Upload Instructions for Mobile */}
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+        <p className="font-semibold text-blue-900">📱 Mobile/Excel Upload Instructions</p>
+        <ul className="list-disc pl-5 text-sm text-blue-800 mt-2">
+          <li>File .xlsx format mein save karo (WPS/MS Excel → Save As → xlsx).</li>
+          <li>Google Sheets se: File → Download → Microsoft Excel (.xlsx).</li>
+          <li>Headers change mat karo. Year 1-4 hona chahiye.</li>
+        </ul>
+      </div>
+
       {/* Page header actions */}
       <div
         className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
@@ -279,9 +316,13 @@ export default function StudentManagement() {
             + Create Student
           </Button>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={handleDownloadTemplate}>
+            📥 Download Template
+          </Button>
+
+          <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded border border-gray-200">
             <label
-              className="cursor-pointer rounded-md border px-3 py-2 text-sm font-medium"
+              className="cursor-pointer rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-100 transition"
               style={{ borderColor: theme.colors.border, color: theme.colors.text.primary, backgroundColor: theme.colors.surface }}
             >
               Choose File
@@ -292,10 +333,10 @@ export default function StudentManagement() {
                 className="hidden"
               />
             </label>
-            <span className="text-sm" style={{ color: theme.colors.text.secondary }}>
+            <span className="text-sm px-2 max-w-[150px] truncate" style={{ color: theme.colors.text.secondary }}>
               {uploadFile ? uploadFile.name : "No file chosen"}
             </span>
-            <Button variant="outline" onClick={handleUpload} disabled={uploading}>
+            <Button variant="outline" onClick={handleUpload} disabled={!uploadFile || uploading}>
               {uploading ? "Uploading..." : "Upload Excel"}
             </Button>
           </div>
@@ -601,6 +642,13 @@ export default function StudentManagement() {
           </form>
         )}
       </Modal>
+
+      {/* Upload Result Modal */}
+      <UploadResultModal 
+        isOpen={isResultModalOpen} 
+        onClose={() => setIsResultModalOpen(false)} 
+        result={uploadResult} 
+      />
     </DashboardLayout>
   );
 }
