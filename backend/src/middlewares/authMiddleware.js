@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
-export const protect = (req, res, next) => {
+export const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -12,10 +13,19 @@ export const protect = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded; // { id, role }
+    // DB-level active user verification
+    const user = await User.findById(decoded.id).select("-passwordHash -resetOTP -resetOTPExpiry");
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: "User no longer exists" 
+      });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({ 
