@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
@@ -11,7 +13,30 @@ import defaulterRoutes from "./routes/defaulterRoutes.js";
 
 const app = express();
 
-app.use(cors());
+// Security Headers
+app.use(helmet());
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again later."
+  }
+});
+
+// Apply rate limiter to all API routes
+app.use("/api/", limiter);
+
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Allow specific origin
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // Allow cookies if needed
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check endpoint
@@ -75,6 +100,14 @@ app.use((err, req, res, next) => {
     return res.status(401).json({
       success: false,
       message: "Token expired",
+    });
+  }
+
+  // Multer errors
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      success: false,
+      message: "File is too large. Maximum size is 5MB.",
     });
   }
 
