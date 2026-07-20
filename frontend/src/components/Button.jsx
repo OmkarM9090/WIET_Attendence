@@ -45,6 +45,7 @@ export default function Button({
     justifyContent: "center",
     gap: "0.5rem",
     width: fullWidth ? "100%" : "auto",
+    minHeight: "44px", // Better touch target for mobile
   };
 
   // Variant styles

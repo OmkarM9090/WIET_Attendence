@@ -1090,20 +1090,17 @@ export default function TeacherMarkAttendance() {
                         >
                           Quick Add Absent Students by Roll Numbers
                         </label>
-                        <div style={{ display: "flex", gap: "12px" }}>
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <FormInput
                             placeholder="Enter roll numbers (e.g., 12 34 35 or 12, 34, 35)"
                             value={rollNumberInput}
                             onChange={(e) => setRollNumberInput(e.target.value)}
-                            style={{ flex: 1 }}
+                            className="flex-1 w-full text-base sm:text-sm min-h-[44px]"
                           />
                           <Button
                             onClick={handleAddRollNumbers}
                             disabled={!rollNumberInput.trim()}
-                            style={{
-                              padding: "0 24px",
-                              whiteSpace: "nowrap",
-                            }}
+                            className="w-full sm:w-auto min-h-[44px] px-6 whitespace-nowrap"
                           >
                             Add to Absent List
                           </Button>
@@ -1194,11 +1191,16 @@ export default function TeacherMarkAttendance() {
                         style={{
                           maxHeight: "400px",
                           overflowY: "auto",
+                      <div
+                        className="overflow-x-auto w-full"
+                        style={{
+                          maxHeight: "400px",
+                          overflowY: "auto",
                           border: `1px solid ${theme.colors.border}`,
                           borderRadius: "8px",
                         }}
                       >
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "500px" }}>
                           <thead
                             style={{
                               backgroundColor: theme.colors.neutral[100],
@@ -1268,12 +1270,13 @@ export default function TeacherMarkAttendance() {
                               return (
                                 <tr
                                   key={student._id}
+                                  onClick={() => toggleAbsentStudent(student._id)}
+                                  className="cursor-pointer transition-colors"
                                   style={{
                                     backgroundColor:
                                       index % 2 === 0
                                         ? "white"
                                         : theme.colors.neutral[50],
-                                    transition: "background-color 0.2s",
                                   }}
                                   onMouseEnter={(e) => {
                                     e.currentTarget.style.backgroundColor =
@@ -1295,14 +1298,8 @@ export default function TeacherMarkAttendance() {
                                     <input
                                       type="checkbox"
                                       checked={isAbsent}
-                                      onChange={() =>
-                                        toggleAbsentStudent(student._id)
-                                      }
-                                      style={{
-                                        width: "18px",
-                                        height: "18px",
-                                        cursor: "pointer",
-                                      }}
+                                      onChange={() => {}} 
+                                      className="w-6 h-6 md:w-4 md:h-4 cursor-pointer"
                                     />
                                   </td>
                                   <td

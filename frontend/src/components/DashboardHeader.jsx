@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { LogOut, User, ChevronDown, Menu } from "lucide-react";
 
-export default function DashboardHeader({ title, subtitle }) {
+export default function DashboardHeader({ title, subtitle, onMenuClick }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -14,17 +14,26 @@ export default function DashboardHeader({ title, subtitle }) {
   };
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-white border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="mt-1 text-sm text-slate-500 font-medium">
-            {subtitle}
-          </p>
-        )}
+    <header className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-8 py-4 bg-white border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+      {/* Left side: Hamburger (mobile) + Page Title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+          aria-label="Open sidebar"
+        >
+          <Menu size={24} />
+        </button>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium hidden sm:block">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* User Profile Section */}
@@ -45,7 +54,7 @@ export default function DashboardHeader({ title, subtitle }) {
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2 p-1 pr-2 rounded-full border border-slate-100 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-bold shadow-sm">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-bold shadow-sm text-sm sm:text-base">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
             <ChevronDown size={16} className="text-slate-400" />
