@@ -1,19 +1,84 @@
 import ExcelJS from "exceljs";
 
-const getCellValue = (cell, { asNumber = false } = {}) => {
+const getRawValue = (cell) => {
   const raw = cell?.value;
+  if (raw === undefined || raw === null) return null;
+  
+  if (typeof raw === "object") {
+    if (raw instanceof Date) return raw;
+    // Handle formulas
+    if ("result" in raw) {
+      if (raw.result instanceof Date) return raw.result;
+      return raw.result;
+    }
+    // Handle hyperlinks / rich text
+    if ("text" in raw) return raw.text;
+  }
+  return raw;
+};
 
-  // ExcelJS wraps hyperlink cells in an object with a text property
-  let value = raw && typeof raw === "object" && "text" in raw ? raw.text : raw;
-
-  if (value === undefined || value === null) return asNumber ? null : "";
+const getCellValue = (cell, { asNumber = false } = {}) => {
+  const raw = getRawValue(cell);
+  
+  if (raw === undefined || raw === null) return asNumber ? null : "";
 
   if (asNumber) {
-    const n = Number(value);
+    const n = Number(raw);
     return Number.isNaN(n) ? null : n;
   }
 
-  return String(value).trim();
+  // If it's a Date, we shouldn't just String() it for generic text fields
+  if (raw instanceof Date) {
+    return raw.toISOString().split('T')[0];
+  }
+
+  return String(raw).trim();
+};
+
+const parseExcelDate = (cell) => {
+  const raw = getRawValue(cell);
+  if (raw === undefined || raw === null) return null;
+
+  // 1. If it's already a Date object
+  if (raw instanceof Date) {
+    // Add timezone offset to prevent day shifting before converting to ISO string
+    const offsetDate = new Date(raw.getTime() - (raw.getTimezoneOffset() * 60000));
+    return offsetDate.toISOString().split('T')[0];
+  }
+
+  // 2. If it's a number (Excel serial date)
+  if (typeof raw === "number") {
+    // Excel epoch is Jan 1, 1900. 25569 is days between 1900 and 1970 (UNIX epoch).
+    const excelEpochOffset = (raw - 25569) * 86400 * 1000;
+    const d = new Date(excelEpochOffset);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+  }
+
+  // 3. If it's a string
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    // Format: YYYY-MM-DD
+    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s;
+    
+    // Format: DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      return `${dmyMatch[3]}-${month}-${day}`;
+    }
+    
+    // Fallback: JS Date parser
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+      return offsetDate.toISOString().split('T')[0];
+    }
+  }
+
+  return null;
 };
 
 export const parseStudentExcel = async (buffer) => {
@@ -66,9 +131,9 @@ export const parseAttendanceExcel = async (buffer) => {
   
   headerRow.eachCell((cell, colNumber) => {
     if (colNumber > baseColumns) {
-      const val = getCellValue(cell);
-      if (val && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        dateColumns.push({ colIndex: colNumber, dateStr: val });
+      const parsedDate = parseExcelDate(cell);
+      if (parsedDate) {
+        dateColumns.push({ colIndex: colNumber, dateStr: parsedDate });
       }
     }
   });
