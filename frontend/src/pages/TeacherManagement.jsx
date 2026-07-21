@@ -82,7 +82,7 @@ export default function TeacherManagement() {
   const [ttSuccess, setTtSuccess] = useState("");
   const [ttError, setTtError] = useState("");
   const [ttDuplicateWarning, setTtDuplicateWarning] = useState("");
-  
+
   // Edit/Delete Assignment state
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
@@ -117,12 +117,23 @@ export default function TeacherManagement() {
     try {
       setLoadingAssignments(true);
       const data = await getTeachingAssignments();
-      console.log("Fetched assignments - Type:", typeof data, "Is Array:", Array.isArray(data), "Data:", data);
-      
+      console.log(
+        "Fetched assignments - Type:",
+        typeof data,
+        "Is Array:",
+        Array.isArray(data),
+        "Data:",
+        data,
+      );
+
       // Ensure we have an array
-      const assignmentsArray = Array.isArray(data) ? data : (data?.data ? data.data : []);
+      const assignmentsArray = Array.isArray(data)
+        ? data
+        : data?.data
+          ? data.data
+          : [];
       setAssignments(assignmentsArray);
-      
+
       if (assignmentsArray.length > 0) {
         console.log("Sample assignment:", assignmentsArray[0]);
       }
@@ -136,11 +147,18 @@ export default function TeacherManagement() {
   };
 
   // Timetable Assignment Functions
-  const DAY_OPTIONS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const DAY_OPTIONS = [
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ];
   const SESSION_TYPES = ["LECTURE", "PRACTICAL"];
   const YEAR_OPTIONS = [1, 2, 3, 4];
   const DIVISION_OPTIONS = ["A", "B", "C"];
-  
+
   const timeToMinutes = (timeStr) => {
     if (!timeStr) return null;
     const [h, m] = String(timeStr).split(":").map(Number);
@@ -152,7 +170,7 @@ export default function TeacherManagement() {
     const { name, value } = e.target;
     setTtFormData((prev) => {
       const next = { ...prev, [name]: value };
-      
+
       // Auto-set year based on semester (1-2=FE, 3-4=SE, 5-6=TE, 7-8=BE)
       if (name === "semester") {
         const sem = Number(value);
@@ -161,7 +179,7 @@ export default function TeacherManagement() {
         else if (sem >= 5 && sem <= 6) next.year = "3";
         else if (sem >= 7 && sem <= 8) next.year = "4";
       }
-      
+
       // Clear batch if switching to LECTURE
       if (name === "sessionType" && value === "LECTURE") {
         next.batchId = "";
@@ -183,7 +201,8 @@ export default function TeacherManagement() {
     if (!ttFormData.dayOfWeek) errors.dayOfWeek = "Day of week is required";
     if (!ttFormData.startTime) errors.startTime = "Start time is required";
     if (!ttFormData.endTime) errors.endTime = "End time is required";
-    if (!ttFormData.academicYear) errors.academicYear = "Academic year is required";
+    if (!ttFormData.academicYear)
+      errors.academicYear = "Academic year is required";
     if (ttFormData.sessionType === "PRACTICAL" && !ttFormData.batchId) {
       errors.batchId = "Batch is required for PRACTICAL sessions";
     }
@@ -210,9 +229,14 @@ export default function TeacherManagement() {
     const isDuplicate = assignments.some((a) => {
       // For LECTURE: batchId should be null/undefined
       // For PRACTICAL: batchId should match
-      const formBatchId = ttFormData.sessionType === "PRACTICAL" ? ttFormData.batchId : null;
-      const assignmentBatchId = a.batchId ? (typeof a.batchId === "string" ? a.batchId : a.batchId._id) : null;
-      
+      const formBatchId =
+        ttFormData.sessionType === "PRACTICAL" ? ttFormData.batchId : null;
+      const assignmentBatchId = a.batchId
+        ? typeof a.batchId === "string"
+          ? a.batchId
+          : a.batchId._id
+        : null;
+
       // Match the unique index: teacherId, subjectId, branchId, year, division, batchId, dayOfWeek, startTime, academicYear
       return (
         (a.teacherId?._id || a.teacherId) === ttFormData.teacherId &&
@@ -235,7 +259,7 @@ export default function TeacherManagement() {
     setTtError("");
     setTtSuccess("");
     setTtDuplicateWarning("");
-    
+
     if (!validateTtForm()) {
       setTtError("Please fix the validation errors");
       return;
@@ -247,23 +271,27 @@ export default function TeacherManagement() {
       formData: ttFormData,
       assignmentsCount: Array.isArray(assignments) ? assignments.length : 0,
       hasDuplicate,
-      assignments: Array.isArray(assignments) ? assignments.map(a => ({
-        teacherId: a.teacherId?._id || a.teacherId,
-        subjectId: a.subjectId?._id || a.subjectId,
-        branchId: a.branchId?._id || a.branchId,
-        year: a.year,
-        division: a.division,
-        dayOfWeek: a.dayOfWeek,
-        startTime: a.startTime,
-        endTime: a.endTime,
-        sessionType: a.sessionType,
-        academicYear: a.academicYear,
-        batchId: a.batchId?._id || a.batchId
-      })) : []
+      assignments: Array.isArray(assignments)
+        ? assignments.map((a) => ({
+            teacherId: a.teacherId?._id || a.teacherId,
+            subjectId: a.subjectId?._id || a.subjectId,
+            branchId: a.branchId?._id || a.branchId,
+            year: a.year,
+            division: a.division,
+            dayOfWeek: a.dayOfWeek,
+            startTime: a.startTime,
+            endTime: a.endTime,
+            sessionType: a.sessionType,
+            academicYear: a.academicYear,
+            batchId: a.batchId?._id || a.batchId,
+          }))
+        : [],
     });
-    
+
     if (hasDuplicate) {
-      setTtDuplicateWarning("⚠️ This assignment already exists! Check the View All tab or modify the details.");
+      setTtDuplicateWarning(
+        "⚠️ This assignment already exists! Check the View All tab or modify the details.",
+      );
       return;
     }
 
@@ -275,7 +303,10 @@ export default function TeacherManagement() {
         branchId: ttFormData.branchId,
         year: Number(ttFormData.year),
         division: ttFormData.division,
-        batchId: ttFormData.sessionType === "PRACTICAL" ? ttFormData.batchId : undefined,
+        batchId:
+          ttFormData.sessionType === "PRACTICAL"
+            ? ttFormData.batchId
+            : undefined,
         dayOfWeek: ttFormData.dayOfWeek,
         startTime: ttFormData.startTime,
         endTime: ttFormData.endTime,
@@ -305,7 +336,10 @@ export default function TeacherManagement() {
       // Clear success after 3 seconds
       setTimeout(() => setTtSuccess(""), 3000);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || "Failed to create assignment";
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to create assignment";
       setTtError(`❌ ${errorMsg}`);
       console.error("Assignment creation error:", err);
     } finally {
@@ -333,20 +367,26 @@ export default function TeacherManagement() {
 
   const handleUpdateAssignment = async () => {
     if (!editingAssignment || !editAssignmentData) return;
-    
+
     setEditAssignmentLoading(true);
     try {
       await updateTeachingAssignment(editingAssignment._id, {
         ...editAssignmentData,
-        batchId: editAssignmentData.sessionType === "PRACTICAL" ? editAssignmentData.batchId : undefined,
+        batchId:
+          editAssignmentData.sessionType === "PRACTICAL"
+            ? editAssignmentData.batchId
+            : undefined,
       });
-      
+
       await fetchAssignments();
       setTtSuccess("✅ Assignment updated successfully!");
       setIsEditAssignmentOpen(false);
       setTimeout(() => setTtSuccess(""), 3000);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || "Failed to update assignment";
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to update assignment";
       setTtError(`❌ ${errorMsg}`);
       console.error("Update error:", err);
     } finally {
@@ -355,8 +395,9 @@ export default function TeacherManagement() {
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    if (!window.confirm("Are you sure you want to delete this assignment?")) return;
-    
+    if (!window.confirm("Are you sure you want to delete this assignment?"))
+      return;
+
     setDeleteAssignmentLoading(assignmentId);
     try {
       await deleteTeachingAssignment(assignmentId);
@@ -364,7 +405,10 @@ export default function TeacherManagement() {
       setTtSuccess("✅ Assignment deleted successfully!");
       setTimeout(() => setTtSuccess(""), 3000);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || "Failed to delete assignment";
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to delete assignment";
       setTtError(`❌ ${errorMsg}`);
       console.error("Delete error:", err);
     } finally {
@@ -400,7 +444,10 @@ export default function TeacherManagement() {
         return;
       }
       try {
-        const data = await getSubjects(ttFormData.branchId, ttFormData.semester);
+        const data = await getSubjects(
+          ttFormData.branchId,
+          ttFormData.semester,
+        );
         setSubjects(data);
       } catch (err) {
         setSubjects([]);
@@ -490,9 +537,9 @@ export default function TeacherManagement() {
       setUploading(true);
       setCreateError("");
       setCreateSuccess("");
-      
+
       const { data } = await uploadTeachersExcel(uploadFile);
-      
+
       setUploadResult(data);
       setIsResultModalOpen(true);
       setUploadFile(null);
@@ -505,7 +552,9 @@ export default function TeacherManagement() {
   };
 
   const handleDeleteTeacher = async (teacher) => {
-    const ok = window.confirm(`Delete teacher ${teacher.userId?.name || ""}? This cannot be undone.`);
+    const ok = window.confirm(
+      `Delete teacher ${teacher.userId?.name || ""}? This cannot be undone.`,
+    );
     if (!ok) return;
     try {
       setCreateError("");
@@ -528,23 +577,23 @@ export default function TeacherManagement() {
       {(createError || createSuccess || ttError || ttSuccess) && (
         <div className="mb-6 space-y-2">
           {(createError || ttError) && (
-            <Alert 
-              message={createError || ttError} 
-              type="error" 
+            <Alert
+              message={createError || ttError}
+              type="error"
               onClose={() => {
                 setCreateError("");
                 setTtError("");
-              }} 
+              }}
             />
           )}
           {(createSuccess || ttSuccess) && (
-            <Alert 
-              message={createSuccess || ttSuccess} 
-              type="success" 
+            <Alert
+              message={createSuccess || ttSuccess}
+              type="success"
               onClose={() => {
                 setCreateSuccess("");
                 setTtSuccess("");
-              }} 
+              }}
             />
           )}
         </div>
@@ -560,19 +609,23 @@ export default function TeacherManagement() {
         }}
       >
         <div>
-          <h2 className="text-xl font-bold" style={{ color: theme.colors.primary[600] }}>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: theme.colors.primary[600] }}
+          >
             👨‍🏫 Teachers
           </h2>
-          <p className="mt-1 text-sm" style={{ color: theme.colors.text.secondary }}>
+          <p
+            className="mt-1 text-sm"
+            style={{ color: theme.colors.text.secondary }}
+          >
             Manage teacher profiles and timetable assignments
           </p>
         </div>
 
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
           <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-lg border border-primary-200">
-            <label
-              className="cursor-pointer rounded-md border border-primary-200 px-3 py-2 text-sm font-medium hover:bg-primary-50 transition text-primary-700"
-            >
+            <label className="cursor-pointer rounded-md border border-primary-200 px-3 py-2 text-sm font-medium hover:bg-primary-50 transition text-primary-700">
               Choose File for Preview
               <input
                 type="file"
@@ -610,36 +663,75 @@ export default function TeacherManagement() {
       <ExcelFormatGuide type="teacher" />
 
       {/* Teachers Table Section */}
-      <div className="mb-10 rounded-xl border p-6" style={{ borderColor: theme.colors.border, boxShadow: theme.shadows.md }}>
+      <div
+        className="mb-10 rounded-xl border p-6"
+        style={{
+          borderColor: theme.colors.border,
+          boxShadow: theme.shadows.md,
+        }}
+      >
         <div className="mb-6 flex items-center gap-3">
           <span className="text-2xl">👥</span>
           <div>
-            <h4 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>
+            <h4
+              className="text-lg font-bold"
+              style={{ color: theme.colors.text.primary }}
+            >
               All Teachers
             </h4>
-            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+            <p
+              className="text-sm"
+              style={{ color: theme.colors.text.secondary }}
+            >
               View and manage teacher information
             </p>
           </div>
         </div>
         <Table
           columns={[
-            { header: "Name", accessor: "userId", render: (val) => val?.name || "-" },
-            { header: "Email", accessor: "userId", render: (val) => val?.email || "-" },
-            { header: "Department", accessor: "department", render: (val) => (val ? `${val.name} (${val.code})` : "-") },
+            {
+              header: "Name",
+              accessor: "userId",
+              render: (val) => val?.name || "-",
+            },
+            {
+              header: "Email",
+              accessor: "userId",
+              render: (val) => val?.email || "-",
+            },
+            {
+              header: "Department",
+              accessor: "department",
+              render: (val) => (val ? `${val.name} (${val.code})` : "-"),
+            },
             { header: "Designation", accessor: "designation" },
           ]}
-          data={teachers.filter((t) =>
-            (t.userId?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-            (t.userId?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+          data={teachers.filter(
+            (t) =>
+              (t.userId?.name?.toLowerCase() || "").includes(
+                searchTerm.toLowerCase(),
+              ) ||
+              (t.userId?.email?.toLowerCase() || "").includes(
+                searchTerm.toLowerCase(),
+              ),
           )}
-          emptyMessage={loadingTeachers ? "Loading teachers..." : "No teachers found"}
+          emptyMessage={
+            loadingTeachers ? "Loading teachers..." : "No teachers found"
+          }
           actions={(row) => (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => openEditModal(row)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEditModal(row)}
+              >
                 Edit
               </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDeleteTeacher(row)}>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDeleteTeacher(row)}
+              >
                 Delete
               </Button>
             </div>
@@ -699,7 +791,10 @@ export default function TeacherManagement() {
               onChange={(e) => setTDepartment(e.target.value)}
               options={[
                 { label: "Select Department", value: "" },
-                ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
+                ...branches.map((b) => ({
+                  label: `${b.name} (${b.code})`,
+                  value: b._id,
+                })),
               ]}
               required
             />
@@ -739,7 +834,9 @@ export default function TeacherManagement() {
                 name="editName"
                 placeholder="John Doe"
                 value={editingTeacher.name}
-                onChange={(e) => setEditingTeacher({ ...editingTeacher, name: e.target.value })}
+                onChange={(e) =>
+                  setEditingTeacher({ ...editingTeacher, name: e.target.value })
+                }
                 required
               />
               <FormInput
@@ -748,17 +845,30 @@ export default function TeacherManagement() {
                 type="email"
                 placeholder="john@college.com"
                 value={editingTeacher.email}
-                onChange={(e) => setEditingTeacher({ ...editingTeacher, email: e.target.value })}
+                onChange={(e) =>
+                  setEditingTeacher({
+                    ...editingTeacher,
+                    email: e.target.value,
+                  })
+                }
                 required
               />
               <FormSelect
                 label="Department"
                 name="editDepartment"
                 value={editingTeacher.department}
-                onChange={(e) => setEditingTeacher({ ...editingTeacher, department: e.target.value })}
+                onChange={(e) =>
+                  setEditingTeacher({
+                    ...editingTeacher,
+                    department: e.target.value,
+                  })
+                }
                 options={[
                   { label: "Select Department", value: "" },
-                  ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
+                  ...branches.map((b) => ({
+                    label: `${b.name} (${b.code})`,
+                    value: b._id,
+                  })),
                 ]}
                 required
               />
@@ -767,7 +877,12 @@ export default function TeacherManagement() {
                 name="editDesignation"
                 placeholder="e.g., Assistant Professor"
                 value={editingTeacher.designation}
-                onChange={(e) => setEditingTeacher({ ...editingTeacher, designation: e.target.value })}
+                onChange={(e) =>
+                  setEditingTeacher({
+                    ...editingTeacher,
+                    designation: e.target.value,
+                  })
+                }
               />
             </div>
           </form>
@@ -775,21 +890,40 @@ export default function TeacherManagement() {
       </Modal>
 
       {/* Timetable Assignments Section */}
-      <div className="mt-12 rounded-xl border p-6" style={{ borderColor: theme.colors.border, boxShadow: theme.shadows.md }}>
+      <div
+        className="mt-12 rounded-xl border p-6"
+        style={{
+          borderColor: theme.colors.border,
+          boxShadow: theme.shadows.md,
+        }}
+      >
         <div className="mb-8 flex items-center gap-3">
           <span className="text-2xl">🗓️</span>
           <div>
-            <h4 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>
+            <h4
+              className="text-lg font-bold"
+              style={{ color: theme.colors.text.primary }}
+            >
               Timetable Assignments
             </h4>
-            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+            <p
+              className="text-sm"
+              style={{ color: theme.colors.text.secondary }}
+            >
               Create and manage teacher timetable schedules
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: `2px solid ${theme.colors.border}`, marginBottom: "24px", gap: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            borderBottom: `2px solid ${theme.colors.border}`,
+            marginBottom: "24px",
+            gap: "8px",
+          }}
+        >
           <button
             onClick={() => {
               setActiveTab("timetable");
@@ -800,8 +934,14 @@ export default function TeacherManagement() {
               padding: "12px 24px",
               fontSize: "14px",
               fontWeight: activeTab === "timetable" ? "600" : "500",
-              color: activeTab === "timetable" ? theme.colors.primary : theme.colors.text.secondary,
-              borderBottom: activeTab === "timetable" ? `3px solid ${theme.colors.primary}` : "none",
+              color:
+                activeTab === "timetable"
+                  ? theme.colors.primary
+                  : theme.colors.text.secondary,
+              borderBottom:
+                activeTab === "timetable"
+                  ? `3px solid ${theme.colors.primary}`
+                  : "none",
               borderTop: "none",
               borderLeft: "none",
               borderRight: "none",
@@ -818,8 +958,14 @@ export default function TeacherManagement() {
               padding: "12px 24px",
               fontSize: "14px",
               fontWeight: activeTab === "view" ? "600" : "500",
-              color: activeTab === "view" ? theme.colors.primary : theme.colors.text.secondary,
-              borderBottom: activeTab === "view" ? `3px solid ${theme.colors.primary}` : "none",
+              color:
+                activeTab === "view"
+                  ? theme.colors.primary
+                  : theme.colors.text.secondary,
+              borderBottom:
+                activeTab === "view"
+                  ? `3px solid ${theme.colors.primary}`
+                  : "none",
               borderTop: "none",
               borderLeft: "none",
               borderRight: "none",
@@ -828,7 +974,7 @@ export default function TeacherManagement() {
               transition: "all 0.2s",
             }}
           >
-            📋 View All ({(Array.isArray(assignments) ? assignments.length : 0)})
+            📋 View All ({Array.isArray(assignments) ? assignments.length : 0})
           </button>
         </div>
 
@@ -844,8 +990,16 @@ export default function TeacherManagement() {
                 marginBottom: "24px",
               }}
             >
-              <p style={{ fontSize: "14px", color: theme.colors.text.primary, margin: "0" }}>
-                <strong>💡 Tip:</strong> Fill out all fields to create a new timetable assignment. The system will prevent duplicate assignments automatically.
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: theme.colors.text.primary,
+                  margin: "0",
+                }}
+              >
+                <strong>💡 Tip:</strong> Fill out all fields to create a new
+                timetable assignment. The system will prevent duplicate
+                assignments automatically.
               </p>
             </div>
 
@@ -870,11 +1024,7 @@ export default function TeacherManagement() {
               )}
               {ttError && (
                 <div style={{ marginBottom: "16px" }}>
-                  <Alert
-                    type="error"
-                    message="Error"
-                    description={ttError}
-                  />
+                  <Alert type="error" message="Error" description={ttError} />
                 </div>
               )}
               {ttSuccess && (
@@ -887,7 +1037,10 @@ export default function TeacherManagement() {
                 </div>
               )}
 
-              <form onSubmit={handleTtSubmit} style={{ display: "grid", gap: "16px" }}>
+              <form
+                onSubmit={handleTtSubmit}
+                style={{ display: "grid", gap: "16px" }}
+              >
                 <div>
                   <FormSelect
                     label="Teacher"
@@ -904,7 +1057,13 @@ export default function TeacherManagement() {
                     required
                   />
                   {ttValidationErrors.teacherId && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.teacherId}
                     </p>
                   )}
@@ -918,12 +1077,21 @@ export default function TeacherManagement() {
                     onChange={handleTtChange}
                     options={[
                       { value: "", label: "Select branch" },
-                      ...branches.map((b) => ({ value: b._id, label: `${b.name} (${b.code})` })),
+                      ...branches.map((b) => ({
+                        value: b._id,
+                        label: `${b.name} (${b.code})`,
+                      })),
                     ]}
                     required
                   />
                   {ttValidationErrors.branchId && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.branchId}
                     </p>
                   )}
@@ -949,7 +1117,13 @@ export default function TeacherManagement() {
                     required
                   />
                   {ttValidationErrors.semester && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.semester}
                     </p>
                   )}
@@ -963,20 +1137,43 @@ export default function TeacherManagement() {
                     onChange={handleTtChange}
                     options={[
                       { value: "", label: "Select subject" },
-                      ...subjects.map((s) => ({ value: s._id, label: `${s.name} (${s.code})` })),
+                      ...subjects.map((s) => ({
+                        value: s._id,
+                        label: `${s.name} (${s.code})`,
+                      })),
                     ]}
                     required
                   />
                   {ttValidationErrors.subjectId && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.subjectId}
                     </p>
                   )}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
                   <div>
-                    <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        color: "#374151",
+                      }}
+                    >
                       Year <span style={{ color: "#ef4444" }}>*</span>
                     </label>
                     <div
@@ -993,9 +1190,13 @@ export default function TeacherManagement() {
                       }}
                     >
                       <span>
-                        {ttFormData.year ? `Year ${ttFormData.year} (${ttFormData.semester ? `Sem ${ttFormData.semester}` : ""})` : "Select semester first"}
+                        {ttFormData.year
+                          ? `Year ${ttFormData.year} (${ttFormData.semester ? `Sem ${ttFormData.semester}` : ""})`
+                          : "Select semester first"}
                       </span>
-                      <span style={{ fontSize: "12px", color: "#6b7280" }}>Auto-calculated</span>
+                      <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                        Auto-calculated
+                      </span>
                     </div>
                   </div>
                   <div>
@@ -1006,12 +1207,21 @@ export default function TeacherManagement() {
                       onChange={handleTtChange}
                       options={[
                         { value: "", label: "Select division" },
-                        ...DIVISION_OPTIONS.map((d) => ({ value: d, label: d })),
+                        ...DIVISION_OPTIONS.map((d) => ({
+                          value: d,
+                          label: d,
+                        })),
                       ]}
                       required
                     />
                     {ttValidationErrors.division && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      <p
+                        style={{
+                          color: "#ef4444",
+                          fontSize: "12px",
+                          marginTop: "4px",
+                        }}
+                      >
                         {ttValidationErrors.division}
                       </p>
                     )}
@@ -1038,19 +1248,34 @@ export default function TeacherManagement() {
                       onChange={handleTtChange}
                       options={[
                         { value: "", label: "Select batch" },
-                        ...batches.map((b) => ({ value: b._id, label: b.name })),
+                        ...batches.map((b) => ({
+                          value: b._id,
+                          label: b.name,
+                        })),
                       ]}
                       required
                     />
                     {ttValidationErrors.batchId && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      <p
+                        style={{
+                          color: "#ef4444",
+                          fontSize: "12px",
+                          marginTop: "4px",
+                        }}
+                      >
                         {ttValidationErrors.batchId}
                       </p>
                     )}
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                  }}
+                >
                   <div>
                     <FormSelect
                       label="Day"
@@ -1061,7 +1286,13 @@ export default function TeacherManagement() {
                       required
                     />
                     {ttValidationErrors.dayOfWeek && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      <p
+                        style={{
+                          color: "#ef4444",
+                          fontSize: "12px",
+                          marginTop: "4px",
+                        }}
+                      >
                         {ttValidationErrors.dayOfWeek}
                       </p>
                     )}
@@ -1076,7 +1307,13 @@ export default function TeacherManagement() {
                       required
                     />
                     {ttValidationErrors.startTime && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                      <p
+                        style={{
+                          color: "#ef4444",
+                          fontSize: "12px",
+                          marginTop: "4px",
+                        }}
+                      >
                         {ttValidationErrors.startTime}
                       </p>
                     )}
@@ -1093,7 +1330,13 @@ export default function TeacherManagement() {
                     required
                   />
                   {ttValidationErrors.endTime && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.endTime}
                     </p>
                   )}
@@ -1110,20 +1353,34 @@ export default function TeacherManagement() {
                     required
                   />
                   {ttValidationErrors.academicYear && (
-                    <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+                    <p
+                      style={{
+                        color: "#ef4444",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {ttValidationErrors.academicYear}
                     </p>
                   )}
                 </div>
 
-                <Button 
-                  type="submit" 
-                  loading={ttSubmitting} 
-                  disabled={ttSubmitting || !!ttDuplicateWarning} 
+                <Button
+                  type="submit"
+                  loading={ttSubmitting}
+                  disabled={ttSubmitting || !!ttDuplicateWarning}
                   style={{ width: "100%" }}
-                  title={ttDuplicateWarning ? "Cannot submit - duplicate assignment detected" : ""}
+                  title={
+                    ttDuplicateWarning
+                      ? "Cannot submit - duplicate assignment detected"
+                      : ""
+                  }
                 >
-                  {ttSubmitting ? "Creating..." : ttDuplicateWarning ? "Fix Duplicate to Submit" : "Create Assignment"}
+                  {ttSubmitting
+                    ? "Creating..."
+                    : ttDuplicateWarning
+                      ? "Fix Duplicate to Submit"
+                      : "Create Assignment"}
                 </Button>
               </form>
             </div>
@@ -1145,8 +1402,16 @@ export default function TeacherManagement() {
                 alignItems: "center",
               }}
             >
-              <p style={{ fontSize: "14px", color: theme.colors.text.primary, margin: "0" }}>
-                <strong>📋 Info:</strong> All timetable assignments are listed below. Click on any assignment to view details, edit, or delete it.
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: theme.colors.text.primary,
+                  margin: "0",
+                }}
+              >
+                <strong>📋 Info:</strong> All timetable assignments are listed
+                below. Click on any assignment to view details, edit, or delete
+                it.
               </p>
               <button
                 onClick={() => {
@@ -1201,18 +1466,48 @@ export default function TeacherManagement() {
             {loadingAssignments ? (
               <LoadingSpinner />
             ) : !Array.isArray(assignments) || assignments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: theme.colors.text.secondary }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "60px 20px",
+                  color: theme.colors.text.secondary,
+                }}
+              >
                 <p style={{ fontSize: "40px", marginBottom: "12px" }}>📭</p>
                 <p>No timetable assignments yet</p>
-                <p style={{ fontSize: "13px", marginTop: "8px", color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    marginTop: "8px",
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Start by creating one using the "Create Assignment" tab
                 </p>
               </div>
             ) : (
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "12px", backgroundColor: theme.colors.neutral[50], borderRadius: "8px" }}>
-                  <p style={{ fontSize: "14px", color: theme.colors.text.secondary }}>
-                    Total Assignments: <strong style={{ color: theme.colors.text.primary }}>{assignments.length}</strong>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "16px",
+                    padding: "12px",
+                    backgroundColor: theme.colors.neutral[50],
+                    borderRadius: "8px",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: theme.colors.text.secondary,
+                    }}
+                  >
+                    Total Assignments:{" "}
+                    <strong style={{ color: theme.colors.text.primary }}>
+                      {assignments.length}
+                    </strong>
                   </p>
                   <button
                     onClick={fetchAssignments}
@@ -1244,95 +1539,144 @@ export default function TeacherManagement() {
                 </div>
                 <Table
                   columns={[
-                    { 
-                      header: "TEACHER", 
-                      accessor: "teacherId", 
+                    {
+                      header: "TEACHER",
+                      accessor: "teacherId",
                       render: (v) => (
                         <div style={{ fontWeight: "500" }}>
-                          {v?.name || <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not assigned</span>}
+                          {v?.name || (
+                            <span
+                              style={{ color: "#9ca3af", fontStyle: "italic" }}
+                            >
+                              Not assigned
+                            </span>
+                          )}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "SUBJECT", 
-                      accessor: "subjectId", 
+                    {
+                      header: "SUBJECT",
+                      accessor: "subjectId",
                       render: (v) => (
                         <div>
                           {v ? (
                             <>
                               <div style={{ fontWeight: "500" }}>{v.name}</div>
-                              <div style={{ fontSize: "11px", color: theme.colors.text.secondary }}>({v.code})</div>
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: theme.colors.text.secondary,
+                                }}
+                              >
+                                ({v.code})
+                              </div>
                             </>
                           ) : (
-                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not assigned</span>
+                            <span
+                              style={{ color: "#9ca3af", fontStyle: "italic" }}
+                            >
+                              Not assigned
+                            </span>
                           )}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "BRANCH", 
-                      accessor: "branchId", 
+                    {
+                      header: "BRANCH",
+                      accessor: "branchId",
                       render: (v) => (
                         <div>
                           {v?.name ? (
                             <>
                               <div style={{ fontWeight: "500" }}>{v.name}</div>
-                              {v.code && <div style={{ fontSize: "11px", color: theme.colors.text.secondary }}>({v.code})</div>}
+                              {v.code && (
+                                <div
+                                  style={{
+                                    fontSize: "11px",
+                                    color: theme.colors.text.secondary,
+                                  }}
+                                >
+                                  ({v.code})
+                                </div>
+                              )}
                             </>
                           ) : (
-                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>N/A</span>
+                            <span
+                              style={{ color: "#9ca3af", fontStyle: "italic" }}
+                            >
+                              N/A
+                            </span>
                           )}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "YEAR", 
+                    {
+                      header: "YEAR",
                       accessor: "year",
                       render: (v) => (
-                        <div style={{ textAlign: "center", fontWeight: "600", color: theme.colors.primary }}>
+                        <div
+                          style={{
+                            textAlign: "center",
+                            fontWeight: "600",
+                            color: theme.colors.primary,
+                          }}
+                        >
                           {v ? `Year ${v}` : "-"}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "DIV", 
+                    {
+                      header: "DIV",
                       accessor: "division",
                       render: (v) => (
-                        <div style={{ 
-                          textAlign: "center", 
-                          fontWeight: "700", 
-                          fontSize: "14px",
-                          color: theme.colors.primary,
-                          backgroundColor: theme.colors.primary[50],
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          display: "inline-block"
-                        }}>
+                        <div
+                          style={{
+                            textAlign: "center",
+                            fontWeight: "700",
+                            fontSize: "14px",
+                            color: theme.colors.primary,
+                            backgroundColor: theme.colors.primary[50],
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            display: "inline-block",
+                          }}
+                        >
                           {v || "-"}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "DAY", 
+                    {
+                      header: "DAY",
                       accessor: "dayOfWeek",
                       render: (v) => (
-                        <div style={{ fontWeight: "500", textTransform: "capitalize" }}>
+                        <div
+                          style={{
+                            fontWeight: "500",
+                            textTransform: "capitalize",
+                          }}
+                        >
                           {v ? v.charAt(0) + v.slice(1).toLowerCase() : "-"}
                         </div>
-                      )
+                      ),
                     },
-                    { 
-                      header: "TIME", 
-                      accessor: "startTime", 
+                    {
+                      header: "TIME",
+                      accessor: "startTime",
                       render: (v, r) => (
-                        <div style={{ fontFamily: "monospace", fontSize: "13px" }}>
+                        <div
+                          style={{ fontFamily: "monospace", fontSize: "13px" }}
+                        >
                           {v && r.endTime ? (
                             `${v} - ${r.endTime}`
                           ) : (
-                            <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Not set</span>
+                            <span
+                              style={{ color: "#9ca3af", fontStyle: "italic" }}
+                            >
+                              Not set
+                            </span>
                           )}
                         </div>
-                      )
+                      ),
                     },
                     {
                       header: "TYPE",
@@ -1344,7 +1688,8 @@ export default function TeacherManagement() {
                             borderRadius: "4px",
                             fontSize: "12px",
                             fontWeight: "600",
-                            backgroundColor: v === "PRACTICAL" ? "#fef3c7" : "#dbeafe",
+                            backgroundColor:
+                              v === "PRACTICAL" ? "#fef3c7" : "#dbeafe",
                             color: v === "PRACTICAL" ? "#92400e" : "#1e40af",
                           }}
                         >
@@ -1356,7 +1701,14 @@ export default function TeacherManagement() {
                       header: "ACTIONS",
                       accessor: "_id",
                       render: (v, row) => (
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "center" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "6px",
+                            flexWrap: "wrap",
+                            justifyContent: "center",
+                          }}
+                        >
                           <button
                             onClick={() => handleShowDetails(row)}
                             title="View Details"
@@ -1409,11 +1761,20 @@ export default function TeacherManagement() {
                             title="Delete Assignment"
                             style={{
                               padding: "6px 10px",
-                              backgroundColor: deleteAssignmentLoading === v ? "#fca5a5" : "#fee2e2",
+                              backgroundColor:
+                                deleteAssignmentLoading === v
+                                  ? "#fca5a5"
+                                  : "#fee2e2",
                               color: "#991b1b",
-                              border: deleteAssignmentLoading === v ? "1px solid #fca5a5" : "1px solid #fecaca",
+                              border:
+                                deleteAssignmentLoading === v
+                                  ? "1px solid #fca5a5"
+                                  : "1px solid #fecaca",
                               borderRadius: "6px",
-                              cursor: deleteAssignmentLoading === v ? "not-allowed" : "pointer",
+                              cursor:
+                                deleteAssignmentLoading === v
+                                  ? "not-allowed"
+                                  : "pointer",
                               fontSize: "11px",
                               fontWeight: "600",
                               transition: "all 0.2s",
@@ -1429,7 +1790,9 @@ export default function TeacherManagement() {
                               }
                             }}
                           >
-                            {deleteAssignmentLoading === v ? "⏳ Deleting..." : "🗑️ Delete"}
+                            {deleteAssignmentLoading === v
+                              ? "⏳ Deleting..."
+                              : "🗑️ Delete"}
                           </button>
                         </div>
                       ),
@@ -1441,302 +1804,450 @@ export default function TeacherManagement() {
             )}
           </div>
         )}
+      </div>
 
-        {/* Details Modal */}
-        <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Assignment Details">
-          {detailsModalData && (
-            <div style={{ display: "grid", gap: "16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Teacher
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.teacherId?.name || "-"}
-                  </p>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary }}>
-                    {detailsModalData.teacherId?.email}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Subject
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.subjectId?.name}
-                  </p>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary }}>
-                    Code: {detailsModalData.subjectId?.code}
-                  </p>
-                </div>
+      {/* Details Modal */}
+      <Modal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title="Assignment Details"
+      >
+        {detailsModalData && (
+          <div style={{ display: "grid", gap: "16px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Teacher
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.teacherId?.name || "-"}
+                </p>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                  }}
+                >
+                  {detailsModalData.teacherId?.email}
+                </p>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Class
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.branchId?.name} - Year {detailsModalData.year} Division {detailsModalData.division}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Academic Year
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.academicYear}
-                  </p>
-                </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Subject
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.subjectId?.name}
+                </p>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                  }}
+                >
+                  Code: {detailsModalData.subjectId?.code}
+                </p>
               </div>
+            </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Day
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.dayOfWeek}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Time
-                  </p>
-                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                    {detailsModalData.startTime} - {detailsModalData.endTime}
-                  </p>
-                </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Class
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.branchId?.name} - Year{" "}
+                  {detailsModalData.year} Division {detailsModalData.division}
+                </p>
               </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Academic Year
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.academicYear}
+                </p>
+              </div>
+            </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Day
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.dayOfWeek}
+                </p>
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Time
+                </p>
+                <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                  {detailsModalData.startTime} - {detailsModalData.endTime}
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: theme.colors.text.secondary,
+                    marginBottom: "4px",
+                  }}
+                >
+                  Session Type
+                </p>
+                <span
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    backgroundColor:
+                      detailsModalData.sessionType === "PRACTICAL"
+                        ? "#fef3c7"
+                        : "#dbeafe",
+                    color:
+                      detailsModalData.sessionType === "PRACTICAL"
+                        ? "#92400e"
+                        : "#1e40af",
+                    display: "inline-block",
+                  }}
+                >
+                  {detailsModalData.sessionType}
+                </span>
+              </div>
+              {detailsModalData.batchId && (
                 <div>
-                  <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                    Session Type
-                  </p>
-                  <span
+                  <p
                     style={{
-                      padding: "6px 12px",
-                      borderRadius: "4px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      backgroundColor: detailsModalData.sessionType === "PRACTICAL" ? "#fef3c7" : "#dbeafe",
-                      color: detailsModalData.sessionType === "PRACTICAL" ? "#92400e" : "#1e40af",
-                      display: "inline-block",
+                      fontSize: "12px",
+                      color: theme.colors.text.secondary,
+                      marginBottom: "4px",
                     }}
                   >
-                    {detailsModalData.sessionType}
-                  </span>
+                    Batch
+                  </p>
+                  <p style={{ fontSize: "16px", fontWeight: "600" }}>
+                    {detailsModalData.batchId?.name || "-"}
+                  </p>
                 </div>
-                {detailsModalData.batchId && (
-                  <div>
-                    <p style={{ fontSize: "12px", color: theme.colors.text.secondary, marginBottom: "4px" }}>
-                      Batch
-                    </p>
-                    <p style={{ fontSize: "16px", fontWeight: "600" }}>
-                      {detailsModalData.batchId?.name || "-"}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
-                <Button
-                  onClick={() => {
-                    handleEditAssignment(detailsModalData);
-                    setIsDetailsOpen(false);
-                  }}
-                  style={{ flex: 1 }}
-                >
-                  ✏️ Edit
-                </Button>
-                <Button
-                  onClick={() => {
-                    handleDeleteAssignment(detailsModalData._id);
-                    setIsDetailsOpen(false);
-                  }}
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#fee2e2",
-                    color: "#991b1b",
-                    border: "none",
-                  }}
-                >
-                  🗑️ Delete
-                </Button>
-              </div>
-            </div>
-          )}
-        </Modal>
-
-        {/* Edit Assignment Modal */}
-        <Modal
-          isOpen={isEditAssignmentOpen}
-          onClose={() => setIsEditAssignmentOpen(false)}
-          title="Edit Assignment"
-        >
-          {editAssignmentData && (
-            <div style={{ display: "grid", gap: "16px" }}>
-              <FormSelect
-                label="Teacher"
-                value={editAssignmentData.teacherId}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, teacherId: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select teacher" },
-                  ...teachers.map((t) => ({
-                    value: t.userId?._id || t._id,
-                    label: `${t.userId?.name || "Unknown"} (${t.userId?.email || ""})`,
-                  })),
-                ]}
-              />
-
-              <FormSelect
-                label="Branch"
-                value={editAssignmentData.branchId}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, branchId: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select branch" },
-                  ...branches.map((b) => ({ value: b._id, label: b.name })),
-                ]}
-              />
-
-              <FormSelect
-                label="Year"
-                value={editAssignmentData.year}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, year: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select year" },
-                  { value: "1", label: "Year 1" },
-                  { value: "2", label: "Year 2" },
-                  { value: "3", label: "Year 3" },
-                  { value: "4", label: "Year 4" },
-                ]}
-              />
-
-              <FormSelect
-                label="Division"
-                value={editAssignmentData.division}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, division: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select division" },
-                  { value: "A", label: "A" },
-                  { value: "B", label: "B" },
-                  { value: "C", label: "C" },
-                ]}
-              />
-
-              <FormSelect
-                label="Subject"
-                value={editAssignmentData.subjectId}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, subjectId: e.target.value }))
-                }
-                options={[
-                  { value: "", label: "Select subject" },
-                  ...subjects.map((s) => ({ value: s._id, label: `${s.name} (${s.code})` })),
-                ]}
-              />
-
-              <FormSelect
-                label="Session Type"
-                value={editAssignmentData.sessionType}
-                onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, sessionType: e.target.value, batchId: e.target.value === "LECTURE" ? "" : prev.batchId }))
-                }
-                options={[
-                  { value: "LECTURE", label: "Lecture" },
-                  { value: "PRACTICAL", label: "Practical" },
-                ]}
-              />
-
-              {editAssignmentData.sessionType === "PRACTICAL" && (
-                <FormSelect
-                  label="Batch"
-                  value={editAssignmentData.batchId}
-                  onChange={(e) =>
-                    setEditAssignmentData((prev) => ({ ...prev, batchId: e.target.value }))
-                  }
-                  options={[
-                    { value: "", label: "Select batch" },
-                    ...batches.map((b) => ({ value: b._id, label: b.name })),
-                  ]}
-                />
               )}
+            </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <FormSelect
-                  label="Day"
-                  value={editAssignmentData.dayOfWeek}
-                  onChange={(e) =>
-                    setEditAssignmentData((prev) => ({ ...prev, dayOfWeek: e.target.value }))
-                  }
-                  options={["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].map((d) => ({
-                    value: d,
-                    label: d,
-                  }))}
-                />
+            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+              <Button
+                onClick={() => {
+                  handleEditAssignment(detailsModalData);
+                  setIsDetailsOpen(false);
+                }}
+                style={{ flex: 1 }}
+              >
+                ✏️ Edit
+              </Button>
+              <Button
+                onClick={() => {
+                  handleDeleteAssignment(detailsModalData._id);
+                  setIsDetailsOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#fee2e2",
+                  color: "#991b1b",
+                  border: "none",
+                }}
+              >
+                🗑️ Delete
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
-                <FormInput
-                  label="Start Time"
-                  type="time"
-                  value={editAssignmentData.startTime}
-                  onChange={(e) =>
-                    setEditAssignmentData((prev) => ({ ...prev, startTime: e.target.value }))
-                  }
-                />
-              </div>
+      {/* Edit Assignment Modal */}
+      <Modal
+        isOpen={isEditAssignmentOpen}
+        onClose={() => setIsEditAssignmentOpen(false)}
+        title="Edit Assignment"
+      >
+        {editAssignmentData && (
+          <div style={{ display: "grid", gap: "16px" }}>
+            <FormSelect
+              label="Teacher"
+              value={editAssignmentData.teacherId}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  teacherId: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select teacher" },
+                ...teachers.map((t) => ({
+                  value: t.userId?._id || t._id,
+                  label: `${t.userId?.name || "Unknown"} (${t.userId?.email || ""})`,
+                })),
+              ]}
+            />
 
-              <FormInput
-                label="End Time"
-                type="time"
-                value={editAssignmentData.endTime}
+            <FormSelect
+              label="Branch"
+              value={editAssignmentData.branchId}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  branchId: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select branch" },
+                ...branches.map((b) => ({ value: b._id, label: b.name })),
+              ]}
+            />
+
+            <FormSelect
+              label="Year"
+              value={editAssignmentData.year}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  year: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select year" },
+                { value: "1", label: "Year 1" },
+                { value: "2", label: "Year 2" },
+                { value: "3", label: "Year 3" },
+                { value: "4", label: "Year 4" },
+              ]}
+            />
+
+            <FormSelect
+              label="Division"
+              value={editAssignmentData.division}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  division: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select division" },
+                { value: "A", label: "A" },
+                { value: "B", label: "B" },
+                { value: "C", label: "C" },
+              ]}
+            />
+
+            <FormSelect
+              label="Subject"
+              value={editAssignmentData.subjectId}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  subjectId: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select subject" },
+                ...subjects.map((s) => ({
+                  value: s._id,
+                  label: `${s.name} (${s.code})`,
+                })),
+              ]}
+            />
+
+            <FormSelect
+              label="Session Type"
+              value={editAssignmentData.sessionType}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  sessionType: e.target.value,
+                  batchId: e.target.value === "LECTURE" ? "" : prev.batchId,
+                }))
+              }
+              options={[
+                { value: "LECTURE", label: "Lecture" },
+                { value: "PRACTICAL", label: "Practical" },
+              ]}
+            />
+
+            {editAssignmentData.sessionType === "PRACTICAL" && (
+              <FormSelect
+                label="Batch"
+                value={editAssignmentData.batchId}
                 onChange={(e) =>
-                  setEditAssignmentData((prev) => ({ ...prev, endTime: e.target.value }))
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    batchId: e.target.value,
+                  }))
                 }
+                options={[
+                  { value: "", label: "Select batch" },
+                  ...batches.map((b) => ({ value: b._id, label: b.name })),
+                ]}
+              />
+            )}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+              }}
+            >
+              <FormSelect
+                label="Day"
+                value={editAssignmentData.dayOfWeek}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    dayOfWeek: e.target.value,
+                  }))
+                }
+                options={[
+                  "MONDAY",
+                  "TUESDAY",
+                  "WEDNESDAY",
+                  "THURSDAY",
+                  "FRIDAY",
+                  "SATURDAY",
+                ].map((d) => ({
+                  value: d,
+                  label: d,
+                }))}
               />
 
               <FormInput
-                label="Academic Year"
-                type="text"
-                placeholder="2025-2026"
-                value={editAssignmentData.academicYear}
-              <div style={{ display: "flex", gap: "12px" }}>
-                <Button
-                  onClick={handleUpdateAssignment}
-                  loading={editAssignmentLoading}
-                  style={{ flex: 1 }}
-                >
-                  {editAssignmentLoading ? "Updating..." : "Update Assignment"}
-                </Button>
-                <Button
-                  onClick={() => setIsEditAssignmentOpen(false)}
-                  style={{
-                    flex: 1,
-                    backgroundColor: theme.colors.neutral[100],
-                    color: theme.colors.text.primary,
-                    border: "none",
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+                label="Start Time"
+                type="time"
+                value={editAssignmentData.startTime}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    startTime: e.target.value,
+                  }))
+                }
+              />
             </div>
-          )}
-        </Modal>
+
+            <FormInput
+              label="End Time"
+              type="time"
+              value={editAssignmentData.endTime}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  endTime: e.target.value,
+                }))
+              }
+            />
+
+            <FormInput
+              label="Academic Year"
+              type="text"
+              placeholder="2025-2026"
+              value={editAssignmentData.academicYear}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  academicYear: e.target.value,
+                }))
+              }
+            />
+            <div style={{ display: "flex", gap: "12px" }}>
+              <Button
+                onClick={handleUpdateAssignment}
+                loading={editAssignmentLoading}
+                style={{ flex: 1 }}
+              >
+                {editAssignmentLoading ? "Updating..." : "Update Assignment"}
+              </Button>
+              <Button
+                onClick={() => setIsEditAssignmentOpen(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: theme.colors.neutral[100],
+                  color: theme.colors.text.primary,
+                  border: "none",
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Upload Result Modal */}
-      <UploadResultModal 
-        isOpen={isResultModalOpen} 
-        onClose={() => setIsResultModalOpen(false)} 
-        result={uploadResult} 
+      <UploadResultModal
+        isOpen={isResultModalOpen}
+        onClose={() => setIsResultModalOpen(false)}
+        result={uploadResult}
         type="teacher"
       />
 
@@ -1744,9 +2255,9 @@ export default function TeacherManagement() {
       {showPreview && uploadFile && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex items-center justify-center">
           <div className="w-full max-w-6xl w-full">
-            <DataPreviewTable 
-              file={uploadFile} 
-              type="teacher" 
+            <DataPreviewTable
+              file={uploadFile}
+              type="teacher"
               onCancel={() => {
                 setShowPreview(false);
                 setUploadFile(null);
@@ -1754,7 +2265,7 @@ export default function TeacherManagement() {
               onConfirm={async (file) => {
                 await handleUpload();
                 setShowPreview(false);
-              }} 
+              }}
             />
           </div>
         </div>
