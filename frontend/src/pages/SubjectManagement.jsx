@@ -194,6 +194,21 @@ export default function SubjectManagement() {
       setFormError("Please select a semester");
       return false;
     }
+    
+    if (!formData.semesterStartDate) {
+      setFormError("Please select a semester start date");
+      return false;
+    }
+
+    if (!formData.semesterEndDate) {
+      setFormError("Please select a semester end date");
+      return false;
+    }
+    
+    if (new Date(formData.semesterStartDate) >= new Date(formData.semesterEndDate)) {
+      setFormError("End date must be after start date");
+      return false;
+    }
 
     return true;
   };
@@ -211,12 +226,10 @@ export default function SubjectManagement() {
 
     try {
       if (modalMode === "create") {
-        await createSubject(
-          formData.name,
-          formData.code,
-          formData.branch,
-          parseInt(formData.semester)
-        );
+        await createSubject({
+          ...formData,
+          semester: parseInt(formData.semester)
+        });
         setSuccess("Subject created successfully!");
       } else {
         // Edit functionality would go here

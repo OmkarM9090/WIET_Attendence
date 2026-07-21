@@ -65,19 +65,11 @@ export const deleteBranch = async (id) => {
 
 /**
  * Create a new subject
- * @param {string} name - Subject name
- * @param {string} code - Subject code
- * @param {string} branch - Branch ID
- * @param {number} semester - Semester number
+ * @param {object} subjectData - Subject information including name, code, branch, semester, semesterStartDate, semesterEndDate
  */
-export const createSubject = async (name, code, branch, semester) => {
+export const createSubject = async (subjectData) => {
   try {
-    const response = await axiosInstance.post("/admin/subjects", {
-      name,
-      code,
-      branch,
-      semester,
-    });
+    const response = await axiosInstance.post("/admin/subjects", subjectData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to create subject" };
