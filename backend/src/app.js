@@ -16,10 +16,20 @@ const app = express();
 // Security Headers
 app.use(helmet());
 
+// CORS Configuration (Must be before routes and rate limiters)
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Allow specific origin
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // Allow cookies if needed
+};
+app.use(cors(corsOptions));
+app.use(express.json());
+
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 300, // Increased limit to prevent false positives in SPA
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later."
@@ -28,16 +38,6 @@ const limiter = rateLimit({
 
 // Apply rate limiter to all API routes
 app.use("/api/", limiter);
-
-// CORS Configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Allow specific origin
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Allow cookies if needed
-};
-app.use(cors(corsOptions));
-app.use(express.json());
 
 // Health check endpoint
 app.get("/health", (req, res) => {

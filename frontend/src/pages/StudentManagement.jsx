@@ -71,12 +71,13 @@ export default function StudentManagement() {
 
   // Sidebar menu for admin
   const sidebarItems = [
-    { label: "Dashboard", path: "/admin", icon: "🏠" },
-    { label: "Branches", path: "/admin/branches", icon: "🌿" },
-    { label: "Subjects", path: "/admin/subjects", icon: "📘" },
-    { label: "Students", path: "/admin/students", icon: "🎓" },
-    { label: "Teachers", path: "/admin/teachers", icon: "👩‍🏫" },
-    { label: "Reports", path: "/admin/defaulters", icon: "📊" },
+    { path: "/admin", icon: "📊", label: "Dashboard" },
+    { path: "/admin/branches", icon: "🏢", label: "Branches" },
+    { path: "/admin/subjects", icon: "📚", label: "Subjects" },
+    { path: "/admin/students", icon: "🎓", label: "Students" },
+    { path: "/admin/teachers", icon: "👨‍🏫", label: "Teachers" },
+    { path: "/admin/reports", icon: "📋", label: "Reports" },
+    { path: "/admin/defaulters", icon: "⚠️", label: "Defaulters" },
   ];
 
   useEffect(() => {
