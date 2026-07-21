@@ -54,17 +54,11 @@ export default function ReportPreview({
         {reportText}
       </div>
 
-      <div
-        style={{
-          marginTop: "16px",
-          display: "flex",
-          gap: "12px",
-          justifyContent: "flex-end",
-        }}
-      >
+      <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:justify-end w-full">
         {attendanceId && onUpdateExcel && (
           <Button 
             onClick={onUpdateExcel}
+            className="w-full sm:w-auto"
             disabled={isUpdatingExcel || isDownloadingExcel}
             style={{
               backgroundColor: isUpdatingExcel ? theme.colors.neutral[300] : theme.colors.success,
@@ -77,6 +71,7 @@ export default function ReportPreview({
         {attendanceId && onDownloadExcel && (
           <Button 
             onClick={onDownloadExcel}
+            className="w-full sm:w-auto"
             disabled={isDownloadingExcel || isUpdatingExcel}
             style={{
               backgroundColor: isDownloadingExcel ? theme.colors.neutral[300] : theme.colors.primary,
@@ -86,8 +81,8 @@ export default function ReportPreview({
             {isDownloadingExcel ? "⬇️ Downloading..." : "⬇️ Download Excel"}
           </Button>
         )}
-        <Button onClick={onCopy}>Copy</Button>
-        <Button onClick={onShare}>Share WhatsApp</Button>
+        <Button onClick={onCopy} className="w-full sm:w-auto">Copy</Button>
+        <Button onClick={onShare} className="w-full sm:w-auto">Share WhatsApp</Button>
       </div>
     </div>
   );

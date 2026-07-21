@@ -44,7 +44,6 @@ export default function Button({
     alignItems: "center",
     justifyContent: "center",
     gap: "0.5rem",
-    width: fullWidth ? "100%" : "auto",
     minHeight: "44px", // Better touch target for mobile
   };
 
@@ -123,7 +122,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={className}
+      className={`${fullWidth ? 'w-full ' : ''}${className}`}
       style={{
         ...baseStyles,
         ...variantStyles,

@@ -56,6 +56,7 @@ export default function TeacherMarkAttendance() {
   const [savingReport, setSavingReport] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
   const [isUpdatingExcel, setIsUpdatingExcel] = useState(false);
   const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
   const [savedAttendanceId, setSavedAttendanceId] = useState(null);
@@ -235,9 +236,21 @@ export default function TeacherMarkAttendance() {
       );
 
       if (response.data.success) {
-        setStudents(response.data.data || []);
+        let fetchedStudents = response.data.data || [];
+        // Sort by Roll Number first, then Alphabetically by Name
+        fetchedStudents.sort((a, b) => {
+          const rollA = String(a.rollNo || "").padStart(15, '0');
+          const rollB = String(b.rollNo || "").padStart(15, '0');
+          if (rollA !== rollB) return rollA.localeCompare(rollB);
+          
+          const nameA = String(a.name || "").toLowerCase();
+          const nameB = String(b.name || "").toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        setStudents(fetchedStudents);
         setReportText("");
         setReportError("");
+        setReportSuccess("");
       } else {
         setStudentError(response.data.message || "Failed to fetch students");
       }
@@ -444,6 +457,7 @@ export default function TeacherMarkAttendance() {
     try {
       setIsUpdatingExcel(true);
       setReportError("");
+      setReportSuccess("");
 
       if (!savedAttendanceId) {
         setReportError("No attendance session to update Excel for");
@@ -458,12 +472,10 @@ export default function TeacherMarkAttendance() {
         if (response.data.skipped) {
           setReportError("Excel update skipped (cancelled/holiday session)");
         } else {
-          setReportError(""); // Clear error to show success
-          // Show success message briefly
-          const successMsg = "✅ Excel file updated successfully!";
-          setReportError(successMsg);
+          setReportError(""); 
+          setReportSuccess("Excel file updated successfully!");
           setTimeout(() => {
-            setReportError("");
+            setReportSuccess("");
           }, 3000);
         }
       } else {
@@ -486,6 +498,7 @@ export default function TeacherMarkAttendance() {
     try {
       setIsDownloadingExcel(true);
       setReportError("");
+      setReportSuccess("");
 
       if (!savedAttendanceId) {
         setReportError("No attendance session to download Excel for");
@@ -520,10 +533,10 @@ export default function TeacherMarkAttendance() {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      const successMsg = "✅ Download started!";
-      setReportError(successMsg);
+      setReportError("");
+      setReportSuccess("Download started!");
       setTimeout(() => {
-        setReportError("");
+        setReportSuccess("");
       }, 3000);
       
     } catch (err) {
@@ -1066,57 +1079,22 @@ export default function TeacherMarkAttendance() {
                       </div>
 
                       {/* Student Count Summary */}
-                      <div
-                        style={{
-                          marginBottom: "16px",
-                          padding: "12px 16px",
-                          backgroundColor: theme.colors.info + "10",
-                          borderRadius: "8px",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <div>
-                          <span
-                            style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              color: theme.colors.text.primary,
-                            }}
-                          >
+                      <div className="mb-4 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3" style={{ backgroundColor: theme.colors.info + "10" }}>
+                        <div className="flex flex-wrap items-center">
+                          <span className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
                             Total Students: {students.length}
                           </span>
                           {selectedAssignment.sessionType === "PRACTICAL" && (
-                            <span
-                              style={{
-                                marginLeft: "12px",
-                                fontSize: "13px",
-                                color: theme.colors.text.secondary,
-                              }}
-                            >
+                            <span className="ml-2 text-xs sm:text-sm text-slate-500">
                               (Batch: {selectedAssignment.batch?.name})
                             </span>
                           )}
                         </div>
-                        <div>
-                          <span
-                            style={{
-                              fontSize: "14px",
-                              color: theme.colors.error,
-                              fontWeight: "600",
-                            }}
-                          >
+                        <div className="flex flex-wrap gap-4 items-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
+                          <span className="text-sm font-semibold" style={{ color: theme.colors.error }}>
                             Absent: {selectedAbsentStudents.length}
                           </span>
-                          <span
-                            style={{
-                              marginLeft: "12px",
-                              fontSize: "14px",
-                              color: theme.colors.success,
-                              fontWeight: "600",
-                            }}
-                          >
+                          <span className="text-sm font-semibold" style={{ color: theme.colors.success }}>
                             Present: {students.length - selectedAbsentStudents.length}
                           </span>
                         </div>
@@ -1286,14 +1264,7 @@ export default function TeacherMarkAttendance() {
 
               {/* Continue Button */}
               {selectedAssignment && (
-                <div
-                  style={{
-                    marginTop: "24px",
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "12px",
-                  }}
-                >
+                <div className="mt-6 flex flex-wrap justify-end gap-3 w-full">
                   <Button
                     onClick={handleSaveAttendance}
                     disabled={
@@ -1322,6 +1293,11 @@ export default function TeacherMarkAttendance() {
               {reportError && (
                 <div style={{ marginTop: "16px" }}>
                   <Alert type="error" message="Error" description={reportError} />
+                </div>
+              )}
+              {reportSuccess && (
+                <div style={{ marginTop: "16px" }}>
+                  <Alert type="success" message="Success" description={reportSuccess} />
                 </div>
               )}
 
