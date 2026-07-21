@@ -57,6 +57,7 @@ export default function TeacherMarkAttendance() {
   const [reportText, setReportText] = useState("");
   const [reportError, setReportError] = useState("");
   const [isUpdatingExcel, setIsUpdatingExcel] = useState(false);
+  const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
   const [savedAttendanceId, setSavedAttendanceId] = useState(null);
 
   // Edit modal state
@@ -475,6 +476,78 @@ export default function TeacherMarkAttendance() {
       );
     } finally {
       setIsUpdatingExcel(false);
+    }
+  };
+
+  /**
+   * Handle downloading Excel file
+   */
+  const handleDownloadExcel = async () => {
+    try {
+      setIsDownloadingExcel(true);
+      setReportError("");
+
+      if (!savedAttendanceId) {
+        setReportError("No attendance session to download Excel for");
+        return;
+      }
+
+      // We need responseType 'blob' to handle binary file download
+      const response = await axiosInstance.get(
+        `/attendance/download-excel/${savedAttendanceId}`,
+        { responseType: 'blob' }
+      );
+
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from Content-Disposition header if available
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'Attendance.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+        if (filenameMatch && filenameMatch.length === 2)
+          filename = filenameMatch[1];
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      const successMsg = "✅ Download started!";
+      setReportError(successMsg);
+      setTimeout(() => {
+        setReportError("");
+      }, 3000);
+      
+    } catch (err) {
+      console.error("Excel download error:", err);
+      
+      // If response was blob, we need to read it as text to get the error message
+      if (err.response?.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const errorData = JSON.parse(reader.result);
+            setReportError(errorData.message || "Failed to download Excel file");
+          } catch (e) {
+            setReportError("Failed to download Excel file");
+          }
+        };
+        reader.readAsText(err.response.data);
+      } else {
+        setReportError(
+          err.response?.data?.message || "Failed to download Excel file"
+        );
+      }
+    } finally {
+      setIsDownloadingExcel(false);
     }
   };
 
@@ -1259,6 +1332,8 @@ export default function TeacherMarkAttendance() {
                   onShare={handleShareWhatsApp}
                   onUpdateExcel={handleUpdateExcel}
                   isUpdatingExcel={isUpdatingExcel}
+                  onDownloadExcel={handleDownloadExcel}
+                  isDownloadingExcel={isDownloadingExcel}
                   attendanceId={savedAttendanceId}
                 />
               )}

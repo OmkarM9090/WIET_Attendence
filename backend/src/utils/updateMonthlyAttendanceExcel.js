@@ -7,6 +7,7 @@ import Student from "../models/Student.js";
 import User from "../models/User.js";
 import Subject from "../models/Subject.js";
 import Branch from "../models/Branch.js";
+import Batch from "../models/Batch.js";
 import mongoose from "mongoose";
 
 // Get __dirname equivalent in ES modules
@@ -54,10 +55,11 @@ export const updateMonthlyAttendanceExcel = async (attendanceSession) => {
     } = attendanceSession;
 
     // ============ 3. FETCH RELATED DATA ============
-    const [subject, branch, teacher] = await Promise.all([
+    const [subject, branch, teacher, batchDoc] = await Promise.all([
       Subject.findById(subjectId).select("name code").lean(),
       Branch.findById(branchId).select("name code").lean(),
-      User.findById(teacherId).select("name").lean()
+      User.findById(teacherId).select("name").lean(),
+      (sessionType === "PRACTICAL" && batch) ? Batch.findById(batch).select("name").lean() : null
     ]);
 
     if (!subject) {
@@ -73,6 +75,7 @@ export const updateMonthlyAttendanceExcel = async (attendanceSession) => {
     console.log(`📊 Excel update for: ${branch.name} ${division} - ${subject.name} - ${teacher.name}`);
 
     // ============ 4. DETERMINE FILE PATH ============
+    const batchNameForExcel = batchDoc ? batchDoc.name : batch;
     const filePath = await buildExcelFilePath(
       academicYear,
       branch.name,
@@ -80,7 +83,7 @@ export const updateMonthlyAttendanceExcel = async (attendanceSession) => {
       subject.name,
       date,
       sessionType,
-      batch
+      batchNameForExcel
     );
 
     // ============ 5. CREATE OR LOAD WORKBOOK ============
@@ -110,7 +113,7 @@ export const updateMonthlyAttendanceExcel = async (attendanceSession) => {
         subject.name,
         teacher.name,
         sessionType,
-        batch
+        batchNameForExcel
       );
     }
 
@@ -233,9 +236,9 @@ const buildExcelFilePath = async (
   batch
 ) => {
   // Clean names (remove special characters)
-  const cleanBranch = branchName.replace(/[^a-zA-Z0-9]/g, "");
-  const cleanSubject = subjectName.replace(/[^a-zA-Z0-9]/g, "");
-  const cleanBatch = batch ? batch.replace(/[^a-zA-Z0-9]/g, "") : "";
+  const cleanBranch = String(branchName || "").replace(/[^a-zA-Z0-9]/g, "");
+  const cleanSubject = String(subjectName || "").replace(/[^a-zA-Z0-9]/g, "");
+  const cleanBatch = batch ? String(batch).replace(/[^a-zA-Z0-9]/g, "") : "";
 
   // Get Year context. In our models, year is like 1, 2, 3, 4. 
   // Wait, we don't have year passed as parameter here? Yes we do, wait...
@@ -366,8 +369,7 @@ const fetchEligibleStudents = async (
     year: parseInt(year),
     division,
     status: "active",
-    academicYear,
-    admissionDate: { $lte: new Date(sessionDate) } // Late admission logic
+    academicYear
   };
 
   // Filter by batch for practicals

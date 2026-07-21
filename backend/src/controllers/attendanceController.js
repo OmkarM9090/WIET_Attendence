@@ -1,3 +1,4 @@
+import fs from "fs";
 import mongoose from "mongoose";
 import AttendanceSession from "../models/AttendanceSession.js";
 import Student from "../models/Student.js";
@@ -1352,5 +1353,72 @@ export const importAttendanceExcel = async (req, res) => {
   } catch (error) {
     console.error("IMPORT EXCEL ERROR:", error);
     res.status(500).json({ success: false, message: "Error importing Excel", error: error.message });
+  }
+};
+
+/**
+ * ====================================================
+ * DOWNLOAD EXCEL
+ * ====================================================
+ * @route   GET /api/attendance/download-excel/:attendanceId
+ * @desc    Generates (or updates) and downloads the Excel file
+ * @access  Private (Teacher/Admin)
+ */
+export const downloadExcel = async (req, res) => {
+  try {
+    const { attendanceId } = req.params;
+
+    // Validate ID
+    if (!mongoose.Types.ObjectId.isValid(attendanceId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid attendance ID format"
+      });
+    }
+
+    // Find attendance session
+    const attendance = await AttendanceSession.findById(attendanceId).lean();
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance session not found"
+      });
+    }
+
+    // Always update/generate to ensure file exists on disk
+    const result = await updateMonthlyAttendanceExcel(attendance);
+
+    if (!result.success || !result.filePath) {
+      return res.status(500).json({
+        success: false,
+        message: result.message || "Failed to generate Excel file"
+      });
+    }
+
+    // Ensure file exists
+    if (!fs.existsSync(result.filePath)) {
+      return res.status(500).json({
+        success: false,
+        message: "Generated file could not be found"
+      });
+    }
+
+    // Send file to client
+    res.download(result.filePath, (err) => {
+      if (err) {
+        console.error("❌ Excel download error:", err);
+        // Do not send res.status if headers are already sent
+        if (!res.headersSent) {
+          res.status(500).json({ success: false, message: "Error downloading file" });
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Download Excel Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while downloading Excel"
+    });
   }
 };

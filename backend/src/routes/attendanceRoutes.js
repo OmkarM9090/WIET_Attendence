@@ -7,7 +7,8 @@ import {
   updateAttendance,
   manualExcelUpdate,
   getSessionDetails,
-  importAttendanceExcel
+  importAttendanceExcel,
+  downloadExcel
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
@@ -39,6 +40,14 @@ router.post(
   protect,
   allowRoles("teacher"),
   manualExcelUpdate
+);
+
+// GET route for downloading Excel
+router.get(
+  "/download-excel/:attendanceId",
+  protect,
+  allowRoles("teacher", "admin"),
+  downloadExcel
 );
 router.get(
   "/students-for-session",

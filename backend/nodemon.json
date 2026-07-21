@@ -1,0 +1,8 @@
+{
+  "ignore": [
+    "exports/*",
+    "attendance_excels/*",
+    "node_modules/*",
+    "test/*"
+  ]
+}

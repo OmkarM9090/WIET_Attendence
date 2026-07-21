@@ -6,7 +6,16 @@
 import { theme } from "../styles/theme";
 import Button from "./Button";
 
-export default function ReportPreview({ reportText, onCopy, onShare, onUpdateExcel, isUpdatingExcel, attendanceId }) {
+export default function ReportPreview({ 
+  reportText, 
+  onCopy, 
+  onShare, 
+  onUpdateExcel, 
+  isUpdatingExcel, 
+  onDownloadExcel,
+  isDownloadingExcel,
+  attendanceId 
+}) {
   return (
     <div
       style={{
@@ -56,13 +65,25 @@ export default function ReportPreview({ reportText, onCopy, onShare, onUpdateExc
         {attendanceId && onUpdateExcel && (
           <Button 
             onClick={onUpdateExcel}
-            disabled={isUpdatingExcel}
+            disabled={isUpdatingExcel || isDownloadingExcel}
             style={{
               backgroundColor: isUpdatingExcel ? theme.colors.neutral[300] : theme.colors.success,
               color: theme.colors.surface,
             }}
           >
             {isUpdatingExcel ? "📊 Updating..." : "📊 Update Excel"}
+          </Button>
+        )}
+        {attendanceId && onDownloadExcel && (
+          <Button 
+            onClick={onDownloadExcel}
+            disabled={isDownloadingExcel || isUpdatingExcel}
+            style={{
+              backgroundColor: isDownloadingExcel ? theme.colors.neutral[300] : theme.colors.primary,
+              color: theme.colors.surface,
+            }}
+          >
+            {isDownloadingExcel ? "⬇️ Downloading..." : "⬇️ Download Excel"}
           </Button>
         )}
         <Button onClick={onCopy}>Copy</Button>
