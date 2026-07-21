@@ -2,7 +2,12 @@ import express from "express";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
 import {createStudent,getStudents,updateStudent,deleteStudent} from "../controllers/studentAdminController.js";
-import { uploadStudentsExcel } from "../controllers/adminStudentUploadController.js";
+import { 
+  uploadStudentsExcel,
+  getClassInfo,
+  downloadSimpleTemplate,
+  uploadStudentsSimple 
+} from "../controllers/adminStudentUploadController.js";
 import { generateStudentTemplate } from "../utils/generateTemplate.js";
 import { upload } from "../utils/upload.js";
 
@@ -18,6 +23,29 @@ router.post(
   allowRoles("admin"),
   upload.single("file"),
   uploadStudentsExcel
+);
+
+// Simplified Upload Routes
+router.get(
+  "/class-info",
+  protect,
+  allowRoles("admin"),
+  getClassInfo
+);
+
+router.get(
+  "/download-simple-template",
+  protect,
+  allowRoles("admin"),
+  downloadSimpleTemplate
+);
+
+router.post(
+  "/upload-students-simple",
+  protect,
+  allowRoles("admin"),
+  upload.single("file"),
+  uploadStudentsSimple
 );
 
 // Download Excel Template Route

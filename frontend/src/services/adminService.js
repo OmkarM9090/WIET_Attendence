@@ -163,6 +163,53 @@ export const uploadStudentsExcel = async (file) => {
 };
 
 /**
+ * Get class info for simplified upload
+ */
+export const getClassInfo = async (branchId, year, division) => {
+  const response = await axiosInstance.get("/admin/class-info", {
+    params: { branchId, year, division }
+  });
+  return response.data;
+};
+
+/**
+ * Download simplified template
+ */
+export const downloadSimpleTemplate = async (branchCode, year, division) => {
+  const response = await axiosInstance.get("/admin/download-simple-template", {
+    params: { branchCode, year, division },
+    responseType: "blob"
+  });
+  
+  // Trigger download
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `students_${branchCode}_Y${year}_${division}.xlsx`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
+/**
+ * Upload students using the simplified Excel flow
+ */
+export const uploadStudentsSimple = async (formData) => {
+  try {
+    const response = await axiosInstance.post(
+      "/admin/upload-students-simple",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to upload students" };
+  }
+};
+
+/**
  * Update a student
  */
 export const updateStudent = async (id, studentData) => {
