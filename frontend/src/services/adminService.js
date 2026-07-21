@@ -186,7 +186,43 @@ export const deleteStudent = async (id) => {
   }
 };
 
-// ============ TEACHER MANAGEMENT ============
+
+/**
+ * Get student counts for bulk delete controls
+ */
+export const getStudentCounts = async () => {
+  try {
+    const response = await axiosInstance.get("/admin/student-counts");
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch student counts" };
+  }
+};
+
+/**
+ * Preview a bulk delete before destructive confirmation
+ */
+export const previewBulkDelete = async (params) => {
+  try {
+    const response = await axiosInstance.get("/admin/preview-bulk-delete", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to preview bulk delete" };
+  }
+};
+
+/**
+ * Execute confirmed bulk student deletion
+ */
+export const bulkDeleteStudents = async (data) => {
+  try {
+    const response = await axiosInstance.post("/admin/bulk-delete-students", data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete students" };
+  }
+};
+
 
 /**
  * Get all teachers (with optional search)

@@ -7,7 +7,10 @@ import {
   getBranchDeleteCount,
   deleteBranch,
   downloadStudentTemplate,
-  downloadTeacherTemplate
+  downloadTeacherTemplate,
+  getStudentCounts,
+  previewBulkDelete,
+  bulkDeleteStudents
 } from "../controllers/adminController.js";
 import {
   createTeachingAssignment,
@@ -41,6 +44,11 @@ router.get(
   allowRoles("admin"),
   getTeachingAssignments
 );
+
+// BULK STUDENT DELETE
+router.get("/student-counts", protect, allowRoles("admin"), getStudentCounts);
+router.get("/preview-bulk-delete", protect, allowRoles("admin"), previewBulkDelete);
+router.post("/bulk-delete-students", protect, allowRoles("admin"), bulkDeleteStudents);
 
 // TEMPLATE DOWNLOADS
 router.get("/download-student-template", protect, allowRoles("admin"), downloadStudentTemplate);

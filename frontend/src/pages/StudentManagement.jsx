@@ -10,12 +10,12 @@ import Alert from "../components/Alert";
 import UploadResultModal from "../components/UploadResultModal";
 import ExcelFormatGuide from "../components/admin/ExcelFormatGuide";
 import DataPreviewTable from "../components/admin/DataPreviewTable";
+import BulkDeleteSection from "../components/admin/BulkDeleteSection";
 import axiosInstance from "../utils/axios";
 import {
   getBranches,
   getStudents,
   createStudent,
-  uploadStudentsExcel,
   updateStudent,
   deleteStudent,
 } from "../services/adminService";
@@ -281,6 +281,9 @@ export default function StudentManagement() {
     }
   };
 
+  const handleBulkDeleteComplete = async () => {
+    await refetchStudents();
+  };
   return (
     <DashboardLayout
       title="Student Management"
@@ -305,7 +308,7 @@ export default function StudentManagement() {
               className="cursor-pointer rounded-md border px-3 py-2 text-sm font-medium hover:bg-gray-100 transition"
               style={{ borderColor: theme.colors.border, color: theme.colors.text.primary, backgroundColor: theme.colors.surface }}
             >
-              Choose File for Preview
+              {uploading ? "Uploading..." : "Choose File for Preview"}
               <input
                 type="file"
                 accept=".xlsx,.xls"
@@ -389,7 +392,21 @@ export default function StudentManagement() {
         {success && <Alert message={success} type="success" onClose={() => setSuccess("")} />}
       </div>
 
-      {/* Data table */}
+
+      {/* Bulk delete danger zone */}
+      <BulkDeleteSection
+        branches={branches}
+        onDeleteComplete={handleBulkDeleteComplete}
+        onError={(message) => {
+          setSuccess("");
+          setError(message);
+        }}
+        onSuccess={(message) => {
+          setError("");
+          setSuccess(message);
+        }}
+      />
+
       <Table
         columns={columns}
         data={students}
@@ -645,7 +662,7 @@ export default function StudentManagement() {
                 setShowPreview(false);
                 setUploadFile(null);
               }}
-              onConfirm={async (file) => {
+              onConfirm={async () => {
                 // Actually trigger upload
                 await handleUpload();
                 setShowPreview(false);
