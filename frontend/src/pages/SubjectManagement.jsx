@@ -51,6 +51,8 @@ export default function SubjectManagement() {
     code: "",
     branch: "",
     semester: "",
+    semesterStartDate: "",
+    semesterEndDate: "",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
@@ -128,7 +130,14 @@ export default function SubjectManagement() {
    */
   const handleCreate = () => {
     setModalMode("create");
-    setFormData({ name: "", code: "", branch: "", semester: "" });
+    setFormData({ 
+      name: "", 
+      code: "", 
+      branch: "", 
+      semester: "", 
+      semesterStartDate: "", 
+      semesterEndDate: "" 
+    });
     setFormError("");
     setShowModal(true);
   };
@@ -144,6 +153,8 @@ export default function SubjectManagement() {
       code: subject.code,
       branch: subject.branch?._id || subject.branch,
       semester: subject.semester?.toString(),
+      semesterStartDate: subject.semesterStartDate ? new Date(subject.semesterStartDate).toISOString().split('T')[0] : "",
+      semesterEndDate: subject.semesterEndDate ? new Date(subject.semesterEndDate).toISOString().split('T')[0] : "",
     });
     setFormError("");
     setShowModal(true);
@@ -528,6 +539,28 @@ export default function SubjectManagement() {
               })),
             ]}
           />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormInput
+              label="Semester Start Date"
+              name="semesterStartDate"
+              type="date"
+              value={formData.semesterStartDate}
+              onChange={handleInputChange}
+              disabled={formLoading}
+              required
+            />
+            
+            <FormInput
+              label="Semester End Date"
+              name="semesterEndDate"
+              type="date"
+              value={formData.semesterEndDate}
+              onChange={handleInputChange}
+              disabled={formLoading}
+              required
+            />
+          </div>
 
           <div
             className="rounded-lg border p-3"
