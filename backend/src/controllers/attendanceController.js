@@ -654,7 +654,11 @@ export const markAndGenerateAttendance = async (req, res) => {
     }
 
     // Academic year must be current
-    const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || "2025-2026";
+    const now = new Date();
+    const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+    const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
+    const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
+    
     if (assignment.academicYear !== currentAcademicYear) {
       return res.status(400).json({
         success: false,
