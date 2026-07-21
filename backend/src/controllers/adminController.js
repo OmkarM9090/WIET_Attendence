@@ -152,9 +152,9 @@ export const getBranches = async (req, res) => {
 /* CREATE SUBJECT */
 export const createSubject = async (req, res) => {
   try {
-    const { name, code, branch, semester } = req.body;
+    const { name, code, branch, semester, semesterStartDate, semesterEndDate } = req.body;
 
-    if (!name || !code || !branch || !semester) {
+    if (!name || !code || !branch || !semester || !semesterStartDate || !semesterEndDate) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -168,6 +168,8 @@ export const createSubject = async (req, res) => {
       code,
       branch,
       semester,
+      semesterStartDate,
+      semesterEndDate
     });
 
     res.status(201).json(subject);
