@@ -4,7 +4,7 @@ import Student from "../models/Student.js";
 import Branch from "../models/Branch.js";
 import Batch from "../models/Batch.js";
 import ExcelJS from "exceljs";
-import { parseStudentExcel } from "../utils/excelParser.js";
+import { parseStudentExcel, getCellValue } from "../utils/excelParser.js";
 import { validateStudentRow } from "../utils/excelValidator.js";
 
 // Helper function to auto-detect academic year
@@ -186,13 +186,13 @@ export const downloadSimpleTemplate = async (req, res) => {
     
     sheet.mergeCells('A2:D2');
     const instructionCell = sheet.getCell('A2');
-    instructionCell.value = '⚠️ Fill Name & Roll Number (mandatory). Email & Batch are optional.';
+    instructionCell.value = '⚠️ Fill Roll No & Name of the Student (mandatory). Email & Batch are optional.';
     instructionCell.font = { italic: true, color: { argb: 'FF92400E' } };
     instructionCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3CD' } };
     instructionCell.alignment = { horizontal: 'center' };
     sheet.getRow(2).height = 25;
     
-    const headers = ['Name*', 'Roll No*', 'Email (Optional)', 'Batch (Optional)'];
+    const headers = ['Roll No*', 'Name of the Student*', 'Email (Optional)', 'Batch (Optional)'];
     sheet.getRow(3).values = headers;
     sheet.getRow(3).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     sheet.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF16A34A' } };
@@ -200,9 +200,9 @@ export const downloadSimpleTemplate = async (req, res) => {
     sheet.getRow(3).height = 25;
     
     const samples = [
-      ['Rahul Sharma', 101, '', 'B1'],
-      ['Priya Patel', 102, 'priya@college.edu', 'B1'],
-      ['Amit Kumar', 103, '', 'B2']
+      [101, 'Rahul Sharma', '', 'B1'],
+      [102, 'Priya Patel', 'priya@college.edu', 'B1'],
+      [103, 'Amit Kumar', '', 'B2']
     ];
     
     samples.forEach((sample, idx) => {
@@ -300,14 +300,11 @@ export const uploadStudentsSimple = async (req, res) => {
     for (let rowIdx = 2; rowIdx <= sheet.rowCount; rowIdx++) {
       const row = sheet.getRow(rowIdx);
       
-      const name = row.getCell(1).value?.toString().trim();
-      let rawRollNo = row.getCell(2).value;
-      if (rawRollNo && typeof rawRollNo === 'object' && rawRollNo.result !== undefined) {
-        rawRollNo = rawRollNo.result;
-      }
-      const rollNo = rawRollNo?.toString().trim();
-      const emailCell = row.getCell(3).value?.toString().trim();
-      const batchCell = row.getCell(4).value?.toString().trim();
+      const rawRollNo = getCellValue(row.getCell(1));
+      const rollNo = rawRollNo ? String(rawRollNo).trim() : '';
+      const name = getCellValue(row.getCell(2));
+      const emailCell = getCellValue(row.getCell(3));
+      const batchCell = getCellValue(row.getCell(4));
       
       if (!name && !rollNo) continue;
       

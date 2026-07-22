@@ -11,13 +11,17 @@ const getRawValue = (cell) => {
       if (raw.result instanceof Date) return raw.result;
       return raw.result;
     }
-    // Handle hyperlinks / rich text
+    // Handle rich text
+    if ("richText" in raw && Array.isArray(raw.richText)) {
+      return raw.richText.map(t => t.text).join("");
+    }
+    // Handle hyperlinks / other text objects
     if ("text" in raw) return raw.text;
   }
   return raw;
 };
 
-const getCellValue = (cell, { asNumber = false } = {}) => {
+export const getCellValue = (cell, { asNumber = false } = {}) => {
   const raw = getRawValue(cell);
   
   if (raw === undefined || raw === null) return asNumber ? null : "";

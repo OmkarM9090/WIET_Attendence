@@ -91,8 +91,8 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
       // Parse and validate
       const parsed = dataRows.map((row, idx) => {
         const rowNum = idx + 4; // Since we skipped 3 rows
-        const name = row[0]?.toString().trim() || '';
-        const rollNo = row[1]?.toString().trim() || '';
+        const rollNo = row[0]?.toString().trim() || '';
+        const name = row[1]?.toString().trim() || '';
         const email = row[2]?.toString().trim() || '';
         const batch = row[3]?.toString().trim() || '';
         
@@ -285,7 +285,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                   
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <p className="text-sm text-blue-900 mb-3">
-                      Template mein sirf <strong>Name</strong> aur <strong>Roll Number</strong> mandatory hai. 
+                      Template mein sirf <strong>Roll No</strong> aur <strong>Name of the Student</strong> mandatory hai. 
                       Email aur Batch optional hain (auto-generate honge if empty).
                     </p>
                     
@@ -365,8 +365,8 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                     <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                       <tr>
                         <th className="px-4 py-2 text-left font-semibold text-slate-700">Row</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Name</th>
                         <th className="px-4 py-2 text-left font-semibold text-slate-700">Roll No</th>
+                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Name of the Student</th>
                         <th className="px-4 py-2 text-left font-semibold text-slate-700">Email</th>
                         <th className="px-4 py-2 text-left font-semibold text-slate-700">Batch</th>
                         <th className="px-4 py-2 text-left font-semibold text-slate-700">Status</th>
@@ -379,8 +379,8 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                           className={`border-b border-slate-100 ${!row.isValid ? 'bg-red-50' : ''}`}
                         >
                           <td className="px-4 py-2 text-slate-600">{row.rowNumber}</td>
-                          <td className="px-4 py-2">{row.name || '-'}</td>
                           <td className="px-4 py-2 font-mono">{row.rollNo || '-'}</td>
+                          <td className="px-4 py-2">{row.name || '-'}</td>
                           <td className="px-4 py-2 text-xs text-slate-600">{row.email}</td>
                           <td className="px-4 py-2">{row.batch || '-'}</td>
                           <td className="px-4 py-2">
