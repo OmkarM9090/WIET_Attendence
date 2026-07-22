@@ -124,7 +124,7 @@ export default function TeacherMarkAttendance() {
    */
   const handleSessionSelect = (e) => {
     const assignmentId = e.target.value;
-    
+
     if (!assignmentId) {
       setSelectedAssignment(null);
       return;
@@ -167,7 +167,7 @@ export default function TeacherMarkAttendance() {
 
     // Convert to Date object (midnight)
     const selectedDate = new Date(dateString + "T00:00:00");
-    
+
     // Get today at midnight
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -244,7 +244,7 @@ export default function TeacherMarkAttendance() {
           const rollA = String(a.rollNo || "").padStart(15, '0');
           const rollB = String(b.rollNo || "").padStart(15, '0');
           if (rollA !== rollB) return rollA.localeCompare(rollB);
-          
+
           const nameA = String(a.name || "").toLowerCase();
           const nameB = String(b.name || "").toLowerCase();
           return nameA.localeCompare(nameB);
@@ -381,7 +381,7 @@ export default function TeacherMarkAttendance() {
       }
     } catch (err) {
       console.error("Save attendance error:", err);
-      
+
       // Handle 409 Conflict - duplicate attendance detected
       if (err.response?.status === 409 && err.response?.data?.alreadyExists) {
         // Backend should return attendanceId, but if not, we need to fetch it
@@ -397,7 +397,7 @@ export default function TeacherMarkAttendance() {
         }
         return;
       }
-      
+
       // Other errors
       setReportError(
         err.response?.data?.message || "Failed to save attendance"
@@ -474,7 +474,7 @@ export default function TeacherMarkAttendance() {
         if (response.data.skipped) {
           setReportError("Excel update skipped (cancelled/holiday session)");
         } else {
-          setReportError(""); 
+          setReportError("");
           setReportSuccess("Excel file updated successfully!");
           setTimeout(() => {
             setReportSuccess("");
@@ -517,7 +517,7 @@ export default function TeacherMarkAttendance() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
+
       // Get filename from Content-Disposition header if available
       const contentDisposition = response.headers['content-disposition'];
       let filename = 'Attendance.xlsx';
@@ -526,24 +526,24 @@ export default function TeacherMarkAttendance() {
         if (filenameMatch && filenameMatch.length === 2)
           filename = filenameMatch[1];
       }
-      
+
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
       setReportError("");
       setReportSuccess("Download started!");
       setTimeout(() => {
         setReportSuccess("");
       }, 3000);
-      
+
     } catch (err) {
       console.error("Excel download error:", err);
-      
+
       // If response was blob, we need to read it as text to get the error message
       if (err.response?.data instanceof Blob) {
         const reader = new FileReader();
@@ -693,11 +693,10 @@ export default function TeacherMarkAttendance() {
             <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Session Type:</span>
             <div>
               <span
-                className={`inline-block px-3 py-1 rounded-md text-xs font-semibold ${
-                  sessionType === "PRACTICAL"
+                className={`inline-block px-3 py-1 rounded-md text-xs font-semibold ${sessionType === "PRACTICAL"
                     ? "bg-amber-50 text-amber-600 border border-amber-200"
                     : "bg-blue-50 text-blue-600 border border-blue-200"
-                }`}
+                  }`}
               >
                 {sessionType}
               </span>
@@ -807,7 +806,7 @@ export default function TeacherMarkAttendance() {
                 </div>
 
                 <div className="mt-4">
-                  <SessionSelector 
+                  <SessionSelector
                     assignments={assignments}
                     selectedAssignmentId={selectedAssignment?._id || ""}
                     onSelect={(id) => handleSessionSelect({ target: { value: id } })}
@@ -1043,8 +1042,8 @@ export default function TeacherMarkAttendance() {
                     className={`
                       flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 
                       rounded-xl font-extrabold text-sm sm:text-base transition-all duration-300 shadow-sm
-                      ${isContinueEnabled() 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md hover:-translate-y-0.5' 
+                      ${isContinueEnabled()
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md hover:-translate-y-0.5'
                         : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'}
                     `}
                   >
