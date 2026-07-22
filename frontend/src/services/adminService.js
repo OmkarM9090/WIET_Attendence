@@ -94,6 +94,18 @@ export const getSubjects = async (branch = null, semester = null) => {
   }
 };
 
+/**
+ * Delete a subject
+ */
+export const deleteSubject = async (id) => {
+  try {
+    const response = await axiosInstance.delete(`/admin/subjects/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete subject" };
+  }
+};
+
 // ============ STUDENT MANAGEMENT ============
 
 /**

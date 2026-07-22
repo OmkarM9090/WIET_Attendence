@@ -4,6 +4,7 @@ import {
   getBranches,
   createSubject,
   getSubjects,
+  deleteSubject,
   getBranchDeleteCount,
   deleteBranch,
   downloadStudentTemplate,
@@ -30,6 +31,7 @@ router.delete("/branches/:id", protect, allowRoles("admin"), deleteBranch);
 // SUBJECT
 router.post("/subjects", protect, allowRoles("admin"), createSubject);
 router.get("/subjects", protect, allowRoles("admin"), getSubjects);
+router.delete("/subjects/:id", protect, allowRoles("admin"), deleteSubject);
 
 // TEACHING ASSIGNMENTS (Timetable)
 router.post(

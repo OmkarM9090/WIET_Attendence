@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import { theme } from "../styles/theme";
 
 // Services
-import { getSubjects, createSubject, getBranches } from "../services/adminService";
+import { getSubjects, createSubject, getBranches, deleteSubject } from "../services/adminService";
 
 // Components
 import DashboardLayout from "../components/DashboardLayout";
@@ -254,16 +254,13 @@ export default function SubjectManagement() {
     setDeleteConfirm(subject);
   };
 
-  /**
-   * Handle delete action
-   */
   const handleDelete = async () => {
     if (!deleteConfirm) return;
 
     setFormLoading(true);
 
     try {
-      // Delete functionality would go here
+      await deleteSubject(deleteConfirm._id);
       setSuccess("Subject deleted successfully!");
       setDeleteConfirm(null);
       fetchSubjects();

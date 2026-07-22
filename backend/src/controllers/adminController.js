@@ -192,6 +192,29 @@ export const getSubjects = async (req, res) => {
   res.json(subjects);
 };
 
+/* SOFT DELETE SUBJECT */
+export const deleteSubject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user._id || req.user.id; // From protect middleware
+
+    const subject = await Subject.findById(id);
+    if (!subject) return res.status(404).json({ message: "Subject not found" });
+
+    // Mark subject as deleted
+    subject.isDeleted = true;
+    subject.deletedAt = new Date();
+    subject.deletedBy = adminId;
+    await subject.save();
+
+    console.log(`[DELETE] Soft deleted subject ${subject.code} by Admin ${adminId}`);
+
+    res.json({ success: true, message: "Subject deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error during deletion" });
+  }
+};
+
 /* GET BRANCH DELETE COUNTS */
 export const getBranchDeleteCount = async (req, res) => {
   try {
