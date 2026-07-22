@@ -33,6 +33,7 @@ import EditAttendanceModal from "../components/EditAttendanceModal";
 import { getMyTeachingAssignments } from "../services/teacherService";
 import axiosInstance from "../utils/axios";
 import SessionSelector from "../components/teacher/SessionSelector";
+import StudentAttendanceList from "../components/teacher/StudentAttendanceList";
 
 export default function TeacherMarkAttendance() {
   // State management
@@ -1012,255 +1013,24 @@ export default function TeacherMarkAttendance() {
                       </p>
                     </div>
                   ) : (
-                    <>
-                      {/* Roll Number Input */}
-                      <div
-                        style={{
-                          marginBottom: "20px",
-                          padding: "16px",
-                          backgroundColor: theme.colors.neutral[50],
-                          borderRadius: "8px",
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        <label
-                          style={{
-                            display: "block",
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: theme.colors.text.primary,
-                            marginBottom: "8px",
-                          }}
-                        >
-                          Quick Add Absent Students by Roll Numbers
-                        </label>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <FormInput
-                            placeholder="Enter roll numbers (e.g., 12 34 35 or 12, 34, 35)"
-                            value={rollNumberInput}
-                            onChange={(e) => setRollNumberInput(e.target.value)}
-                            className="flex-1 w-full text-base sm:text-sm min-h-[44px]"
-                          />
-                          <Button
-                            onClick={handleAddRollNumbers}
-                            disabled={!rollNumberInput.trim()}
-                            className="w-full sm:w-auto min-h-[44px] px-6 whitespace-nowrap"
-                          >
-                            Add to Absent List
-                          </Button>
-                        </div>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: theme.colors.text.secondary,
-                            marginTop: "8px",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          💡 Separate roll numbers with commas or spaces
-                        </p>
-                        {rollNumberError && (
-                          <p
-                            style={{
-                              marginTop: "8px",
-                              fontSize: "12px",
-                              color: theme.colors.error,
-                              fontWeight: "600",
-                            }}
-                          >
-                            {rollNumberError}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Student Count Summary */}
-                      <div className="mb-4 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3" style={{ backgroundColor: theme.colors.info + "10" }}>
-                        <div className="flex flex-wrap items-center">
-                          <span className="text-sm font-semibold" style={{ color: theme.colors.text.primary }}>
-                            Total Students: {students.length}
-                          </span>
-                          {selectedAssignment.sessionType === "PRACTICAL" && (
-                            <span className="ml-2 text-xs sm:text-sm text-slate-500">
-                              (Batch: {selectedAssignment.batch?.name})
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-4 items-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
-                          <span className="text-sm font-semibold" style={{ color: theme.colors.error }}>
-                            Absent: {selectedAbsentStudents.length}
-                          </span>
-                          <span className="text-sm font-semibold" style={{ color: theme.colors.success }}>
-                            Present: {students.length - selectedAbsentStudents.length}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Student List */}
-                      <div
-                        className="overflow-x-auto w-full"
-                        style={{
-                          maxHeight: "400px",
-                          overflowY: "auto",
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: "8px",
-                        }}
-                      >
-                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "500px" }}>
-                          <thead
-                            style={{
-                              backgroundColor: theme.colors.neutral[100],
-                              position: "sticky",
-                              top: 0,
-                              zIndex: 1,
-                            }}
-                          >
-                            <tr>
-                              <th
-                                style={{
-                                  padding: "12px 16px",
-                                  textAlign: "left",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  color: theme.colors.text.primary,
-                                  borderBottom: `2px solid ${theme.colors.border}`,
-                                }}
-                              >
-                                Absent
-                              </th>
-                              <th
-                                style={{
-                                  padding: "12px 16px",
-                                  textAlign: "left",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  color: theme.colors.text.primary,
-                                  borderBottom: `2px solid ${theme.colors.border}`,
-                                }}
-                              >
-                                Roll No
-                              </th>
-                              <th
-                                style={{
-                                  padding: "12px 16px",
-                                  textAlign: "left",
-                                  fontSize: "13px",
-                                  fontWeight: "600",
-                                  color: theme.colors.text.primary,
-                                  borderBottom: `2px solid ${theme.colors.border}`,
-                                }}
-                              >
-                                Name
-                              </th>
-                              {selectedAssignment.sessionType === "PRACTICAL" && (
-                                <th
-                                  style={{
-                                    padding: "12px 16px",
-                                    textAlign: "left",
-                                    fontSize: "13px",
-                                    fontWeight: "600",
-                                    color: theme.colors.text.primary,
-                                    borderBottom: `2px solid ${theme.colors.border}`,
-                                  }}
-                                >
-                                  Batch
-                                </th>
-                              )}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {students.map((student, index) => {
-                              const isAbsent = selectedAbsentStudents.includes(
-                                student._id
-                              );
-                              return (
-                                <tr
-                                  key={student._id}
-                                  onClick={() => toggleAbsentStudent(student._id)}
-                                  className="cursor-pointer transition-colors"
-                                  style={{
-                                    backgroundColor:
-                                      index % 2 === 0
-                                        ? "white"
-                                        : theme.colors.neutral[50],
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      theme.colors.neutral[100];
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                      index % 2 === 0
-                                        ? "white"
-                                        : theme.colors.neutral[50];
-                                  }}
-                                >
-                                  <td
-                                    style={{
-                                      padding: "12px 16px",
-                                      borderBottom: `1px solid ${theme.colors.border}`,
-                                    }}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isAbsent}
-                                      onChange={() => {}} 
-                                      className="w-6 h-6 md:w-4 md:h-4 cursor-pointer"
-                                    />
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "12px 16px",
-                                      fontSize: "14px",
-                                      fontWeight: "600",
-                                      color: theme.colors.text.primary,
-                                      borderBottom: `1px solid ${theme.colors.border}`,
-                                    }}
-                                  >
-                                    {student.rollNo ?? "--"}
-                                  </td>
-                                  <td
-                                    style={{
-                                      padding: "12px 16px",
-                                      fontSize: "14px",
-                                      color: isAbsent
-                                        ? theme.colors.error
-                                        : theme.colors.text.primary,
-                                      textDecoration: isAbsent
-                                        ? "line-through"
-                                        : "none",
-                                      borderBottom: `1px solid ${theme.colors.border}`,
-                                    }}
-                                  >
-                                    {student.name || "Unnamed Student"}
-                                  </td>
-                                  {selectedAssignment.sessionType ===
-                                    "PRACTICAL" && (
-                                    <td
-                                      style={{
-                                        padding: "12px 16px",
-                                        fontSize: "14px",
-                                        color: theme.colors.text.secondary,
-                                        borderBottom: `1px solid ${theme.colors.border}`,
-                                      }}
-                                    >
-                                      {student.batch || "N/A"}
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
+                    <StudentAttendanceList
+                      students={students}
+                      selectedAbsentStudents={selectedAbsentStudents}
+                      toggleAbsentStudent={toggleAbsentStudent}
+                      selectedAssignment={selectedAssignment}
+                      rollNumberInput={rollNumberInput}
+                      setRollNumberInput={setRollNumberInput}
+                      handleAddRollNumbers={handleAddRollNumbers}
+                      rollNumberError={rollNumberError}
+                    />
                   )}
                 </div>
               )}
 
               {/* Continue Button */}
               {selectedAssignment && (
-                <div className="mt-6 flex flex-wrap justify-end gap-3 w-full">
-                  <Button
+                <div className="mt-6 flex flex-wrap justify-end gap-3 w-full border-t border-slate-200 pt-6">
+                  <button
                     onClick={handleSaveAttendance}
                     disabled={
                       !isContinueEnabled() ||
@@ -1270,18 +1040,21 @@ export default function TeacherMarkAttendance() {
                       students.length === 0 ||
                       savingReport
                     }
-                    style={{
-                      padding: "12px 32px",
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      backgroundColor: isContinueEnabled()
-                        ? theme.colors.primary
-                        : theme.colors.neutral[300],
-                      cursor: isContinueEnabled() ? "pointer" : "not-allowed",
-                    }}
+                    className={`
+                      flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 
+                      rounded-xl font-extrabold text-sm sm:text-base transition-all duration-300 shadow-sm
+                      ${isContinueEnabled() 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md hover:-translate-y-0.5' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'}
+                    `}
                   >
-                    {savingReport ? "Saving..." : "Save Attendance & Generate Report"}
-                  </Button>
+                    {savingReport ? (
+                      <>
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Saving...
+                      </>
+                    ) : "Save Attendance & Generate Report"}
+                  </button>
                 </div>
               )}
 

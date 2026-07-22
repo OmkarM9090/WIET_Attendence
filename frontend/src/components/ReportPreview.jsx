@@ -54,35 +54,59 @@ export default function ReportPreview({
         {reportText}
       </div>
 
-      <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:justify-end w-full">
+      <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:justify-end w-full border-t border-slate-200 pt-5">
         {attendanceId && onUpdateExcel && (
-          <Button 
+          <button 
             onClick={onUpdateExcel}
-            className="w-full sm:w-auto"
             disabled={isUpdatingExcel || isDownloadingExcel}
-            style={{
-              backgroundColor: isUpdatingExcel ? theme.colors.neutral[300] : theme.colors.success,
-              color: theme.colors.surface,
-            }}
+            className={`
+              flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 shadow-sm
+              ${isUpdatingExcel || isDownloadingExcel 
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
+                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 hover:shadow-md'}
+              flex-1 sm:flex-none
+            `}
           >
-            {isUpdatingExcel ? "📊 Updating..." : "📊 Update Excel"}
-          </Button>
+            {isUpdatingExcel ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Updating...
+              </>
+            ) : "📊 Update Excel"}
+          </button>
         )}
         {attendanceId && onDownloadExcel && (
-          <Button 
+          <button 
             onClick={onDownloadExcel}
-            className="w-full sm:w-auto"
             disabled={isDownloadingExcel || isUpdatingExcel}
-            style={{
-              backgroundColor: isDownloadingExcel ? theme.colors.neutral[300] : theme.colors.primary,
-              color: theme.colors.surface,
-            }}
+            className={`
+              flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 shadow-sm
+              ${isDownloadingExcel || isUpdatingExcel 
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
+                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-300 hover:shadow-md'}
+              flex-1 sm:flex-none
+            `}
           >
-            {isDownloadingExcel ? "⬇️ Downloading..." : "⬇️ Download Excel"}
-          </Button>
+            {isDownloadingExcel ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Downloading...
+              </>
+            ) : "⬇️ Download Excel"}
+          </button>
         )}
-        <Button onClick={onCopy} className="w-full sm:w-auto">Copy</Button>
-        <Button onClick={onShare} className="w-full sm:w-auto">Share WhatsApp</Button>
+        <button 
+          onClick={onCopy} 
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 shadow-sm bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-md"
+        >
+          📋 Copy
+        </button>
+        <button 
+          onClick={onShare} 
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 shadow-md bg-[#25D366] hover:bg-[#1fbd59] text-white hover:shadow-lg hover:-translate-y-0.5"
+        >
+          💬 Share WhatsApp
+        </button>
       </div>
     </div>
   );
