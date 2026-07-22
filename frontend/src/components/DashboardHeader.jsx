@@ -14,7 +14,7 @@ export default function DashboardHeader({ title, subtitle, onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-8 py-4 bg-white border-b border-slate-100 shadow-sm">
+    <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-8 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200">
       {/* Left side: Hamburger (mobile) + Page Title */}
       <div className="flex items-center gap-3">
         <button
@@ -25,7 +25,7 @@ export default function DashboardHeader({ title, subtitle, onMenuClick }) {
           <Menu size={24} />
         </button>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
             {title}
           </h1>
           {subtitle && (
@@ -68,7 +68,7 @@ export default function DashboardHeader({ title, subtitle, onMenuClick }) {
                 onClick={() => setShowDropdown(false)}
               />
 
-              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-slate-100 z-20 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg border border-slate-200 z-20 overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 sm:hidden">
                   <p className="text-sm font-bold text-slate-700">
                     {user?.name}

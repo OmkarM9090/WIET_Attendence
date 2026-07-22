@@ -7,7 +7,7 @@ export default function DashboardLayout({ children, sidebarItems, title, subtitl
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.surface }}>
+    <div className="flex h-screen overflow-hidden bg-white text-slate-900 font-sans">
       {/* Mobile Backdrop Overlay */}
       {mobileMenuOpen && (
         <div 
@@ -39,8 +39,7 @@ export default function DashboardLayout({ children, sidebarItems, title, subtitl
 
         {/* Page Content */}
         <main
-          className="flex-1 overflow-y-auto p-4 md:p-8"
-          style={{ backgroundColor: theme.colors.surface }}
+          className="flex-1 overflow-y-auto p-4 md:p-8 bg-white"
         >
           {children}
         </main>

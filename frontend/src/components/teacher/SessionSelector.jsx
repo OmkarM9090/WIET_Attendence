@@ -60,16 +60,33 @@ export default function SessionSelector({ assignments, selectedAssignmentId, onS
   return (
     <div className="flex flex-col gap-5 w-full">
       {groupedAndSorted.map(dayGroup => (
-        <div key={dayGroup.day} className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h4 className={`text-base sm:text-lg font-bold flex items-center gap-2 pb-2 ${dayGroup.isToday ? 'text-blue-700' : 'text-slate-800'}`}>
-              <Calendar size={18} className={dayGroup.isToday ? 'text-blue-600' : 'text-slate-500'}/>
-              {dayGroup.isToday ? `Today (${dayGroup.day})` : dayGroup.day}
-            </h4>
-            {dayGroup.isToday && <span className="text-[10px] sm:text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full animate-pulse shadow-sm">Current Day</span>}
+        <div key={dayGroup.day} className={`flex flex-col gap-2 ${dayGroup.isToday ? 'bg-blue-50/30 p-2 sm:p-4 rounded-xl border border-blue-100/50' : ''}`}>
+          <div className="flex items-center gap-3">
+            {dayGroup.isToday ? (
+              <div className="flex flex-wrap items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 sm:py-2.5 rounded-lg shadow-md mb-2 w-full sm:w-auto">
+                <Calendar size={18} className="text-white"/>
+                <h4 className="text-base sm:text-lg font-bold text-white tracking-wide mr-2">
+                  Today ({dayGroup.day})
+                </h4>
+                <div className="flex items-center bg-white/20 text-white text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
+                  <span className="relative flex h-2.5 w-2.5 mr-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                  </span>
+                  ACTIVE NOW
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 pb-2">
+                <Calendar size={18} className="text-slate-500"/>
+                <h4 className="text-base sm:text-lg font-bold text-slate-800">
+                  {dayGroup.day}
+                </h4>
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col gap-4 pl-3 sm:pl-4 border-l-2 border-slate-200 ml-2 mt-1">
+          <div className={`flex flex-col gap-4 pl-3 sm:pl-4 border-l-2 ml-2 mt-1 ${dayGroup.isToday ? 'border-blue-200' : 'border-slate-200'}`}>
             {dayGroup.divisions.map(div => (
               <div key={div.label} className="ml-1 mb-2">
                 <div className="inline-flex items-center gap-2 mb-3 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-md shadow-sm border border-slate-200">
