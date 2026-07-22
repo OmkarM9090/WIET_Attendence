@@ -351,6 +351,18 @@ export const deleteTeacher = async (id) => {
 };
 
 /**
+ * Delete all teachers
+ */
+export const deleteAllTeachers = async () => {
+  try {
+    const response = await axiosInstance.delete(`/admin/teachers`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete all teachers" };
+  }
+};
+
+/**
  * Assign a teacher to a subject for a specific class
  */
 export const assignTeacher = async (assignmentData) => {

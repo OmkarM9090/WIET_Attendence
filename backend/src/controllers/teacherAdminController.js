@@ -228,11 +228,42 @@ export const deleteTeacher = async (req, res) => {
     await Teacher.findByIdAndDelete(id);
 
     // Also delete any teaching assignments
-    await TeachingAssignment.deleteMany({ teacher: id });
+    await TeachingAssignment.deleteMany({ teacherId: teacher.userId });
 
     res.json({ message: "Teacher deleted" });
   } catch (error) {
     console.error("DELETE TEACHER ERROR:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * DELETE ALL TEACHERS (Nuclear Option)
+ * Admin only
+ */
+export const deleteAllTeachers = async (req, res) => {
+  try {
+    const teachers = await Teacher.find();
+    
+    if (teachers.length === 0) {
+      return res.status(404).json({ message: "No teachers found to delete" });
+    }
+
+    const teacherIds = teachers.map(t => t._id);
+    const userIds = teachers.map(t => t.userId);
+
+    // Delete Users with role teacher
+    await User.deleteMany({ _id: { $in: userIds } });
+    
+    // Delete Teachers
+    await Teacher.deleteMany({ _id: { $in: teacherIds } });
+
+    // Delete Teaching Assignments for all these teachers
+    await TeachingAssignment.deleteMany({ teacherId: { $in: userIds } });
+
+    res.json({ message: `Successfully deleted ${teachers.length} teachers and their assignments.` });
+  } catch (error) {
+    console.error("DELETE ALL TEACHERS ERROR:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

@@ -19,6 +19,7 @@ import {
   uploadTeachersExcel,
   updateTeacher,
   deleteTeacher,
+  deleteAllTeachers,
   getTeachers,
   getTeachingAssignments,
   updateTeachingAssignment,
@@ -661,6 +662,45 @@ export default function TeacherManagement() {
 
       {/* Upload Instructions and Format Guide */}
       <ExcelFormatGuide type="teacher" />
+
+      {/* Delete All Teachers Section */}
+      <div className="mb-8 rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50 p-6 shadow-sm">
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-red-900">
+          <span className="text-xl">☠️</span> Nuclear Option
+        </h3>
+        <button
+          type="button"
+          onClick={async () => {
+            if (teachers.length === 0) return;
+            const confirm = window.confirm(`Are you absolutely sure you want to DELETE ALL ${teachers.length} TEACHERS and their timetable assignments? This CANNOT be undone!`);
+            if (!confirm) return;
+            const secondConfirm = window.prompt('Type "DELETE ALL" to confirm this destructive action:');
+            if (secondConfirm !== "DELETE ALL") {
+              setCreateError('Confirmation failed. Typed text did not match "DELETE ALL".');
+              return;
+            }
+            try {
+              setCreateLoading(true);
+              setCreateError("");
+              setCreateSuccess("");
+              const res = await deleteAllTeachers();
+              setCreateSuccess(res.message || "All teachers deleted");
+              await fetchTeachers();
+            } catch (err) {
+              setCreateError(err.message || "Failed to delete all teachers");
+            } finally {
+              setCreateLoading(false);
+            }
+          }}
+          disabled={teachers.length === 0 || createLoading}
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all hover:bg-red-700 hover:shadow-xl disabled:cursor-not-allowed disabled:bg-slate-400 md:w-auto"
+        >
+          DELETE ALL TEACHERS ({teachers.length})
+        </button>
+        <p className="mt-2 text-xs italic text-red-700">
+          This deletes every teacher, their user accounts, and their timetable assignments. Cannot be undone.
+        </p>
+      </div>
 
       {/* Teachers Table Section */}
       <div

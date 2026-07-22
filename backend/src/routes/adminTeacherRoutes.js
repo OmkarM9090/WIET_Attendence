@@ -7,6 +7,7 @@ import {
   getTeachers,
   updateTeacher,
   deleteTeacher,
+  deleteAllTeachers,
   getTeachingAssignments,
   updateTeachingAssignment,
   deleteTeachingAssignment,
@@ -16,6 +17,7 @@ const router = express.Router();
 
 router.post("/teachers", protect, allowRoles("admin"), createTeacher);
 router.get("/teachers", protect, allowRoles("admin"), getTeachers);
+router.delete("/teachers", protect, allowRoles("admin"), deleteAllTeachers);
 router.patch("/teachers/:id", protect, allowRoles("admin"), updateTeacher);
 router.delete("/teachers/:id", protect, allowRoles("admin"), deleteTeacher);
 router.post("/assign-teacher", protect, allowRoles("admin"), assignTeacher);
