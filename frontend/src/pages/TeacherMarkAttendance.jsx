@@ -32,6 +32,7 @@ import ReportPreview from "../components/ReportPreview";
 import EditAttendanceModal from "../components/EditAttendanceModal";
 import { getMyTeachingAssignments } from "../services/teacherService";
 import axiosInstance from "../utils/axios";
+import SessionSelector from "../components/teacher/SessionSelector";
 
 export default function TeacherMarkAttendance() {
   // State management
@@ -804,24 +805,18 @@ export default function TeacherMarkAttendance() {
                   </h3>
                 </div>
 
-                <FormSelect
-                  label="Assigned Sessions"
-                  value={selectedAssignment?._id || ""}
-                  onChange={handleSessionSelect}
-                  options={[
-                    { value: "", label: "-- Select a teaching session --" },
-                    ...assignments.map((assignment) => ({
-                      value: assignment._id,
-                      label: formatDropdownLabel(assignment),
-                    })),
-                  ]}
-                  required
-                />
+                <div className="mt-4">
+                  <SessionSelector 
+                    assignments={assignments}
+                    selectedAssignmentId={selectedAssignment?._id || ""}
+                    onSelect={(id) => handleSessionSelect({ target: { value: id } })}
+                  />
+                </div>
 
                 {assignments.length > 0 && (
                   <p
                     style={{
-                      marginTop: "12px",
+                      marginTop: "16px",
                       fontSize: "13px",
                       color: theme.colors.text.secondary,
                       fontStyle: "italic",
