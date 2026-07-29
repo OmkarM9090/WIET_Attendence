@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import FormInput from "../components/FormInput";
 import Button from "../components/Button";
@@ -10,9 +11,12 @@ import { getMyTeachingAssignments } from "../services/teacherService";
 import axiosInstance from "../utils/axios";
 import SessionSelector from "../components/teacher/SessionSelector";
 import StudentAttendanceList from "../components/teacher/StudentAttendanceList";
-import { LayoutDashboard, UserCheck, History, FileText, Calendar, CheckCircle2, AlertTriangle, Info, BookOpen, Inbox } from "lucide-react";
+import { LayoutDashboard, UserCheck, History, FileText, Calendar, CheckCircle2, AlertTriangle, Info, BookOpen, Inbox, ArrowLeft } from "lucide-react";
 
 export default function TeacherMarkAttendance() {
+  const { sessionId } = useParams();
+  const navigate = useNavigate();
+
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedDate, setSelectedDate] = useState(
@@ -53,6 +57,21 @@ export default function TeacherMarkAttendance() {
   }, []);
 
   useEffect(() => {
+    if (sessionId && assignments.length > 0) {
+      const selected = assignments.find((a) => a._id === sessionId);
+      if (selected) {
+        setSelectedAssignment(selected);
+        setError("");
+      } else {
+        setSelectedAssignment(null);
+        setError("Teaching session not found or you do not have permission to access it.");
+      }
+    } else if (!sessionId) {
+      setSelectedAssignment(null);
+    }
+  }, [sessionId, assignments]);
+
+  useEffect(() => {
     if (selectedAssignment && selectedDate && !dateError) {
       fetchStudentsForSession();
     } else {
@@ -79,16 +98,9 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  const handleSessionSelect = (e) => {
-    const assignmentId = e.target.value;
-
-    if (!assignmentId) {
-      setSelectedAssignment(null);
-      return;
-    }
-
-    const selected = assignments.find((a) => a._id === assignmentId);
-    setSelectedAssignment(selected);
+  const handleSessionSelect = (assignmentId) => {
+    if (!assignmentId) return;
+    navigate(`/teacher/mark-attendance/${assignmentId}`);
   };
 
   const handleDateChange = (e) => {
@@ -480,46 +492,36 @@ export default function TeacherMarkAttendance() {
     } = selectedAssignment;
 
     return (
-      <div className="mt-6 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs mb-6">
         <h3 className="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-          Selected Session Details
+          Session Details
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-8 text-sm">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Subject:</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-6 text-sm">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</span>
             <span className="font-bold text-slate-900">{subject?.name} ({subject?.code})</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Branch:</span>
-            <span className="font-semibold text-slate-900">{branch?.name}</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Class:</span>
-            <span className="font-semibold text-slate-900">Year {year} Division {division}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Branch & Class</span>
+            <span className="font-semibold text-slate-900">{branch?.name} • Year {year} Div {division}</span>
           </div>
 
           {batch && (
-            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-              <span className="font-bold text-slate-500 sm:w-28 shrink-0">Batch:</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Batch</span>
               <span className="font-semibold text-slate-900">{batch.name}</span>
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Day of Week:</span>
-            <span className="font-semibold text-slate-900">{dayOfWeek}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule</span>
+            <span className="font-bold text-slate-900 font-mono">{dayOfWeek}, {startTime} – {endTime}</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Time Slot:</span>
-            <span className="font-bold text-slate-900 font-mono">{startTime} – {endTime}</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Session Type:</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Session Type</span>
             <div>
               <span
                 className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${
@@ -533,8 +535,8 @@ export default function TeacherMarkAttendance() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Academic Year:</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Academic Year</span>
             <span className="font-semibold text-slate-900">{academicYear}</span>
           </div>
         </div>
@@ -542,10 +544,18 @@ export default function TeacherMarkAttendance() {
     );
   };
 
+  const pageTitle = sessionId && selectedAssignment 
+    ? `Mark Attendance: ${selectedAssignment.subject?.name || 'Session'}`
+    : "Mark Attendance";
+
+  const pageSubtitle = sessionId && selectedAssignment
+    ? `Year ${selectedAssignment.year} Div ${selectedAssignment.division} • ${selectedAssignment.startTime} - ${selectedAssignment.endTime}`
+    : "Select teaching session to mark attendance";
+
   return (
     <DashboardLayout
-      title="Mark Attendance"
-      subtitle="Select teaching session and mark attendance"
+      title={pageTitle}
+      subtitle={pageSubtitle}
       sidebarItems={sidebarItems}
     >
       {error && (
@@ -570,47 +580,54 @@ export default function TeacherMarkAttendance() {
                 You do not have any active teaching assignments for this academic year. Please contact the administrator.
               </p>
             </div>
+          ) : !sessionId ? (
+            /* SESSION SELECTION PAGE */
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs shadow-xs">
+                  1
+                </span>
+                <h3 className="text-base font-bold text-slate-900">
+                  Select Teaching Session
+                </h3>
+              </div>
+
+              <div className="mt-4">
+                <SessionSelector
+                  assignments={assignments}
+                  selectedAssignmentId=""
+                  onSelect={(id) => handleSessionSelect(id)}
+                />
+              </div>
+
+              {assignments.length > 0 && (
+                <p className="mt-4 text-xs text-slate-500 font-medium italic">
+                  Click on any teaching session card above to mark attendance for that session. Found {assignments.length} session{assignments.length > 1 ? "s" : ""}.
+                </p>
+              )}
+            </div>
           ) : (
+            /* DEDICATED MARK ATTENDANCE PAGE FOR SPECIFIC SESSION */
             <>
-              {/* Step 1: Session Selector */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5">
+              {/* Back Button Bar */}
+              <div className="mb-6">
+                <button
+                  onClick={() => navigate("/teacher/mark-attendance")}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <ArrowLeft size={18} className="text-slate-500" />
+                  Back to Teaching Sessions
+                </button>
+              </div>
+
+              {/* Session Details Card */}
+              {renderSessionDetails()}
+
+              {/* Step 1: Date Selection */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs shadow-xs">
                     1
-                  </span>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Select Teaching Session
-                  </h3>
-                </div>
-
-                <div className="mt-4">
-                  <SessionSelector
-                    assignments={assignments}
-                    selectedAssignmentId={selectedAssignment?._id || ""}
-                    onSelect={(id) => handleSessionSelect({ target: { value: id } })}
-                  />
-                </div>
-
-                {assignments.length > 0 && (
-                  <p className="mt-4 text-xs text-slate-500 font-medium italic">
-                    Found {assignments.length} teaching session{assignments.length > 1 ? "s" : ""} assigned to you
-                  </p>
-                )}
-              </div>
-
-              {/* Step 2: Date Selection */}
-              <div
-                className={`bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5 transition-opacity duration-200 ${
-                  selectedAssignment ? "opacity-100" : "opacity-50 pointer-events-none"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-white font-bold text-xs shadow-xs ${
-                      selectedAssignment ? "bg-blue-600" : "bg-slate-300"
-                    }`}
-                  >
-                    2
                   </span>
                   <h3 className="text-base font-bold text-slate-900">
                     Select Attendance Date
@@ -625,7 +642,6 @@ export default function TeacherMarkAttendance() {
                   min={getDatePickerLimits().min}
                   max={getDatePickerLimits().max}
                   required
-                  disabled={!selectedAssignment}
                   icon={<Calendar size={16} />}
                 />
 
@@ -641,15 +657,12 @@ export default function TeacherMarkAttendance() {
                 )}
               </div>
 
-              {/* Session Details Card */}
-              {renderSessionDetails()}
-
-              {/* Step 3: Student List */}
+              {/* Step 2: Student List */}
               {selectedAssignment && selectedDate && !dateError && (
-                <div className="mt-6 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs shadow-xs">
-                      3
+                      2
                     </span>
                     <h3 className="text-base font-bold text-slate-900">
                       Student Attendance Roll Call

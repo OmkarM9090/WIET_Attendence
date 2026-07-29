@@ -115,6 +115,14 @@ export default function App() {
             }
           />
           <Route
+            path="/teacher/mark-attendance/:sessionId"
+            element={
+              <ProtectedRoute allowedRoles={["teacher"]}>
+                <TeacherMarkAttendance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/teacher/attendance-history"
             element={
               <ProtectedRoute allowedRoles={["teacher"]}>

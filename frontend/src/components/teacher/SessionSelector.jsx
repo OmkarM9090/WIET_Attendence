@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Calendar, Clock, MapPin, Users, BookOpen } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, BookOpen, ChevronRight } from 'lucide-react';
 
 const DAY_ORDER = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
@@ -104,7 +104,7 @@ export default function SessionSelector({ assignments, selectedAssignmentId, onS
                       <div
                         key={a._id}
                         onClick={() => onSelect(a._id)}
-                        className={`relative cursor-pointer rounded-xl border p-3.5 transition-all duration-300 flex flex-col ${
+                        className={`group relative cursor-pointer rounded-xl border p-3.5 transition-all duration-300 flex flex-col ${
                           isSelected 
                             ? 'border-blue-500 bg-blue-50/70 shadow-md ring-2 ring-blue-200 transform scale-[1.02]' 
                             : 'border-slate-200 bg-white shadow-sm hover:border-blue-400 hover:shadow-md hover:bg-slate-50 hover:-translate-y-1'
@@ -141,6 +141,11 @@ export default function SessionSelector({ assignments, selectedAssignmentId, onS
                             <MapPin size={10} className="text-slate-400 shrink-0" />
                             <span className="truncate">{a.branch?.code || a.branch?.name || "N/A"}</span>
                           </div>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700">
+                          <span>Mark Attendance</span>
+                          <ChevronRight size={14} className="transform transition-transform group-hover:translate-x-0.5" />
                         </div>
                       </div>
                     );

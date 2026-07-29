@@ -1,6 +1,7 @@
 export default function FormInput({
   label,
   name,
+  id,
   type = "text",
   placeholder,
   value,
@@ -16,10 +17,12 @@ export default function FormInput({
   style = {},
   ...props
 }) {
+  const inputId = id || (name ? `input-${name}` : (label ? `input-${String(label).toLowerCase().replace(/\s+/g, '-')}` : undefined));
+
   return (
     <div className="mb-4">
       {label && (
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+        <label htmlFor={inputId} className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
           {label}
           {required && <span className="text-rose-500 ml-1">*</span>}
         </label>
@@ -31,6 +34,7 @@ export default function FormInput({
           </div>
         )}
         <input
+          id={inputId}
           type={type}
           name={name}
           placeholder={placeholder}
