@@ -1,21 +1,4 @@
-/**
- * EDIT ATTENDANCE MODAL
- * 
- * Shown when teacher attempts to mark attendance for a session
- * that already has attendance marked for the same date.
- * 
- * Allows teacher to:
- * - Cancel (close modal, keep current selection)
- * - Edit Attendance (update existing record with new absent students)
- * 
- * Props:
- * - isOpen: boolean - Whether modal is visible
- * - onClose: function - Callback to close modal
- * - onEdit: function - Callback when "Edit Attendance" clicked
- * - isLoading: boolean - Show loading state during API call
- */
-
-import { theme } from "../styles/theme";
+import { AlertTriangle, Info } from "lucide-react";
 import Button from "./Button";
 
 export default function EditAttendanceModal({
@@ -27,111 +10,57 @@ export default function EditAttendanceModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      {/* Modal Content */}
-      <div
-        className="relative w-full max-w-md rounded-lg"
-        style={{
-          backgroundColor: theme.colors.background,
-          boxShadow: theme.shadows.xl,
-        }}
-      >
-        {/* Modal Header with Icon */}
-        <div
-          className="border-b px-6 py-4"
-          style={{ borderColor: theme.colors.border }}
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className="text-2xl"
-              style={{ color: theme.colors.warning }}
-            >
-              ⚠️
-            </span>
-            <h3
-              className="text-lg font-semibold"
-              style={{ color: theme.colors.text.primary }}
-            >
-              Edit Attendance
-            </h3>
+      {/* Modal Card */}
+      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-200">
+        {/* Modal Header */}
+        <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/50 flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200/80">
+            <AlertTriangle size={20} />
           </div>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">
+            Edit Attendance
+          </h3>
         </div>
 
         {/* Modal Body */}
         <div className="px-6 py-5">
-          <p
-            className="mb-4 text-sm leading-relaxed"
-            style={{ color: theme.colors.text.primary }}
-          >
+          <p className="mb-3 text-sm text-slate-700 leading-relaxed font-medium">
             Attendance has already been marked for this session and date.
           </p>
 
-          <p
-            className="mb-6 text-sm leading-relaxed"
-            style={{ color: theme.colors.text.primary }}
-          >
+          <p className="mb-5 text-sm text-slate-600 leading-relaxed">
             You can update the list of absent students and generate a new report.
           </p>
 
           {/* Information Box */}
-          <div
-            className="rounded-lg border p-3 mb-6"
-            style={{
-              backgroundColor: theme.colors.info[50],
-              borderColor: theme.colors.info[200],
-            }}
-          >
-            <p
-              className="text-xs"
-              style={{ color: theme.colors.info[900] }}
-            >
-              <strong>ℹ️ Note:</strong> Your previous absent student selection will
-              replace the existing record. The WhatsApp report will be regenerated
-              with the updated information.
+          <div className="rounded-xl border border-blue-200/80 bg-blue-50/60 p-3.5 flex gap-3 items-start">
+            <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-900 leading-relaxed font-medium">
+              <strong>Note:</strong> Your updated selection will replace the existing record and regenerate the WhatsApp report.
             </p>
           </div>
         </div>
 
-        {/* Modal Footer with Buttons */}
-        <div
-          className="border-t px-6 py-4 flex gap-3 justify-end"
-          style={{ borderColor: theme.colors.border }}
-        >
+        {/* Modal Footer */}
+        <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex gap-3 justify-end">
           <Button
+            variant="secondary"
             onClick={onClose}
             disabled={isLoading}
-            style={{
-              padding: "10px 24px",
-              fontSize: "14px",
-              fontWeight: "600",
-              backgroundColor: theme.colors.neutral[200],
-              color: theme.colors.text.primary,
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.6 : 1,
-            }}
           >
             Cancel
           </Button>
 
           <Button
+            variant="primary"
             onClick={onEdit}
-            disabled={isLoading}
-            style={{
-              padding: "10px 24px",
-              fontSize: "14px",
-              fontWeight: "600",
-              backgroundColor: theme.colors.primary,
-              cursor: isLoading ? "not-allowed" : "pointer",
-              opacity: isLoading ? 0.6 : 1,
-            }}
+            loading={isLoading}
           >
-            {isLoading ? "Updating..." : "Edit Attendance"}
+            Edit Attendance
           </Button>
         </div>
       </div>

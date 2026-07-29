@@ -7,6 +7,7 @@ import FormSelect from "../components/FormSelect";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
 import Card from "../components/Card";
+import { ArrowLeft, UserPlus } from "lucide-react";
 
 export default function AdminCreateUser() {
   const [form, setForm] = useState({
@@ -36,7 +37,7 @@ export default function AdminCreateUser() {
     setLoading(true);
 
     try {
-      const res = await registerUser(form);
+      await registerUser(form);
       setMessage("User created successfully!");
       setForm({
         name: "",
@@ -50,7 +51,7 @@ export default function AdminCreateUser() {
       });
       setTimeout(() => {
         navigate("/admin");
-      }, 2000);
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Error creating user");
     } finally {
@@ -59,53 +60,48 @@ export default function AdminCreateUser() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f8f9fa] text-[#212529]">
       <Header />
 
       <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             onClick={() => navigate("/admin")}
-            className="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-700"
+            className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
           >
-            ← Back to Dashboard
+            <ArrowLeft size={14} /> Back to Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Create New User</h1>
-          <p className="mt-2 text-gray-600">Add a new student or teacher to the system</p>
+          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <UserPlus size={20} className="text-blue-600" /> Create Account
+          </h1>
+          <p className="mt-0.5 text-xs font-medium text-slate-500">
+            Register a new student or faculty member in the system
+          </p>
         </div>
 
         <Card>
           {message && (
             <div className="mb-4">
-              <Alert
-                message={message}
-                type="success"
-                onClose={() => setMessage("")}
-              />
+              <Alert message={message} type="success" onClose={() => setMessage("")} />
             </div>
           )}
 
           {error && (
             <div className="mb-4">
-              <Alert
-                message={error}
-                type="error"
-                onClose={() => setError("")}
-              />
+              <Alert message={error} type="error" onClose={() => setError("")} />
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                Basic Information
+              <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                Personal Credentials
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormInput
                   label="Full Name"
                   name="name"
-                  placeholder="John Doe"
+                  placeholder="e.g., Jane Doe"
                   value={form.name}
                   onChange={handleChange}
                   required
@@ -115,31 +111,32 @@ export default function AdminCreateUser() {
                   label="Email Address"
                   name="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="jane@college.edu"
                   value={form.email}
                   onChange={handleChange}
                   required
                 />
               </div>
 
-              <FormInput
-                label="Password"
-                name="password"
-                type="password"
-                placeholder="Enter a strong password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="mt-4">
+                <FormInput
+                  label="Password"
+                  name="password"
+                  type="password"
+                  placeholder="Set initial password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
 
-            {/* Role Selection */}
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
                 Account Type
               </h3>
               <FormSelect
-                label="Select Role"
+                label="Role"
                 name="role"
                 value={form.role}
                 onChange={handleChange}
@@ -150,17 +147,16 @@ export default function AdminCreateUser() {
               />
             </div>
 
-            {/* Student-specific fields */}
             {form.role === "student" && (
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                  Student Information
+              <div className="border-t border-slate-100 pt-4">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Student Assignment Details
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormInput
                     label="Branch"
                     name="branch"
-                    placeholder="e.g., Computer Science"
+                    placeholder="e.g., Computer Engineering"
                     value={form.branch}
                     onChange={handleChange}
                     required={form.role === "student"}
@@ -173,10 +169,10 @@ export default function AdminCreateUser() {
                     onChange={handleChange}
                     options={[
                       { label: "Select Year", value: "" },
-                      { label: "1st Year", value: "1" },
-                      { label: "2nd Year", value: "2" },
-                      { label: "3rd Year", value: "3" },
-                      { label: "4th Year", value: "4" },
+                      { label: "1st Year (FE)", value: "1" },
+                      { label: "2nd Year (SE)", value: "2" },
+                      { label: "3rd Year (TE)", value: "3" },
+                      { label: "4th Year (BE)", value: "4" },
                     ]}
                     required={form.role === "student"}
                   />
@@ -193,7 +189,7 @@ export default function AdminCreateUser() {
                   <FormInput
                     label="Roll Number"
                     name="rollNo"
-                    placeholder="e.g., 001"
+                    placeholder="e.g., 101"
                     value={form.rollNo}
                     onChange={handleChange}
                     required={form.role === "student"}
@@ -202,22 +198,20 @@ export default function AdminCreateUser() {
               </div>
             )}
 
-            {/* Submit Button */}
-            <div className="flex gap-4 border-t border-gray-200 pt-6">
-              <Button
-                type="submit"
-                loading={loading}
-                fullWidth={false}
-              >
-                {loading ? "Creating..." : "Create User"}
-              </Button>
+            <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => navigate("/admin")}
-                fullWidth={false}
               >
                 Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={loading}
+                variant="primary"
+              >
+                Create Account
               </Button>
             </div>
           </form>

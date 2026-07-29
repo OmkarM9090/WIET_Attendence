@@ -1,27 +1,12 @@
-/**
- * RESET PASSWORD PAGE
- * Step 2 & 3: Verify OTP and set new password
- * 3-Step form:
- * 1. Enter email and OTP
- * 2. Enter new password and confirm
- * 3. Submit and redirect to login
- *
- * API: POST /api/auth/reset-password
- * Request: { email, otp, newPassword }
- * Response: { message: "Password reset successful" }
- */
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { resetPassword } from "../services/authService";
-import { theme } from "../styles/theme";
+import { KeyRound, Mail, Lock, ShieldCheck, CheckCircle2, ArrowLeft } from "lucide-react";
 
-// UI Components
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import Alert from "../components/Alert";
 
-// Step enum
 const STEP = {
   VERIFY_OTP: 1,
   SET_PASSWORD: 2,
@@ -31,21 +16,16 @@ const STEP = {
 export default function ResetPassword() {
   const navigate = useNavigate();
 
-  // Form state
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // UI state
   const [step, setStep] = useState(STEP.VERIFY_OTP);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /**
-   * Validate OTP step
-   */
   const validateOtpStep = () => {
     if (!email.trim()) {
       setError("Email is required");
@@ -53,7 +33,7 @@ export default function ResetPassword() {
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email");
+      setError("Please enter a valid email address");
       return false;
     }
 
@@ -63,16 +43,13 @@ export default function ResetPassword() {
     }
 
     if (otp.length !== 6 || isNaN(otp)) {
-      setError("OTP must be 6 digits");
+      setError("OTP must be a 6-digit number");
       return false;
     }
 
     return true;
   };
 
-  /**
-   * Validate password step
-   */
   const validatePasswordStep = () => {
     if (!newPassword.trim()) {
       setError("New password is required");
@@ -97,9 +74,6 @@ export default function ResetPassword() {
     return true;
   };
 
-  /**
-   * Handle moving to password step
-   */
   const handleNextStep = (e) => {
     e.preventDefault();
     setError("");
@@ -109,9 +83,6 @@ export default function ResetPassword() {
     }
   };
 
-  /**
-   * Handle password reset submission
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -133,120 +104,74 @@ export default function ResetPassword() {
     }
   };
 
-  /**
-   * Handle redirect to login
-   */
   const handleBackToLogin = () => {
     setTimeout(() => {
       navigate("/");
-    }, 1000);
+    }, 500);
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-6 py-12"
-      style={{
-        background: `linear-gradient(135deg, ${theme.colors.primary[50]} 0%, ${theme.colors.neutral[50]} 100%)`,
-      }}
-    >
-      <div
-        className="w-full max-w-md rounded-lg p-8"
-        style={{
-          backgroundColor: theme.colors.background,
-          boxShadow: theme.shadows.lg,
-        }}
-      >
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h2
-            className="text-3xl font-bold"
-            style={{ color: theme.colors.text.primary }}
-          >
+    <div className="flex min-h-screen items-center justify-center bg-[#f8f9fa] text-[#212529] p-6 font-sans antialiased">
+      <div className="w-full max-w-md bg-white border border-slate-200/80 rounded-3xl p-8 sm:p-10 shadow-xl space-y-6">
+        <div className="flex justify-center">
+          <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-xs">
+            <KeyRound size={24} />
+          </div>
+        </div>
+
+        <div className="text-center">
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             {step === STEP.SUCCESS ? "Password Reset" : "Reset Your Password"}
           </h2>
-          <p
-            className="mt-2 text-sm"
-            style={{ color: theme.colors.text.secondary }}
-          >
-            {step === STEP.VERIFY_OTP && "Step 1 of 2: Verify OTP"}
-            {step === STEP.SET_PASSWORD && "Step 2 of 2: Create new password"}
-            {step === STEP.SUCCESS && "Your password has been successfully reset"}
+          <p className="mt-1.5 text-xs sm:text-sm text-slate-500 font-medium">
+            {step === STEP.VERIFY_OTP && "Step 1 of 2: Verify OTP Code"}
+            {step === STEP.SET_PASSWORD && "Step 2 of 2: Set New Password"}
+            {step === STEP.SUCCESS && "Your password has been successfully updated"}
           </p>
         </div>
 
-        {/* Progress Indicator */}
+        {/* Progress Bar */}
         {step !== STEP.SUCCESS && (
-          <div className="mb-8 flex gap-3">
+          <div className="flex gap-2">
             {[1, 2].map((s) => (
               <div
                 key={s}
-                className="h-2 flex-1 rounded-full"
-                style={{
-                  backgroundColor:
-                    s <= step ? theme.colors.primary[500] : theme.colors.neutral[200],
-                  transition: theme.transitions.base,
-                }}
+                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                  s <= step ? "bg-blue-600" : "bg-slate-200"
+                }`}
               />
             ))}
           </div>
         )}
 
-        {/* Success State */}
+        {/* Step 3: Success State */}
         {step === STEP.SUCCESS ? (
           <div className="space-y-6">
-            {/* Success Icon */}
-            <div className="flex justify-center">
-              <div
-                className="flex h-16 w-16 items-center justify-center rounded-full"
-                style={{ backgroundColor: theme.colors.success, opacity: 0.1 }}
-              >
-                <span className="text-4xl">✓</span>
-              </div>
-            </div>
-
-            {/* Success Message */}
             <Alert
               type="success"
               message="Your password has been successfully reset! You can now login with your new password."
             />
 
-            {/* Info Box */}
-            <div
-              className="rounded-lg border p-4 text-center"
-              style={{
-                borderColor: theme.colors.success,
-                backgroundColor: `${theme.colors.success}15`,
-              }}
-            >
-              <p
-                className="text-sm font-medium"
-                style={{ color: theme.colors.success }}
-              >
-                ✓ Ready to Login
+            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 text-center">
+              <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                Ready to Login
               </p>
-              <p
-                className="mt-2 text-xs"
-                style={{ color: theme.colors.success, opacity: 0.8 }}
-              >
-                Your new password is now active. Use your email and new password to sign in.
+              <p className="mt-1 text-xs text-emerald-800 leading-relaxed font-medium">
+                Your new password is active. Log in with your email and new password.
               </p>
             </div>
 
-            {/* Login Button */}
-            <Button fullWidth onClick={handleBackToLogin}>
+            <Button fullWidth size="lg" onClick={handleBackToLogin}>
               Go to Login
             </Button>
           </div>
         ) : (
-          // Form States
           <>
-            {/* OTP Verification Step */}
+            {/* Step 1: Verify OTP */}
             {step === STEP.VERIFY_OTP && (
-              <form onSubmit={handleNextStep} className="space-y-6">
-                {/* Alerts */}
+              <form onSubmit={handleNextStep} className="space-y-4">
                 {error && <Alert type="error" message={error} />}
 
-                {/* Email Input */}
                 <FormInput
                   label="Email Address"
                   type="email"
@@ -255,11 +180,11 @@ export default function ResetPassword() {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   required
+                  icon={<Mail size={16} />}
                 />
 
-                {/* OTP Input */}
                 <FormInput
-                  label="Enter OTP"
+                  label="Enter OTP Code"
                   type="text"
                   placeholder="6-digit code"
                   value={otp}
@@ -267,61 +192,38 @@ export default function ResetPassword() {
                   maxLength="6"
                   disabled={loading}
                   required
+                  icon={<ShieldCheck size={16} />}
                 />
 
-                {/* OTP Info Box */}
-                <div
-                  className="rounded-lg border p-4"
-                  style={{
-                    borderColor: theme.colors.primary[200],
-                    backgroundColor: theme.colors.primary[50],
-                  }}
-                >
-                  <p
-                    className="text-xs font-semibold"
-                    style={{ color: theme.colors.primary[700] }}
-                  >
-                    💌 Check Your Email
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 text-xs space-y-1 text-slate-700">
+                  <p className="font-bold text-blue-900 uppercase tracking-wider text-[11px]">
+                    Check Your Email
                   </p>
-                  <p
-                    className="mt-2 text-xs"
-                    style={{ color: theme.colors.primary[600] }}
-                  >
-                    We sent a 6-digit OTP to {email || "your email"}. If you didn't receive it, check your spam folder.
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                    We sent a 6-digit OTP code to {email || "your registered email"}.
                   </p>
                 </div>
 
-                {/* Submit Button */}
-                <Button type="submit" loading={loading} fullWidth>
-                  {loading ? "Verifying..." : "Verify OTP"}
+                <Button type="submit" loading={loading} fullWidth size="lg">
+                  Verify OTP
                 </Button>
 
-                {/* Back to Forgot Password */}
-                <div className="text-center">
-                  <p
-                    className="text-sm"
-                    style={{ color: theme.colors.text.secondary }}
+                <div className="text-center pt-1">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
                   >
-                    Need a new OTP?{" "}
-                    <Link
-                      to="/forgot-password"
-                      className="font-medium hover:underline"
-                      style={{ color: theme.colors.primary[500] }}
-                    >
-                      Request again
-                    </Link>
-                  </p>
+                    Request a new OTP code
+                  </Link>
                 </div>
               </form>
             )}
 
-            {/* Password Setup Step */}
+            {/* Step 2: Set New Password */}
             {step === STEP.SET_PASSWORD && (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Alerts */}
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {error && <Alert type="error" message={error} />}
 
-                {/* New Password Input */}
                 <FormInput
                   label="New Password"
                   type={showPassword ? "text" : "password"}
@@ -330,93 +232,65 @@ export default function ResetPassword() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   disabled={loading}
                   required
+                  icon={<Lock size={16} />}
                 />
 
-                {/* Confirm Password Input */}
                 <FormInput
                   label="Confirm Password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
+                  placeholder="Re-enter your new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={loading}
                   required
+                  icon={<Lock size={16} />}
                 />
 
-                {/* Show Password Toggle */}
-                <label
-                  className="flex items-center text-sm cursor-pointer"
-                  style={{ color: theme.colors.text.secondary }}
-                >
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={showPassword}
                     onChange={() => setShowPassword(!showPassword)}
-                    className="mr-2 h-4 w-4 rounded"
-                    style={{ accentColor: theme.colors.primary[500] }}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
                   />
                   Show password
                 </label>
 
-                {/* Password Requirements */}
-                <div
-                  className="rounded-lg border p-4"
-                  style={{
-                    borderColor: theme.colors.primary[200],
-                    backgroundColor: theme.colors.primary[50],
-                  }}
-                >
-                  <p
-                    className="text-xs font-semibold"
-                    style={{ color: theme.colors.primary[700] }}
-                  >
-                    🔒 Password Requirements
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 text-xs space-y-1.5 text-slate-700">
+                  <p className="font-bold text-blue-900 uppercase tracking-wider text-[11px]">
+                    Password Security Criteria
                   </p>
-                  <ul
-                    className="mt-3 space-y-1 text-xs"
-                    style={{ color: theme.colors.primary[600] }}
-                  >
-                    <li>✓ At least 8 characters long</li>
-                    <li>✓ Mix of uppercase and lowercase</li>
-                    <li>✓ Include numbers or symbols</li>
+                  <ul className="space-y-1 text-[11px] font-medium text-slate-600">
+                    <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-600" /> At least 8 characters long</li>
                   </ul>
                 </div>
 
-                {/* Submit Button */}
-                <Button type="submit" loading={loading} fullWidth>
-                  {loading ? "Resetting..." : "Reset Password"}
+                <Button type="submit" loading={loading} fullWidth size="lg">
+                  Reset Password
                 </Button>
 
-                {/* Back to OTP */}
-                <button
-                  type="button"
-                  onClick={() => setStep(STEP.VERIFY_OTP)}
-                  className="w-full text-sm font-medium hover:underline"
-                  style={{ color: theme.colors.primary[500] }}
-                >
-                  Back to OTP Verification
-                </button>
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep(STEP.VERIFY_OTP)}
+                    className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Back to OTP verification
+                  </button>
+                </div>
               </form>
             )}
           </>
         )}
 
-        {/* Back to Login - All States */}
         {step !== STEP.SUCCESS && (
-          <div className="mt-8 text-center border-t pt-6" style={{ borderColor: theme.colors.border }}>
-            <p
-              className="text-sm"
-              style={{ color: theme.colors.text.secondary }}
+          <div className="pt-4 border-t border-slate-100 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
             >
-              Remember your password?{" "}
-              <Link
-                to="/"
-                className="font-medium hover:underline"
-                style={{ color: theme.colors.primary[500] }}
-              >
-                Sign in here
-              </Link>
-            </p>
+              <ArrowLeft size={14} /> Back to Login
+            </Link>
           </div>
         )}
       </div>

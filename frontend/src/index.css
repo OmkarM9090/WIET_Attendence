@@ -10,8 +10,8 @@
   font-weight: 400;
 
   color-scheme: light;
-  color: #111827; /* slate-900 */
-  background-color: #ffffff;
+  color: #212529;
+  background-color: #f8f9fa;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -29,6 +29,9 @@ html,
 body {
   height: 100%;
   width: 100%;
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+  letter-spacing: -0.01em;
 }
 
 #root {
@@ -52,48 +55,67 @@ textarea {
   font-family: inherit;
 }
 
-/* Scrollbar Styling */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #94a3b8;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Base focus styles */
+:focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #111827;
-    background-color: #ffffff;
+/* Status Badge Utility Classes */
+.badge-present {
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold;
+}
+
+.badge-late {
+  @apply bg-amber-50 text-amber-700 border border-amber-200 font-semibold;
+}
+
+.badge-absent {
+  @apply bg-rose-50 text-rose-700 border border-rose-200 font-semibold;
+}
+
+.badge-remote {
+  @apply bg-purple-50 text-purple-700 border border-purple-200 font-semibold;
+}
+
+/* Glassmorphism Panel Utility */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Page Transition Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
-  a:hover {
-    color: #2563eb;
-  }
-  button {
-    background-color: transparent;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  letter-spacing: -0.01em;
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-@tailwind base;
-@tailwind components;
-@tailwind utilities;

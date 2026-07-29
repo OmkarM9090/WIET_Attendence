@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { theme } from "../styles/theme";
 import DashboardLayout from "../components/DashboardLayout";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
@@ -21,24 +20,35 @@ import {
   updateStudent,
   deleteStudent,
 } from "../services/adminService";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  FileText, 
+  AlertTriangle,
+  Plus,
+  Upload,
+  RefreshCw,
+  Search,
+  Edit2,
+  Trash2
+} from "lucide-react";
 
 export default function StudentManagement() {
-  // Data state
   const [branches, setBranches] = useState([]);
   const [students, setStudents] = useState([]);
 
-  // Filters
   const [branchFilter, setBranchFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Create modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newStudent, setNewStudent] = useState({
@@ -49,35 +59,31 @@ export default function StudentManagement() {
     branch: "",
     year: "",
     division: "",
-    academicYear: "",  // Academic Year e.g., "2024-2025"
+    academicYear: "",
     admissionYear: "",
   });
 
-  // Upload Excel
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Upload Type Flow
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [showQuickUpload, setShowQuickUpload] = useState(false);
 
-  // Edit modal
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Sidebar menu for admin
   const sidebarItems = [
-    { path: "/admin", icon: "📊", label: "Dashboard" },
-    { path: "/admin/branches", icon: "🏢", label: "Branches" },
-    { path: "/admin/subjects", icon: "📚", label: "Subjects" },
-    { path: "/admin/students", icon: "🎓", label: "Students" },
-    { path: "/admin/teachers", icon: "👨‍🏫", label: "Teachers" },
-    { path: "/admin/reports", icon: "📋", label: "Reports" },
-    { path: "/admin/defaulters", icon: "⚠️", label: "Defaulters" },
+    { path: "/admin", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
+    { path: "/admin/branches", icon: <Building2 size={18} />, label: "Branches" },
+    { path: "/admin/subjects", icon: <BookOpen size={18} />, label: "Subjects" },
+    { path: "/admin/students", icon: <GraduationCap size={18} />, label: "Students" },
+    { path: "/admin/teachers", icon: <Users size={18} />, label: "Teachers" },
+    { path: "/admin/reports", icon: <FileText size={18} />, label: "Reports" },
+    { path: "/admin/defaulters", icon: <AlertTriangle size={18} />, label: "Defaulters" },
   ];
 
   useEffect(() => {
@@ -123,9 +129,7 @@ export default function StudentManagement() {
   };
 
   useEffect(() => {
-    // Refetch when filters or search change
     refetchStudents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchFilter, yearFilter, divisionFilter, searchTerm]);
 
   const handleCreateSubmit = async (e) => {
@@ -142,7 +146,7 @@ export default function StudentManagement() {
         branch: newStudent.branch,
         year: Number(newStudent.year),
         division: newStudent.division,
-        academicYear: newStudent.academicYear.trim(),  // Required
+        academicYear: newStudent.academicYear.trim(),
         admissionYear: newStudent.admissionYear
           ? Number(newStudent.admissionYear)
           : undefined,
@@ -201,18 +205,22 @@ export default function StudentManagement() {
     {
       header: "Name",
       accessor: "userId",
-      render: (val) => val?.name || "-",
+      render: (val) => <span className="font-bold text-slate-900">{val?.name || "-"}</span>,
     },
     {
       header: "Email",
       accessor: "userId",
-      render: (val) => val?.email || "-",
+      render: (val) => <span className="text-xs text-slate-500 font-medium">{val?.email || "-"}</span>,
     },
-    { header: "Roll No", accessor: "rollNo" },
+    { 
+      header: "Roll No", 
+      accessor: "rollNo",
+      render: (val) => <span className="font-mono text-xs font-bold text-slate-800">{val}</span>
+    },
     {
       header: "Branch",
       accessor: "branch",
-      render: (val) => (val ? `${val.name} (${val.code})` : "-"),
+      render: (val) => (val ? <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-slate-100 text-slate-700">{val.code || val.name}</span> : "-"),
     },
     { header: "Year", accessor: "year" },
     { header: "Division", accessor: "division" },
@@ -222,8 +230,17 @@ export default function StudentManagement() {
       render: (val) => val ? val.name || val : "-"
     },
     { header: "Academic Year", accessor: "academicYear" },
-    { header: "Admission Year", accessor: "admissionYear" },
-    { header: "Status", accessor: "status" },
+    { 
+      header: "Status", 
+      accessor: "status",
+      render: (val) => (
+        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-md ${
+          val === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+        }`}>
+          {val || 'active'}
+        </span>
+      )
+    },
   ];
 
   const openEditModal = (student) => {
@@ -291,33 +308,30 @@ export default function StudentManagement() {
   const handleBulkDeleteComplete = async () => {
     await refetchStudents();
   };
+
   return (
     <DashboardLayout
       title="Student Management"
-      subtitle="Create, upload, and filter students"
+      subtitle="Enrollment Roster, Batch Controls & Excel Import"
       sidebarItems={sidebarItems}
     >
-      {/* Upload Instructions and Format Guide */}
       <ExcelFormatGuide type="student" />
 
-      {/* Page header actions */}
-      <div
-        className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
-        style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.background, boxShadow: theme.shadows.sm }}
-      >
+      {/* Toolbar */}
+      <div className="mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/60 shadow-2xs">
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => setIsCreateOpen(true)}>
-            + Create Student
+          <Button onClick={() => setIsCreateOpen(true)} icon={<Plus size={16} />}>
+            Create Student
           </Button>
 
           <Button 
             onClick={() => setShowTypeSelector(true)}
-            style={{ backgroundColor: theme.colors.primary, color: 'white' }}
+            variant="secondary"
+            icon={<Upload size={16} />}
           >
-            📤 Upload Students Excel
+            Upload Students Excel
           </Button>
 
-          {/* Hidden file input for Full Upload */}
           <input
             type="file"
             id="fullUploadInput"
@@ -328,65 +342,62 @@ export default function StudentManagement() {
                 setUploadFile(file);
                 setShowPreview(true);
               }
-              e.target.value = null; // reset so same file can be selected again
+              e.target.value = null;
             }}
             className="hidden"
           />
 
-          <Button variant="outline" onClick={refetchStudents}>
+          <Button variant="outline" onClick={refetchStudents} icon={<RefreshCw size={16} />}>
             Refresh
           </Button>
         </div>
 
-        <div className="w-full max-w-xs md:w-72">
+        <div className="w-full md:w-72">
           <FormInput
-            label="Search"
             name="search"
-            placeholder="Name, email, or roll"
+            placeholder="Search name, email, roll..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            icon={<Search size={16} />}
           />
         </div>
       </div>
 
       {/* Filters */}
-      <div
-        className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3"
-        style={{ backgroundColor: theme.colors.background }}
-      >
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 bg-white p-5 rounded-xl border border-slate-200/60 shadow-2xs">
         <FormSelect
-          label="Branch"
+          label="Filter by Branch"
           name="branchFilter"
           value={branchFilter}
           onChange={handleFilterChange(setBranchFilter)}
           options={[
-            { label: "All", value: "" },
+            { label: "All Branches", value: "" },
             ...branches.map((b) => ({ label: `${b.name} (${b.code})`, value: b._id })),
           ]}
         />
         <FormSelect
-          label="Year"
+          label="Filter by Year"
           name="yearFilter"
           value={yearFilter}
           onChange={handleFilterChange(setYearFilter)}
           options={[
-            { label: "All", value: "" },
-            { label: "FE (1)", value: 1 },
-            { label: "SE (2)", value: 2 },
-            { label: "TE (3)", value: 3 },
-            { label: "BE (4)", value: 4 },
+            { label: "All Years", value: "" },
+            { label: "FE (Year 1)", value: 1 },
+            { label: "SE (Year 2)", value: 2 },
+            { label: "TE (Year 3)", value: 3 },
+            { label: "BE (Year 4)", value: 4 },
           ]}
         />
         <FormSelect
-          label="Division"
+          label="Filter by Division"
           name="divisionFilter"
           value={divisionFilter}
           onChange={handleFilterChange(setDivisionFilter)}
           options={[
-            { label: "All", value: "" },
-            { label: "A", value: "A" },
-            { label: "B", value: "B" },
-            { label: "C", value: "C" },
+            { label: "All Divisions", value: "" },
+            { label: "Division A", value: "A" },
+            { label: "Division B", value: "B" },
+            { label: "Division C", value: "C" },
           ]}
         />
       </div>
@@ -397,8 +408,7 @@ export default function StudentManagement() {
         {success && <Alert message={success} type="success" onClose={() => setSuccess("")} />}
       </div>
 
-
-      {/* Bulk delete danger zone */}
+      {/* Danger Zone */}
       <BulkDeleteSection
         branches={branches}
         onDeleteComplete={handleBulkDeleteComplete}
@@ -415,24 +425,30 @@ export default function StudentManagement() {
       <Table
         columns={columns}
         data={students}
-        emptyMessage={loading ? "Loading students..." : "No students found"}
+        emptyMessage={loading ? "Loading students..." : "No student records found"}
         actions={(row) => (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => openEditModal(row)}>
-              Edit
-            </Button>
-            <Button variant="danger" onClick={() => handleDeleteStudent(row)}>
-              Delete
-            </Button>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => openEditModal(row)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-blue-700 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors"
+            >
+              <Edit2 size={13} /> Edit
+            </button>
+            <button
+              onClick={() => handleDeleteStudent(row)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-rose-700 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
           </div>
         )}
       />
 
-      {/* Create Student Modal */}
+      {/* Create Modal */}
       <Modal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Create Student"
+        title="Enroll New Student"
         size="lg"
         footer={
           <div className="flex justify-end gap-2">
@@ -440,22 +456,22 @@ export default function StudentManagement() {
               Cancel
             </Button>
             <Button onClick={handleCreateSubmit} disabled={creating}>
-              {creating ? "Creating..." : "Create"}
+              {creating ? "Creating..." : "Enroll Student"}
             </Button>
           </div>
         }
       >
-        <form onSubmit={handleCreateSubmit}>
+        <form onSubmit={handleCreateSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormInput
-              label="Name"
+              label="Full Name"
               name="name"
               value={newStudent.name}
               onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
               required
             />
             <FormInput
-              label="Email"
+              label="Email Address"
               name="email"
               type="email"
               value={newStudent.email}
@@ -471,7 +487,7 @@ export default function StudentManagement() {
               required
             />
             <FormInput
-              label="Roll No"
+              label="Roll Number"
               name="rollNo"
               type="number"
               value={newStudent.rollNo}
@@ -524,23 +540,15 @@ export default function StudentManagement() {
               onChange={(e) => setNewStudent({ ...newStudent, academicYear: e.target.value })}
               required
             />
-            <FormInput
-              label="Admission Year"
-              name="admissionYear"
-              type="number"
-              placeholder="Optional"
-              value={newStudent.admissionYear}
-              onChange={(e) => setNewStudent({ ...newStudent, admissionYear: e.target.value })}
-            />
           </div>
         </form>
       </Modal>
 
-      {/* Edit Student Modal */}
+      {/* Edit Modal */}
       <Modal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        title="Edit Student"
+        title="Edit Student Record"
         size="lg"
         footer={
           <div className="flex justify-end gap-2">
@@ -548,23 +556,23 @@ export default function StudentManagement() {
               Cancel
             </Button>
             <Button onClick={handleEditSubmit} disabled={savingEdit}>
-              {savingEdit ? "Saving..." : "Save"}
+              {savingEdit ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         }
       >
         {editingStudent && (
-          <form onSubmit={handleEditSubmit}>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormInput
-                label="Name"
+                label="Full Name"
                 name="editName"
                 value={editingStudent.name}
                 onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
                 required
               />
               <FormInput
-                label="Email"
+                label="Email Address"
                 name="editEmail"
                 type="email"
                 value={editingStudent.email}
@@ -572,7 +580,7 @@ export default function StudentManagement() {
                 required
               />
               <FormInput
-                label="Roll No"
+                label="Roll Number"
                 name="editRollNo"
                 type="number"
                 value={editingStudent.rollNo}
@@ -625,14 +633,6 @@ export default function StudentManagement() {
                 onChange={(e) => setEditingStudent({ ...editingStudent, academicYear: e.target.value })}
                 required
               />
-              <FormInput
-                label="Admission Year"
-                name="editAdmissionYear"
-                type="number"
-                placeholder="Optional"
-                value={editingStudent.admissionYear}
-                onChange={(e) => setEditingStudent({ ...editingStudent, admissionYear: e.target.value })}
-              />
               <FormSelect
                 label="Status"
                 name="editStatus"
@@ -674,17 +674,15 @@ export default function StudentManagement() {
         />
       )}
 
-      {/* Upload Result Modal */}
       <UploadResultModal 
         isOpen={isResultModalOpen} 
         onClose={() => setIsResultModalOpen(false)} 
         result={uploadResult} 
       />
 
-      {/* Data Preview Overlay */}
       {showPreview && uploadFile && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex items-center justify-center">
-          <div className="w-full max-w-6xl w-full">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm p-4 sm:p-6 md:p-8 flex items-center justify-center">
+          <div className="w-full max-w-6xl">
             <DataPreviewTable 
               file={uploadFile} 
               type="student" 
@@ -693,7 +691,6 @@ export default function StudentManagement() {
                 setUploadFile(null);
               }}
               onConfirm={async () => {
-                // Actually trigger upload
                 await handleUpload();
                 setShowPreview(false);
               }} 

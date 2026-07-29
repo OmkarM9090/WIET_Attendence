@@ -1,19 +1,8 @@
-/**
- * FORGOT PASSWORD PAGE
- * Step 1: Request password reset OTP
- * User enters email → Receives OTP via email
- *
- * API: POST /api/auth/forgot-password
- * Request: { email }
- * Response: { message: "OTP sent to email" }
- */
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { forgotPassword } from "../services/authService";
-import { theme } from "../styles/theme";
+import { KeyRound, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 
-// UI Components
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import Alert from "../components/Alert";
@@ -24,21 +13,17 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  /**
-   * Handle forgot password request
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!email.trim()) {
       setError("Email is required");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Please enter a valid email");
+      setError("Please enter a valid email address");
       return;
     }
 
@@ -57,99 +42,56 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-6 py-12"
-      style={{
-        background: `linear-gradient(135deg, ${theme.colors.primary[50]} 0%, ${theme.colors.neutral[50]} 100%)`,
-      }}
-    >
-      <div
-        className="w-full max-w-md rounded-lg p-8"
-        style={{
-          backgroundColor: theme.colors.background,
-          boxShadow: theme.shadows.lg,
-        }}
-      >
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h2
-            className="text-3xl font-bold"
-            style={{ color: theme.colors.text.primary }}
-          >
+    <div className="flex min-h-screen items-center justify-center bg-[#f8f9fa] text-[#212529] p-6 font-sans antialiased">
+      <div className="w-full max-w-md bg-white border border-slate-200/80 rounded-3xl p-8 sm:p-10 shadow-xl space-y-6">
+        <div className="flex justify-center">
+          <div className="h-12 w-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-xs">
+            <KeyRound size={24} />
+          </div>
+        </div>
+
+        <div className="text-center">
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             Reset Password
           </h2>
-          <p
-            className="mt-2 text-sm"
-            style={{ color: theme.colors.text.secondary }}
-          >
+          <p className="mt-1.5 text-xs sm:text-sm text-slate-500 font-medium">
             Enter your email and we'll send you an OTP to reset your password
           </p>
         </div>
 
-        {/* Success State */}
         {success ? (
           <div className="space-y-6">
-            {/* Success Icon */}
-            <div className="flex justify-center">
-              <div
-                className="flex h-16 w-16 items-center justify-center rounded-full"
-                style={{ backgroundColor: theme.colors.success, opacity: 0.1 }}
-              >
-                <span className="text-4xl">✓</span>
-              </div>
-            </div>
-
-            {/* Success Message */}
             <Alert
               type="success"
               message="OTP sent successfully! Check your email for the one-time password. It will expire in 10 minutes."
             />
 
-            {/* Next Step Info */}
-            <div
-              className="rounded-lg border p-4 text-center"
-              style={{
-                borderColor: theme.colors.primary[200],
-                backgroundColor: theme.colors.primary[50],
-              }}
-            >
-              <p
-                className="text-sm font-medium"
-                style={{ color: theme.colors.primary[700] }}
-              >
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 text-center">
+              <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">
                 What's Next?
               </p>
-              <p
-                className="mt-2 text-xs"
-                style={{ color: theme.colors.primary[600] }}
-              >
+              <p className="mt-1.5 text-xs text-slate-600 leading-relaxed font-medium">
                 Check your inbox for an email with the OTP code. Then proceed to verify it and set your new password.
               </p>
             </div>
 
-            {/* Proceed Button */}
             <Link to="/reset-password" className="block">
-              <Button fullWidth>Proceed to Reset Password</Button>
+              <Button fullWidth size="lg">Proceed to Reset Password</Button>
             </Link>
 
-            {/* Back to Login */}
             <div className="text-center">
               <Link
                 to="/"
-                className="text-sm font-medium hover:underline"
-                style={{ color: theme.colors.primary[500] }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
               >
-                Back to Login
+                <ArrowLeft size={14} /> Back to Login
               </Link>
             </div>
           </div>
         ) : (
-          // Form State
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Alerts */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && <Alert type="error" message={error} />}
 
-            {/* Email Input */}
             <FormInput
               label="Email Address"
               type="email"
@@ -158,57 +100,35 @@ export default function ForgotPassword() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
+              icon={<Mail size={16} />}
             />
 
-            {/* Info Box */}
-            <div
-              className="rounded-lg border p-4"
-              style={{
-                borderColor: theme.colors.primary[200],
-                backgroundColor: theme.colors.primary[50],
-              }}
-            >
-              <p
-                className="text-xs font-semibold"
-                style={{ color: theme.colors.primary[700] }}
-              >
-                ℹ️ What happens next?
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 text-xs space-y-1.5 text-slate-700">
+              <p className="font-bold text-blue-900 uppercase tracking-wider text-[11px]">
+                What happens next?
               </p>
-              <ul
-                className="mt-3 space-y-2 text-xs"
-                style={{ color: theme.colors.primary[600] }}
-              >
-                <li>✓ We'll send an OTP to your email</li>
-                <li>✓ OTP will be valid for 10 minutes</li>
-                <li>✓ Use it to reset your password</li>
-                <li>✓ Check spam folder if not found</li>
+              <ul className="space-y-1 text-[11px] font-medium text-slate-600">
+                <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-600" /> We'll send an OTP code to your email</li>
+                <li className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-600" /> Code expires in 10 minutes</li>
               </ul>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               loading={loading}
               fullWidth
+              size="lg"
             >
-              {loading ? "Sending OTP..." : "Send OTP"}
+              Send OTP
             </Button>
 
-            {/* Back to Login */}
-            <div className="text-center">
-              <p
-                className="text-sm"
-                style={{ color: theme.colors.text.secondary }}
+            <div className="text-center pt-2">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
               >
-                Remember your password?{" "}
-                <Link
-                  to="/"
-                  className="font-medium hover:underline"
-                  style={{ color: theme.colors.primary[500] }}
-                >
-                  Sign in
-                </Link>
-              </p>
+                <ArrowLeft size={14} /> Back to Login
+              </Link>
             </div>
           </form>
         )}

@@ -141,22 +141,22 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
   };
 
   return (
-    <div className="mb-6 rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50 p-6 shadow-sm md:p-8">
-      <div className="mb-6 flex items-start gap-3">
-        <div className="rounded-lg bg-red-100 p-2">
-          <AlertTriangle className="h-6 w-6 text-red-600" />
+    <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/40 p-6 shadow-xs md:p-8">
+      <div className="mb-6 flex items-start gap-3.5">
+        <div className="rounded-xl bg-rose-100 p-2.5 text-rose-600 border border-rose-200/80">
+          <AlertTriangle className="h-6 w-6 stroke-[2]" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-red-900">Danger Zone: Bulk Delete</h2>
-          <p className="mt-1 text-sm text-red-700">
-            These actions permanently delete students and related records. Review the exact count in the confirmation modal before continuing.
+          <h2 className="text-lg font-bold text-rose-950">Danger Zone: Bulk Deletion</h2>
+          <p className="mt-1 text-xs sm:text-sm text-rose-800 font-medium">
+            These actions permanently remove students and related logs. Confirm student counts before proceeding.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-red-200 bg-white p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800">
-          <Trash2 className="h-4 w-4" />
+      <div className="mt-4 rounded-2xl border border-rose-200/80 bg-white p-5 shadow-xs">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <Trash2 className="h-4 w-4 text-rose-600" />
           Delete by Year
           {loadingCounts && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
         </h3>
@@ -172,9 +172,9 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-red-200 bg-white p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800">
-          <Layers className="h-4 w-4" />
+      <div className="mt-4 rounded-2xl border border-rose-200/80 bg-white p-5 shadow-xs">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <Layers className="h-4 w-4 text-rose-600" />
           Delete by Year + Division
         </h3>
 
@@ -182,7 +182,7 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-base focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
           >
             <option value="">-- Select Year --</option>
             {[1, 2, 3, 4].map((year) => (
@@ -195,7 +195,7 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
           <select
             value={selectedDivision}
             onChange={(e) => setSelectedDivision(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-base focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
           >
             <option value="">-- Select Division --</option>
             {DIVISIONS.map((division) => (
@@ -206,7 +206,7 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-base focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
           >
             <option value="all">All Branches</option>
             {branches.map((branch) => (
@@ -218,8 +218,8 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
         </div>
 
         {selectedYear && selectedDivision && (
-          <p className="mt-3 text-sm text-slate-600">
-            Preview estimate: up to <span className="font-bold text-red-600">{advancedCount}</span> students from {YEAR_LABELS[selectedYear].code}-{selectedDivision}. Exact branch-filtered count appears before deletion.
+          <p className="mt-3 text-xs text-slate-600 font-medium">
+            Preview estimate: up to <span className="font-bold text-rose-600">{advancedCount}</span> students from {YEAR_LABELS[selectedYear].code}-{selectedDivision}.
           </p>
         )}
 
@@ -227,29 +227,29 @@ export default function BulkDeleteSection({ branches = [], onDeleteComplete, onE
           type="button"
           onClick={handleAdvancedDeleteClick}
           disabled={!selectedYear || !selectedDivision || previewLoading}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition-all hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           Delete Selected
         </button>
       </div>
 
-      <div className="mt-4 rounded-xl border-2 border-red-500 bg-red-100 p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-red-900">
-          <Skull className="h-5 w-5" />
+      <div className="mt-4 rounded-2xl border border-rose-300 bg-rose-100/70 p-5 shadow-xs">
+        <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-950">
+          <Skull className="h-5 w-5 text-rose-700" />
           Nuclear Option
         </h3>
         <button
           type="button"
           onClick={handleDeleteAllClick}
           disabled={counts.total === 0 || previewLoading}
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all hover:bg-red-700 hover:shadow-xl disabled:cursor-not-allowed disabled:bg-slate-400 md:w-auto"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-rose-600 px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-rose-700 hover:shadow-lg disabled:cursor-not-allowed disabled:bg-slate-300 md:w-auto"
         >
           {previewLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
           DELETE ALL STUDENTS ({counts.total || 0})
         </button>
-        <p className="mt-2 text-xs italic text-red-700">
-          This deletes every student and related records. Cannot be undone.
+        <p className="mt-2 text-xs italic text-rose-800 font-medium">
+          This deletes every student record. Action cannot be undone.
         </p>
       </div>
 

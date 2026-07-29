@@ -7,7 +7,7 @@ import QuickActions from "../components/teacher/QuickActions";
 import LowAttendanceAlerts from "../components/teacher/LowAttendanceAlerts";
 import { getDashboardStats } from "../services/teacherService";
 import { useAuth } from "../context/AuthContext";
-import { BookOpen, CheckCircle, AlertTriangle, Users } from "lucide-react";
+import { LayoutDashboard, UserCheck, History, FileText, BookOpen, CheckCircle, AlertTriangle, Users } from "lucide-react";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -24,10 +24,10 @@ export default function TeacherDashboard() {
   });
 
   const sidebarItems = [
-    { label: "Dashboard", path: "/teacher", icon: "🏠" },
-    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: "✓" },
-    { label: "View Attendance", path: "/teacher/attendance-history", icon: "📋" },
-    { label: "Reports", path: "/teacher/reports", icon: "📊" },
+    { label: "Dashboard", path: "/teacher", icon: <LayoutDashboard size={20} /> },
+    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: <UserCheck size={20} /> },
+    { label: "View Attendance", path: "/teacher/attendance-history", icon: <History size={20} /> },
+    { label: "Reports", path: "/teacher/reports", icon: <FileText size={20} /> },
   ];
 
   useEffect(() => {
@@ -60,15 +60,15 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <DashboardLayout sidebarItems={sidebarItems}>
-        <div className="p-6 space-y-6 animate-pulse">
-          <div className="h-20 bg-slate-200 rounded-xl"></div>
+      <DashboardLayout sidebarItems={sidebarItems} title="Teacher Dashboard">
+        <div className="space-y-6 animate-pulse">
+          <div className="h-28 bg-slate-200 rounded-2xl"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-200 rounded-xl"></div>)}
+             {[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>)}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-             <div className="lg:col-span-2 h-80 bg-slate-200 rounded-xl"></div>
-             <div className="h-80 bg-slate-200 rounded-xl"></div>
+             <div className="lg:col-span-2 h-80 bg-slate-200 rounded-2xl"></div>
+             <div className="h-80 bg-slate-200 rounded-2xl"></div>
           </div>
         </div>
       </DashboardLayout>
@@ -76,26 +76,26 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <DashboardLayout sidebarItems={sidebarItems} title="Teacher Dashboard" subtitle="Faculty Portal & Attendance Management">
+      <div className="space-y-6">
         
-        {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+        {/* Banner */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1 sm:mb-2">
-              👋 Welcome back, {user?.name?.split(' ')[0] || 'Teacher'}!
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">
+              Welcome back, {user?.name?.split(' ')[0] || 'Teacher'}!
             </h1>
-            <p className="text-indigo-100 font-medium text-sm sm:text-base">Today is {todayStr}</p>
+            <p className="text-blue-100 font-medium text-xs sm:text-sm">Today is {todayStr}</p>
           </div>
           <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-            <BookOpen size={200} />
+            <BookOpen size={220} />
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center justify-between">
-            <p>{error}</p>
-            <button onClick={fetchDashboardData} className="underline text-sm font-semibold">Retry</button>
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-semibold">{error}</p>
+            <button onClick={fetchDashboardData} className="underline text-xs font-bold hover:text-rose-900">Retry</button>
           </div>
         )}
 
@@ -127,7 +127,7 @@ export default function TeacherDashboard() {
           />
         </div>
 
-        {/* Layout for Recent Sessions & Quick Actions */}
+        {/* Recent Sessions & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <RecentSessions sessions={data.recentSessions} />

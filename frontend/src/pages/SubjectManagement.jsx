@@ -1,20 +1,20 @@
-/**
- * SUBJECT MANAGEMENT PAGE
- * Admin page to manage subjects for branches
- * Features: View all subjects, Filter by branch/semester, Create, Edit, Delete
- *
- * API Endpoints:
- * - GET /api/admin/subjects?branch=&semester=
- * - POST /api/admin/subjects { name, code, branch, semester }
- */
-
 import { useState, useEffect } from "react";
-import { theme } from "../styles/theme";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  FileText, 
+  AlertTriangle,
+  Plus,
+  Edit2,
+  Trash2,
+  Filter,
+  Info
+} from "lucide-react";
 
-// Services
 import { getSubjects, createSubject, getBranches, deleteSubject } from "../services/adminService";
-
-// Components
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
@@ -25,27 +25,22 @@ import Alert from "../components/Alert";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function SubjectManagement() {
-  // Data state
   const [subjects, setSubjects] = useState([]);
   const [branches, setBranches] = useState([]);
 
-  // Filter state
   const [filters, setFilters] = useState({
     branch: "",
     semester: "",
   });
 
-  // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState("create");
   const [editingSubject, setEditingSubject] = useState(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -57,27 +52,17 @@ export default function SubjectManagement() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  /**
-   * Fetch branches and subjects on mount
-   */
   useEffect(() => {
     fetchBranches();
     fetchSubjects();
   }, []);
 
-  /**
-   * Fetch subjects when filters change
-   */
   useEffect(() => {
     fetchSubjects();
   }, [filters.branch, filters.semester]);
 
-  /**
-   * Fetch all branches
-   */
   const fetchBranches = async () => {
     try {
       const data = await getBranches();
@@ -87,9 +72,6 @@ export default function SubjectManagement() {
     }
   };
 
-  /**
-   * Fetch subjects from API with filters
-   */
   const fetchSubjects = async () => {
     setLoading(true);
     setError("");
@@ -107,9 +89,6 @@ export default function SubjectManagement() {
     }
   };
 
-  /**
-   * Handle filter changes
-   */
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({
@@ -118,16 +97,10 @@ export default function SubjectManagement() {
     }));
   };
 
-  /**
-   * Clear all filters
-   */
   const clearFilters = () => {
     setFilters({ branch: "", semester: "" });
   };
 
-  /**
-   * Open create modal
-   */
   const handleCreate = () => {
     setModalMode("create");
     setFormData({ 
@@ -142,9 +115,6 @@ export default function SubjectManagement() {
     setShowModal(true);
   };
 
-  /**
-   * Open edit modal
-   */
   const handleEdit = (subject) => {
     setModalMode("edit");
     setEditingSubject(subject);
@@ -160,9 +130,6 @@ export default function SubjectManagement() {
     setShowModal(true);
   };
 
-  /**
-   * Handle form input changes
-   */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -171,9 +138,6 @@ export default function SubjectManagement() {
     }));
   };
 
-  /**
-   * Validate form data
-   */
   const validateForm = () => {
     if (!formData.name.trim()) {
       setFormError("Subject name is required");
@@ -213,9 +177,6 @@ export default function SubjectManagement() {
     return true;
   };
 
-  /**
-   * Handle form submission
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
@@ -232,12 +193,11 @@ export default function SubjectManagement() {
         });
         setSuccess("Subject created successfully!");
       } else {
-        // Edit functionality would go here
         setSuccess("Subject updated successfully!");
       }
 
       setShowModal(false);
-      fetchSubjects(); // Refresh list
+      fetchSubjects();
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -247,9 +207,6 @@ export default function SubjectManagement() {
     }
   };
 
-  /**
-   * Handle delete confirmation
-   */
   const handleDeleteConfirm = (subject) => {
     setDeleteConfirm(subject);
   };
@@ -273,18 +230,16 @@ export default function SubjectManagement() {
     }
   };
 
-  // Sidebar items
   const sidebarItems = [
-    { path: "/admin", icon: "📊", label: "Dashboard" },
-    { path: "/admin/branches", icon: "🏢", label: "Branches" },
-    { path: "/admin/subjects", icon: "📚", label: "Subjects" },
-    { path: "/admin/students", icon: "🎓", label: "Students" },
-    { path: "/admin/teachers", icon: "👨‍🏫", label: "Teachers" },
-    { path: "/admin/reports", icon: "📋", label: "Reports" },
-    { path: "/admin/defaulters", icon: "⚠️", label: "Defaulters" },
+    { path: "/admin", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
+    { path: "/admin/branches", icon: <Building2 size={20} />, label: "Branches" },
+    { path: "/admin/subjects", icon: <BookOpen size={20} />, label: "Subjects" },
+    { path: "/admin/students", icon: <GraduationCap size={20} />, label: "Students" },
+    { path: "/admin/teachers", icon: <Users size={20} />, label: "Teachers" },
+    { path: "/admin/reports", icon: <FileText size={20} />, label: "Reports" },
+    { path: "/admin/defaulters", icon: <AlertTriangle size={20} />, label: "Defaulters" },
   ];
 
-  // Semester options
   const semesterOptions = [
     { value: "", label: "All Semesters" },
     { value: "1", label: "Semester 1" },
@@ -297,19 +252,12 @@ export default function SubjectManagement() {
     { value: "8", label: "Semester 8" },
   ];
 
-  // Table columns
   const columns = [
     {
       header: "Subject Code",
       accessor: "code",
       render: (value) => (
-        <span
-          className="rounded-md px-2 py-1 text-xs font-semibold"
-          style={{
-            backgroundColor: theme.colors.info,
-            color: theme.colors.text.inverse,
-          }}
-        >
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 font-mono">
           {value}
         </span>
       ),
@@ -317,19 +265,13 @@ export default function SubjectManagement() {
     {
       header: "Subject Name",
       accessor: "name",
-      render: (value) => <span className="font-medium">{value}</span>,
+      render: (value) => <span className="font-bold text-slate-900">{value}</span>,
     },
     {
       header: "Branch",
       accessor: "branch",
       render: (value) => (
-        <span
-          className="rounded-md px-2 py-1 text-xs"
-          style={{
-            backgroundColor: theme.colors.primary[50],
-            color: theme.colors.primary[700],
-          }}
-        >
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
           {value?.name || value?.code || "N/A"}
         </span>
       ),
@@ -338,83 +280,44 @@ export default function SubjectManagement() {
       header: "Semester",
       accessor: "semester",
       render: (value) => (
-        <span
-          className="rounded-md px-2 py-1 text-xs font-medium"
-          style={{
-            backgroundColor: theme.colors.success,
-            color: theme.colors.text.inverse,
-          }}
-        >
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
           Sem {value}
         </span>
       ),
     },
   ];
 
-  // Table actions
   const actions = (subject) => (
-    <>
+    <div className="flex justify-end gap-2">
       <button
         onClick={() => handleEdit(subject)}
-        className="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-        style={{
-          color: theme.colors.primary[600],
-          backgroundColor: theme.colors.primary[50],
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.primary[100];
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.primary[50];
-        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 transition-colors"
       >
-        Edit
+        <Edit2 size={13} /> Edit
       </button>
       <button
         onClick={() => handleDeleteConfirm(subject)}
-        className="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-        style={{
-          color: theme.colors.error,
-          backgroundColor: `${theme.colors.error}15`,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = `${theme.colors.error}25`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
-        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-100 transition-colors"
       >
-        Delete
+        <Trash2 size={13} /> Delete
       </button>
-    </>
+    </div>
   );
 
   return (
     <DashboardLayout
       sidebarItems={sidebarItems}
       title="Subject Management"
-      subtitle="Manage subjects for different branches and semesters"
+      subtitle="Manage Course Subjects & Semester Curriculums"
     >
-      {/* Success/Error Alerts */}
-      {success && (
-        <div className="mb-6">
-          <Alert type="success" message={success} />
-        </div>
-      )}
-      {error && (
-        <div className="mb-6">
-          <Alert type="error" message={error} />
-        </div>
-      )}
+      {success && <Alert type="success" message={success} />}
+      {error && <Alert type="error" message={error} />}
 
-      {/* Filters Section */}
-      <div
-        className="mb-6 rounded-lg p-4"
-        style={{
-          backgroundColor: theme.colors.background,
-          border: `1px solid ${theme.colors.border}`,
-        }}
-      >
+      {/* Filters Card */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <Filter size={14} /> Filter Subjects
+        </div>
         <div className="grid gap-4 md:grid-cols-3">
           <FormSelect
             label="Filter by Branch"
@@ -440,28 +343,23 @@ export default function SubjectManagement() {
 
           <div className="flex items-end gap-2">
             <Button variant="secondary" onClick={clearFilters} fullWidth>
-              Clear Filters
+              Reset Filters
             </Button>
-            <Button onClick={handleCreate} fullWidth>
-              ➕ Add Subject
+            <Button onClick={handleCreate} fullWidth icon={<Plus size={18} />}>
+              Add Subject
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
-            Total Subjects:{" "}
-            <span className="font-semibold">{subjects.length}</span>
-          </p>
-        </div>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs font-semibold text-slate-500">
+          Total Subjects: <span className="font-bold text-slate-800">{subjects.length}</span>
+        </p>
       </div>
 
-      {/* Subjects Table */}
       {loading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <LoadingSpinner />
         </div>
       ) : (
@@ -469,7 +367,7 @@ export default function SubjectManagement() {
           columns={columns}
           data={subjects}
           actions={actions}
-          emptyMessage="No subjects found. Create your first subject!"
+          emptyMessage="No subjects found. Click 'Add Subject' to add one."
         />
       )}
 
@@ -500,7 +398,7 @@ export default function SubjectManagement() {
             label="Subject Name"
             name="name"
             type="text"
-            placeholder="e.g., Data Structures"
+            placeholder="e.g., Data Structures & Algorithms"
             value={formData.name}
             onChange={handleInputChange}
             disabled={formLoading}
@@ -572,16 +470,10 @@ export default function SubjectManagement() {
             />
           </div>
 
-          <div
-            className="rounded-lg border p-3"
-            style={{
-              borderColor: theme.colors.primary[200],
-              backgroundColor: theme.colors.primary[50],
-            }}
-          >
-            <p className="text-xs" style={{ color: theme.colors.primary[700] }}>
-              💡 <strong>Tip:</strong> Subject code should be unique and follow
-              your college's naming convention
+          <div className="rounded-xl border border-blue-200/80 bg-blue-50/60 p-3.5 flex gap-2.5 items-start text-xs text-blue-900 font-medium">
+            <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <p>
+              <strong>Tip:</strong> Ensure dates accurately span the academic term for progress reporting.
             </p>
           </div>
         </form>
@@ -612,29 +504,19 @@ export default function SubjectManagement() {
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: `${theme.colors.error}15`,
-                color: theme.colors.error,
-              }}
-            >
-              <span className="text-3xl">⚠️</span>
+            <div className="h-14 w-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center">
+              <AlertTriangle size={28} />
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm" style={{ color: theme.colors.text.primary }}>
-              Are you sure you want to delete the subject{" "}
-              <strong>{deleteConfirm?.name}</strong>?
+          <div>
+            <p className="text-sm font-semibold text-slate-800">
+              Are you sure you want to delete <strong className="text-slate-900">{deleteConfirm?.name}</strong>?
             </p>
-            <p
-              className="mt-2 text-xs"
-              style={{ color: theme.colors.text.secondary }}
-            >
-              This action cannot be undone. All associated data will be removed.
+            <p className="mt-2 text-xs text-slate-500 font-medium">
+              This action cannot be undone. Associated attendance records will be affected.
             </p>
           </div>
         </div>

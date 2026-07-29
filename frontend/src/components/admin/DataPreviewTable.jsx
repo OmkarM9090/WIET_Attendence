@@ -6,7 +6,8 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   XCircle, 
-  Upload
+  Upload,
+  Info
 } from 'lucide-react';
 import Button from '../Button';
 
@@ -32,10 +33,8 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         
-        // Ensure we get headers correctly and all data
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
         
-        // Find header row index
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(10, jsonData.length); i++) {
           if (jsonData[i] && jsonData[i].length > 0 && jsonData[i][0] && jsonData[i][0].toString().includes("Name")) {
@@ -45,18 +44,15 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
         }
 
         if (headerRowIdx === -1) {
-          // Fallback to row 1 (0-indexed) if not found explicitly, as per template
           headerRowIdx = 1;
         }
 
-        const rows = jsonData.slice(headerRowIdx + 1); // Skip headers
+        const rows = jsonData.slice(headerRowIdx + 1);
         
         const issues = [];
         const validatedRows = rows.map((row, idx) => {
-          // +2 to account for 1-based Excel row, and + header row
           const rowNum = headerRowIdx + 1 + idx + 1; 
           
-          // Skip completely empty rows
           if (!row || row.every(cell => !cell || cell.toString().trim() === '')) {
             return null;
           }
@@ -94,7 +90,7 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
             errors: rowIssues,
             isValid: rowIssues.length === 0
           };
-        }).filter(Boolean); // Remove nulls (empty rows)
+        }).filter(Boolean);
         
         setPreviewData(validatedRows);
         setValidationIssues(issues);
@@ -186,14 +182,14 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
   const renderCell = (row, fieldName, value) => {
     const status = getCellStatus(row, fieldName);
     return (
-      <td className={`px-4 py-2 border-r border-slate-100 ${status.invalid ? 'bg-red-50' : ''}`}>
+      <td className={`px-4 py-2 border-r border-slate-100 ${status.invalid ? 'bg-rose-50' : ''}`}>
         <div className="flex items-center gap-2">
           {status.invalid ? (
-            <XCircle className="w-4 h-4 text-red-500 shrink-0" title={status.message} />
+            <XCircle className="w-4 h-4 text-rose-500 shrink-0" title={status.message} />
           ) : (
-            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           )}
-          <span className={`truncate ${status.invalid ? 'text-red-700' : 'text-slate-700'}`}>
+          <span className={`truncate ${status.invalid ? 'text-rose-700 font-semibold' : 'text-slate-800'}`}>
             {value || '-'}
           </span>
         </div>
@@ -203,9 +199,9 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
 
   if (parsing) {
     return (
-      <div className="bg-white border rounded-2xl p-8 flex flex-col items-center justify-center text-slate-500 min-h-[400px]">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent mb-4"></div>
-        <p className="font-medium text-slate-600">Parsing Excel file...</p>
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-8 flex flex-col items-center justify-center text-slate-500 min-h-[350px]">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent mb-4"></div>
+        <p className="font-semibold text-slate-700">Parsing Excel file...</p>
       </div>
     );
   }
@@ -216,25 +212,25 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
   const invalidCount = previewData.length - validCount;
 
   return (
-    <div className="bg-white border rounded-2xl shadow-lg overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
       
       {/* Header */}
       <div className="p-6 border-b border-slate-100 shrink-0">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              🔍 Data Preview
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" /> Data Import Preview
             </h2>
-            <p className="text-sm text-slate-500 mt-1">Review your data before uploading to the server</p>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Review imported records before confirming</p>
           </div>
-          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2 rounded-full transition-colors">
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-2 rounded-xl transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex justify-between items-center">
+        <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-100 p-2.5 rounded-lg text-indigo-600 shadow-sm">
+            <div className="bg-blue-100 p-2.5 rounded-xl text-blue-600 shadow-xs">
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
@@ -244,22 +240,22 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
           </div>
           <button 
             onClick={onCancel}
-            className="text-sm text-red-600 hover:text-red-700 font-semibold px-4 py-1.5 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+            className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-3.5 py-1.5 bg-white border border-rose-200 rounded-xl hover:bg-rose-50 transition-colors shadow-xs"
           >
-            Choose Different File
+            Change File
           </button>
         </div>
       </div>
 
       {/* Issues Alert */}
       {validationIssues.length > 0 && (
-        <div className="px-6 py-4 shrink-0">
-          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 max-h-40 overflow-y-auto shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              <h4 className="font-bold text-amber-900">⚠️ {validationIssues.length} Row(s) have validation issues</h4>
+        <div className="px-6 py-3 shrink-0">
+          <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-4 max-h-36 overflow-y-auto custom-scrollbar">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              <h4 className="font-bold text-amber-900 text-sm">{validationIssues.length} Row(s) have validation issues</h4>
             </div>
-            <ul className="text-sm text-amber-800 space-y-1.5 ml-7">
+            <ul className="text-xs text-amber-800 space-y-1 ml-7">
               {validationIssues.slice(0, 5).map((issue, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="font-bold whitespace-nowrap">Row {issue.row}:</span> 
@@ -267,7 +263,7 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
                 </li>
               ))}
               {validationIssues.length > 5 && (
-                <li className="italic text-amber-600 font-medium pt-1">
+                <li className="italic text-amber-700 font-medium pt-0.5">
                   ...and {validationIssues.length - 5} more rows with issues
                 </li>
               )}
@@ -276,17 +272,14 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
         </div>
       )}
 
-      {/* Table Area (Scrollable) */}
-      <div className="flex-1 overflow-auto px-6 py-2">
-        <div className="flex items-center justify-between mb-3">
-           <h4 className="font-bold text-slate-800">Preview <span className="text-slate-500 font-normal text-sm ml-2">(Showing first 100 rows)</span></h4>
-        </div>
-        <div className="border border-slate-200 rounded-xl overflow-hidden mb-4 shadow-sm">
+      {/* Table Area */}
+      <div className="flex-1 overflow-auto px-6 py-2 custom-scrollbar">
+        <div className="border border-slate-200 rounded-xl overflow-hidden mb-4 shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm min-w-max">
-              <thead className="bg-slate-50 text-slate-700 font-bold border-b-2 border-slate-200">
+            <table className="w-full text-left text-xs min-w-max">
+              <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3 border-r border-slate-200 text-center w-16 uppercase text-xs tracking-wider">Row</th>
+                  <th className="px-4 py-3 border-r border-slate-200 text-center w-16 uppercase tracking-wider">Row</th>
                   {type === 'student' ? (
                     <>
                       <th className="px-4 py-3 border-r border-slate-200">Name</th>
@@ -308,10 +301,10 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {previewData.slice(0, 100).map((row, i) => (
-                  <tr key={i} className={`border-b border-slate-100 transition-colors hover:bg-slate-50 ${!row.isValid ? 'bg-red-50/40' : ''}`}>
-                    <td className="px-4 py-2 text-center text-slate-500 font-mono text-xs border-r border-slate-100 bg-slate-50/50">
+                  <tr key={i} className={`hover:bg-slate-50 ${!row.isValid ? 'bg-rose-50/40' : ''}`}>
+                    <td className="px-4 py-2 text-center text-slate-400 font-mono text-xs border-r border-slate-100 bg-slate-50/50 font-bold">
                       {row.row}
                     </td>
                     {type === 'student' ? (
@@ -342,56 +335,41 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
       </div>
 
       {/* Footer Area */}
-      <div className="bg-white border-t border-slate-200 p-6 shrink-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        
-        {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Rows</p>
-            <p className="text-3xl font-black text-slate-800">{previewData.length}</p>
+      <div className="bg-white border-t border-slate-200 p-6 shrink-0 z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
+            <p className="text-[11px] text-slate-500 uppercase font-bold tracking-wider mb-1">Total Rows</p>
+            <p className="text-2xl font-extrabold text-slate-900">{previewData.length}</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-2 opacity-10"><CheckCircle2 className="w-16 h-16 text-green-500" /></div>
-            <p className="text-xs text-green-700 uppercase font-bold tracking-wider mb-1 relative z-10">Valid & Ready</p>
-            <p className="text-3xl font-black text-green-700 relative z-10">{validCount}</p>
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 text-center">
+            <p className="text-[11px] text-emerald-700 uppercase font-bold tracking-wider mb-1">Valid & Ready</p>
+            <p className="text-2xl font-extrabold text-emerald-700">{validCount}</p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-2 opacity-10"><XCircle className="w-16 h-16 text-red-500" /></div>
-            <p className="text-xs text-red-700 uppercase font-bold tracking-wider mb-1 relative z-10">Invalid (Will Skip)</p>
-            <p className="text-3xl font-black text-red-600 relative z-10">{invalidCount}</p>
+          <div className="bg-rose-50/60 border border-rose-200 rounded-xl p-3.5 text-center">
+            <p className="text-[11px] text-rose-700 uppercase font-bold tracking-wider mb-1">Invalid (Skipped)</p>
+            <p className="text-2xl font-extrabold text-rose-700">{invalidCount}</p>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-white p-2 rounded-full shadow-sm">
-              <Info className="w-5 h-5 text-indigo-500" />
-            </div>
-            <p className="text-sm text-slate-700 font-medium">
-              Only the <strong className="text-green-600">{validCount} valid rows</strong> will be uploaded to the server.
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+          <div className="flex items-center gap-2.5">
+            <Info className="w-5 h-5 text-blue-600 shrink-0" />
+            <p className="text-xs text-slate-700 font-medium">
+              Only <strong className="text-emerald-700">{validCount} valid rows</strong> will be imported.
             </p>
           </div>
           
           <div className="flex gap-3 w-full sm:w-auto">
-            <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto bg-white" disabled={uploading}>
+            <Button variant="secondary" onClick={onCancel} disabled={uploading}>
               Cancel
             </Button>
             <Button 
               onClick={handleConfirm} 
               disabled={validCount === 0 || uploading}
-              className={`w-full sm:w-auto shadow-sm ${validCount > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300'}`}
+              loading={uploading}
+              variant="primary"
             >
-              {uploading ? (
-                <div className="flex items-center">
-                  <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Uploading...
-                </div>
-              ) : (
-                <div className="flex items-center font-bold">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Proceed Upload ({validCount})
-                </div>
-              )}
+              Upload ({validCount})
             </Button>
           </div>
         </div>
@@ -399,8 +377,5 @@ const DataPreviewTable = ({ file, type = 'student', onCancel, onConfirm }) => {
     </div>
   );
 };
-
-// Add Info icon to lucide-react imports if it's missing up top
-import { Info } from 'lucide-react';
 
 export default DataPreviewTable;

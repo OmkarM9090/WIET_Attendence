@@ -88,6 +88,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <DefaulterManagement />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Teacher Routes */}
           <Route

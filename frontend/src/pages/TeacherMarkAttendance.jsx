@@ -1,29 +1,5 @@
-/**
- * TEACHER MARK ATTENDANCE PAGE
- * 
- * Step 1-4 Complete:
- * - Step 1: Select assigned teaching session from dropdown
- * - Step 2: Select date (today or yesterday only) 
- * - Step 3: Date validation with error handling
- * - Step 4: Auto-load student list for selected session
- * 
- * Features:
- * - Dropdown showing all assigned teaching sessions
- * - Format: Branch - Subject (Year Division) Time SessionType
- * - Display selected session details in card
- * - Date picker with today/yesterday restriction
- * - Student list with checkbox selection for absent students
- * - Quick add by roll numbers (comma/space separated)
- * - Real-time present/absent count
- * - Different student lists for LECTURE vs PRACTICAL sessions
- * 
- * Next: Step 5 - Save attendance to backend
- */
-
 import { useEffect, useState } from "react";
-import { theme } from "../styles/theme";
 import DashboardLayout from "../components/DashboardLayout";
-import FormSelect from "../components/FormSelect";
 import FormInput from "../components/FormInput";
 import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -34,9 +10,9 @@ import { getMyTeachingAssignments } from "../services/teacherService";
 import axiosInstance from "../utils/axios";
 import SessionSelector from "../components/teacher/SessionSelector";
 import StudentAttendanceList from "../components/teacher/StudentAttendanceList";
+import { LayoutDashboard, UserCheck, History, FileText, Calendar, CheckCircle2, AlertTriangle, Info, BookOpen, Inbox } from "lucide-react";
 
 export default function TeacherMarkAttendance() {
-  // State management
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedDate, setSelectedDate] = useState(
@@ -46,7 +22,6 @@ export default function TeacherMarkAttendance() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Student state
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [studentError, setStudentError] = useState("");
@@ -54,7 +29,6 @@ export default function TeacherMarkAttendance() {
   const [rollNumberInput, setRollNumberInput] = useState("");
   const [rollNumberError, setRollNumberError] = useState("");
 
-  // Report state
   const [savingReport, setSavingReport] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportError, setReportError] = useState("");
@@ -63,34 +37,25 @@ export default function TeacherMarkAttendance() {
   const [isDownloadingExcel, setIsDownloadingExcel] = useState(false);
   const [savedAttendanceId, setSavedAttendanceId] = useState(null);
 
-  // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [existingAttendanceId, setExistingAttendanceId] = useState(null);
   const [isEditingExisting, setIsEditingExisting] = useState(false);
 
-  // Sidebar navigation items
   const sidebarItems = [
-    { label: "Dashboard", path: "/teacher", icon: "🏠" },
-    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: "✓" },
-    { label: "View Attendance", path: "/teacher/attendance-history", icon: "📋" },
-    { label: "Reports", path: "/teacher/reports", icon: "📊" },
+    { label: "Dashboard", path: "/teacher", icon: <LayoutDashboard size={20} /> },
+    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: <UserCheck size={20} /> },
+    { label: "View Attendance", path: "/teacher/attendance-history", icon: <History size={20} /> },
+    { label: "Reports", path: "/teacher/reports", icon: <FileText size={20} /> },
   ];
 
-  /**
-   * Fetch teaching assignments on component mount
-   */
   useEffect(() => {
     fetchAssignments();
   }, []);
 
-  /**
-   * Fetch students when session and valid date are selected
-   */
   useEffect(() => {
     if (selectedAssignment && selectedDate && !dateError) {
       fetchStudentsForSession();
     } else {
-      // Clear students if session or date becomes invalid
       setStudents([]);
       setSelectedAbsentStudents([]);
       setRollNumberInput("");
@@ -98,12 +63,8 @@ export default function TeacherMarkAttendance() {
       setReportText("");
       setReportError("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAssignment, selectedDate, dateError]);
 
-  /**
-   * Fetch all active teaching assignments for logged-in teacher
-   */
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -118,10 +79,6 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Handle dropdown selection change
-   * @param {Event} e - Change event
-   */
   const handleSessionSelect = (e) => {
     const assignmentId = e.target.value;
 
@@ -130,22 +87,14 @@ export default function TeacherMarkAttendance() {
       return;
     }
 
-    // Find selected assignment from list
     const selected = assignments.find((a) => a._id === assignmentId);
     setSelectedAssignment(selected);
   };
 
-  /**
-   * Handle date selection change
-   * Validates that date is today or yesterday only
-   * 
-   * @param {Event} e - Change event
-   */
   const handleDateChange = (e) => {
     const selectedDateValue = e.target.value;
     setSelectedDate(selectedDateValue);
 
-    // Validate date
     const validation = validateDate(selectedDateValue);
     if (validation.isValid) {
       setDateError("");
@@ -154,52 +103,35 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Validate if selected date is allowed (today or yesterday only)
-   * 
-   * @param {String} dateString - Date in YYYY-MM-DD format
-   * @returns {Object} - { isValid: boolean, error: string }
-   */
   const validateDate = (dateString) => {
     if (!dateString) {
       return { isValid: false, error: "Please select a date" };
     }
 
-    // Convert to Date object (midnight)
-    const selectedDate = new Date(dateString + "T00:00:00");
-
-    // Get today at midnight
+    const selectedDateObj = new Date(dateString + "T00:00:00");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get yesterday at midnight
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Check if date is in the future
-    if (selectedDate > today) {
+    if (selectedDateObj > today) {
       return {
         isValid: false,
         error: "Cannot mark attendance for future dates. Please select today or yesterday.",
       };
     }
 
-    // Check if date is older than yesterday
-    if (selectedDate < yesterday) {
+    if (selectedDateObj < yesterday) {
       return {
         isValid: false,
         error: "Cannot mark attendance for dates older than yesterday. Please select today or yesterday.",
       };
     }
 
-    // Date is valid (today or yesterday)
     return { isValid: true, error: "" };
   };
 
-  /**
-   * Get min and max date for date picker
-   * Min: yesterday, Max: today
-   */
   const getDatePickerLimits = () => {
     const today = new Date();
     const yesterday = new Date(today);
@@ -211,18 +143,10 @@ export default function TeacherMarkAttendance() {
     };
   };
 
-  /**
-   * Check if Continue button should be enabled
-   * Requires: valid session selected + valid date
-   */
   const isContinueEnabled = () => {
     return selectedAssignment && selectedDate && !dateError;
   };
 
-  /**
-   * Fetch students for selected teaching session
-   * Calls backend API with teachingAssignmentId
-   */
   const fetchStudentsForSession = async () => {
     try {
       setLoadingStudents(true);
@@ -239,7 +163,6 @@ export default function TeacherMarkAttendance() {
 
       if (response.data.success) {
         let fetchedStudents = response.data.data || [];
-        // Sort by Roll Number first, then Alphabetically by Name
         fetchedStudents.sort((a, b) => {
           const rollA = String(a.rollNo || "").padStart(15, '0');
           const rollB = String(b.rollNo || "").padStart(15, '0');
@@ -266,10 +189,6 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Toggle student absent status
-   * @param {String} studentId - Student ID to toggle
-   */
   const toggleAbsentStudent = (studentId) => {
     setSelectedAbsentStudents((prev) => {
       if (prev.includes(studentId)) {
@@ -280,20 +199,14 @@ export default function TeacherMarkAttendance() {
     });
   };
 
-  /**
-   * Add students by roll numbers
-   * Parses comma/space separated roll numbers
-   */
   const handleAddRollNumbers = () => {
     if (!rollNumberInput.trim()) return;
 
-    // Parse roll numbers (support comma and space separation)
     const rollNumbers = rollNumberInput
       .split(/[,\s]+/)
       .map((roll) => roll.trim())
       .filter((roll) => roll);
 
-    // Find students with matching roll numbers
     const matchingStudents = students.filter((student) =>
       rollNumbers.includes(student.rollNo?.toString())
     );
@@ -308,7 +221,6 @@ export default function TeacherMarkAttendance() {
       setRollNumberError("");
     }
 
-    // Add to absent list
     const newAbsentIds = matchingStudents
       .map((s) => s._id)
       .filter((id) => !selectedAbsentStudents.includes(id));
@@ -317,17 +229,9 @@ export default function TeacherMarkAttendance() {
       setSelectedAbsentStudents((prev) => [...prev, ...newAbsentIds]);
     }
 
-    // Clear input
     setRollNumberInput("");
   };
 
-  /**
-   * Save attendance and generate WhatsApp report
-   */
-  /**
-   * Save attendance to backend
-   * If attendance already exists for this session+date, show edit modal
-   */
   const handleSaveAttendance = async () => {
     try {
       setSavingReport(true);
@@ -364,33 +268,28 @@ export default function TeacherMarkAttendance() {
         }
       );
 
-      // Check if attendance already exists (200 OK with alreadyExists flag)
       if (response.data?.alreadyExists === true) {
         setExistingAttendanceId(response.data.attendanceId);
         setShowEditModal(true);
         return;
       }
 
-      // New attendance created successfully
       if (response.data?.success) {
         setReportText(response.data.reportText || "");
         setSavedAttendanceId(response.data.attendance?._id || null);
-        setReportError(""); // Clear any previous errors
+        setReportError("");
       } else {
         setReportError(response.data?.message || "Failed to save attendance");
       }
     } catch (err) {
       console.error("Save attendance error:", err);
 
-      // Handle 409 Conflict - duplicate attendance detected
       if (err.response?.status === 409 && err.response?.data?.alreadyExists) {
-        // Backend should return attendanceId, but if not, we need to fetch it
         const attendanceId = err.response?.data?.attendanceId;
         if (attendanceId) {
           setExistingAttendanceId(attendanceId);
           setShowEditModal(true);
         } else {
-          // Fallback: Show modal without ID (user will need to retry)
           setReportError(
             "Attendance already exists. Please refresh and try editing the existing record."
           );
@@ -398,7 +297,6 @@ export default function TeacherMarkAttendance() {
         return;
       }
 
-      // Other errors
       setReportError(
         err.response?.data?.message || "Failed to save attendance"
       );
@@ -407,10 +305,6 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Handle editing existing attendance
-   * Called when user clicks "Edit Attendance" in modal
-   */
   const handleEditAttendance = async () => {
     try {
       setSavingReport(true);
@@ -423,7 +317,6 @@ export default function TeacherMarkAttendance() {
         .filter(Boolean)
         .map((s) => s.rollNo);
 
-      // Call PUT endpoint to update attendance
       const response = await axiosInstance.put(
         `/attendance/update/${existingAttendanceId}`,
         {
@@ -438,23 +331,19 @@ export default function TeacherMarkAttendance() {
         setReportError("");
       } else {
         setReportError(response.data?.message || "Failed to update attendance");
-        setShowEditModal(true); // Show modal again if update fails
+        setShowEditModal(true);
       }
     } catch (err) {
       console.error("Edit attendance error:", err);
       setReportError(
         err.response?.data?.message || "Failed to update attendance"
       );
-      setShowEditModal(true); // Show modal again if update fails
+      setShowEditModal(true);
     } finally {
       setSavingReport(false);
     }
   };
 
-  /**
-   * Handle manual Excel update
-   * Called when user clicks "Update Excel" button
-   */
   const handleUpdateExcel = async () => {
     try {
       setIsUpdatingExcel(true);
@@ -493,9 +382,6 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Handle downloading Excel file
-   */
   const handleDownloadExcel = async () => {
     try {
       setIsDownloadingExcel(true);
@@ -507,18 +393,15 @@ export default function TeacherMarkAttendance() {
         return;
       }
 
-      // We need responseType 'blob' to handle binary file download
       const response = await axiosInstance.get(
         `/attendance/download-excel/${savedAttendanceId}`,
         { responseType: 'blob' }
       );
 
-      // Create a blob URL and trigger download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
 
-      // Get filename from Content-Disposition header if available
       const contentDisposition = response.headers['content-disposition'];
       let filename = 'Attendance.xlsx';
       if (contentDisposition) {
@@ -531,7 +414,6 @@ export default function TeacherMarkAttendance() {
       document.body.appendChild(link);
       link.click();
 
-      // Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
 
@@ -544,7 +426,6 @@ export default function TeacherMarkAttendance() {
     } catch (err) {
       console.error("Excel download error:", err);
 
-      // If response was blob, we need to read it as text to get the error message
       if (err.response?.data instanceof Blob) {
         const reader = new FileReader();
         reader.onload = () => {
@@ -566,9 +447,6 @@ export default function TeacherMarkAttendance() {
     }
   };
 
-  /**
-   * Cancel editing and close modal
-   */
   const handleCancelEdit = () => {
     setShowEditModal(false);
     setExistingAttendanceId(null);
@@ -585,30 +463,6 @@ export default function TeacherMarkAttendance() {
     window.open(url, "_blank");
   };
 
-  /**
-   * Format dropdown option label
-   * Format: Branch - Subject (Year Division) Time SessionType
-   * Example: Computer Engineering - Maths (TE A) 2:00–3:00 Lecture
-   * 
-   * @param {Object} assignment - Teaching assignment object
-   * @returns {String} Formatted label
-   */
-  const formatDropdownLabel = (assignment) => {
-    const branchCode = assignment.branch?.code || assignment.branch?.name || "Unknown";
-    const subjectName = assignment.subject?.name || "Unknown Subject";
-    const yearMap = { 1: "FE", 2: "SE", 3: "TE", 4: "BE" };
-    const yearStr = assignment.year ? (yearMap[assignment.year] || `Y${assignment.year}`) : "";
-    const divStr = assignment.division || "";
-    const time = `${assignment.startTime}-${assignment.endTime}`;
-    const type = assignment.sessionType === "PRACTICAL" ? "Prac" : "Lec";
-    const batch = assignment.batch ? ` (B: ${assignment.batch.name})` : "";
-
-    return `${branchCode} • ${subjectName} • ${yearStr}-${divStr} • ${time} • ${type}${batch}`;
-  };
-
-  /**
-   * Render session details card
-   */
   const renderSessionDetails = () => {
     if (!selectedAssignment) return null;
 
@@ -626,87 +480,62 @@ export default function TeacherMarkAttendance() {
     } = selectedAssignment;
 
     return (
-      <div
-        style={{
-          marginTop: "24px",
-          backgroundColor: theme.colors.surface,
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: "12px",
-          padding: "24px",
-          boxShadow: theme.shadows.md,
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "18px",
-            fontWeight: "600",
-            color: theme.colors.text.primary,
-            marginBottom: "20px",
-            paddingBottom: "12px",
-            borderBottom: `2px solid ${theme.colors.primary}`,
-          }}
-        >
-          📋 Selected Session Details
+      <div className="mt-6 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+        <h3 className="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+          Selected Session Details
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
-          {/* Subject */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3.5 gap-x-8 text-sm">
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Subject:</span>
-            <span className="text-sm font-medium text-slate-900">{subject?.name} ({subject?.code})</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Subject:</span>
+            <span className="font-bold text-slate-900">{subject?.name} ({subject?.code})</span>
           </div>
 
-          {/* Branch */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Branch:</span>
-            <span className="text-sm font-medium text-slate-900">{branch?.name}</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Branch:</span>
+            <span className="font-semibold text-slate-900">{branch?.name}</span>
           </div>
 
-          {/* Class */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Class:</span>
-            <span className="text-sm font-medium text-slate-900">Year {year} Division {division}</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Class:</span>
+            <span className="font-semibold text-slate-900">Year {year} Division {division}</span>
           </div>
 
-          {/* Batch (if practical) */}
           {batch && (
             <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-              <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Batch:</span>
-              <span className="text-sm font-medium text-slate-900">{batch.name}</span>
+              <span className="font-bold text-slate-500 sm:w-28 shrink-0">Batch:</span>
+              <span className="font-semibold text-slate-900">{batch.name}</span>
             </div>
           )}
 
-          {/* Day */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Day of Week:</span>
-            <span className="text-sm font-medium text-slate-900">{dayOfWeek}</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Day of Week:</span>
+            <span className="font-semibold text-slate-900">{dayOfWeek}</span>
           </div>
 
-          {/* Time Slot */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Time Slot:</span>
-            <span className="text-sm font-medium text-slate-900 font-mono">{startTime} – {endTime}</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Time Slot:</span>
+            <span className="font-bold text-slate-900 font-mono">{startTime} – {endTime}</span>
           </div>
 
-          {/* Session Type */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Session Type:</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Session Type:</span>
             <div>
               <span
-                className={`inline-block px-3 py-1 rounded-md text-xs font-semibold ${sessionType === "PRACTICAL"
-                    ? "bg-amber-50 text-amber-600 border border-amber-200"
-                    : "bg-blue-50 text-blue-600 border border-blue-200"
-                  }`}
+                className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                  sessionType === "PRACTICAL"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
               >
                 {sessionType}
               </span>
             </div>
           </div>
 
-          {/* Academic Year */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-            <span className="text-sm font-semibold text-slate-500 sm:w-28 shrink-0">Academic Year:</span>
-            <span className="text-sm font-medium text-slate-900">{academicYear}</span>
+            <span className="font-bold text-slate-500 sm:w-28 shrink-0">Academic Year:</span>
+            <span className="font-semibold text-slate-900">{academicYear}</span>
           </div>
         </div>
       </div>
@@ -716,91 +545,40 @@ export default function TeacherMarkAttendance() {
   return (
     <DashboardLayout
       title="Mark Attendance"
-      subtitle="Select your teaching session to mark attendance"
+      subtitle="Select teaching session and mark attendance"
       sidebarItems={sidebarItems}
     >
-
-
-      {/* Error Alert */}
       {error && (
-        <div style={{ marginBottom: "20px" }}>
-          <Alert type="error" message="Error" description={error} />
+        <div className="mb-6">
+          <Alert type="error" message={error} />
         </div>
       )}
 
-      {/* Loading State */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 20px" }}>
+        <div className="flex items-center justify-center py-16">
           <LoadingSpinner />
-          <p style={{ marginTop: "16px", color: theme.colors.text.secondary }}>
-            Loading your teaching sessions...
-          </p>
         </div>
       ) : (
         <>
-          {/* No Assignments State */}
           {assignments.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "60px 20px",
-                backgroundColor: theme.colors.surface,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: "12px",
-              }}
-            >
-              <p style={{ fontSize: "48px", marginBottom: "16px" }}>📭</p>
-              <h3
-                style={{
-                  fontSize: "18px",
-                  fontWeight: "600",
-                  color: theme.colors.text.primary,
-                  marginBottom: "8px",
-                }}
-              >
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-xs">
+              <Inbox size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
+              <h3 className="text-lg font-bold text-slate-900 mb-1">
                 No Teaching Sessions Assigned
               </h3>
-              <p style={{ fontSize: "14px", color: theme.colors.text.secondary }}>
-                You don't have any active teaching assignments for this academic year.
-                <br />
-                Please contact the admin if you believe this is an error.
+              <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-md mx-auto">
+                You do not have any active teaching assignments for this academic year. Please contact the administrator.
               </p>
             </div>
           ) : (
             <>
-              {/* Step 1: Dropdown Section */}
-              <div className="bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm mb-5">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <span
-                    style={{
-                      backgroundColor: theme.colors.primary,
-                      color: "white",
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                    }}
-                  >
+              {/* Step 1: Session Selector */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs shadow-xs">
                     1
                   </span>
-                  <h3
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: theme.colors.text.primary,
-                    }}
-                  >
+                  <h3 className="text-base font-bold text-slate-900">
                     Select Teaching Session
                   </h3>
                 </div>
@@ -814,61 +592,27 @@ export default function TeacherMarkAttendance() {
                 </div>
 
                 {assignments.length > 0 && (
-                  <p
-                    style={{
-                      marginTop: "16px",
-                      fontSize: "13px",
-                      color: theme.colors.text.secondary,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    💡 Found {assignments.length} teaching session
-                    {assignments.length > 1 ? "s" : ""} assigned to you
+                  <p className="mt-4 text-xs text-slate-500 font-medium italic">
+                    Found {assignments.length} teaching session{assignments.length > 1 ? "s" : ""} assigned to you
                   </p>
                 )}
               </div>
 
               {/* Step 2: Date Selection */}
               <div
-                className="bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm mb-5 transition-opacity duration-200"
-                style={{
-                  opacity: selectedAssignment ? 1 : 0.5,
-                  pointerEvents: selectedAssignment ? "auto" : "none",
-                }}
+                className={`bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5 transition-opacity duration-200 ${
+                  selectedAssignment ? "opacity-100" : "opacity-50 pointer-events-none"
+                }`}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "16px",
-                  }}
-                >
+                <div className="flex items-center gap-3 mb-4">
                   <span
-                    style={{
-                      backgroundColor: selectedAssignment
-                        ? theme.colors.primary
-                        : theme.colors.neutral[300],
-                      color: "white",
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                    }}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-white font-bold text-xs shadow-xs ${
+                      selectedAssignment ? "bg-blue-600" : "bg-slate-300"
+                    }`}
                   >
                     2
                   </span>
-                  <h3
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: theme.colors.text.primary,
-                    }}
-                  >
+                  <h3 className="text-base font-bold text-slate-900">
                     Select Attendance Date
                   </h3>
                 </div>
@@ -882,45 +626,17 @@ export default function TeacherMarkAttendance() {
                   max={getDatePickerLimits().max}
                   required
                   disabled={!selectedAssignment}
+                  icon={<Calendar size={16} />}
                 />
 
-                {/* Helper text */}
-                <p
-                  style={{
-                    marginTop: "8px",
-                    fontSize: "13px",
-                    color: theme.colors.text.secondary,
-                    fontStyle: "italic",
-                  }}
-                >
-                  📅 You can mark attendance only for today or yesterday
+                <p className="mt-2 text-xs text-slate-500 font-medium">
+                  You can mark attendance only for today or yesterday
                 </p>
 
-                {/* Date validation error */}
                 {dateError && (
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      padding: "12px 16px",
-                      backgroundColor: theme.colors.error + "10",
-                      border: `1px solid ${theme.colors.error}`,
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "start",
-                      gap: "8px",
-                    }}
-                  >
-                    <span style={{ fontSize: "16px" }}>⚠️</span>
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: theme.colors.error,
-                        margin: 0,
-                        fontWeight: "500",
-                      }}
-                    >
-                      {dateError}
-                    </p>
+                  <div className="mt-3 p-3.5 bg-rose-50 border border-rose-200/80 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 font-semibold">
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                    <p>{dateError}</p>
                   </div>
                 )}
               </div>
@@ -930,84 +646,33 @@ export default function TeacherMarkAttendance() {
 
               {/* Step 3: Student List */}
               {selectedAssignment && selectedDate && !dateError && (
-                <div className="mt-6 bg-white rounded-2xl border border-slate-100/80 p-5 sm:p-6 shadow-sm">
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        backgroundColor: theme.colors.primary,
-                        color: "white",
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                      }}
-                    >
+                <div className="mt-6 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-xs shadow-xs">
                       3
                     </span>
-                    <h3
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        color: theme.colors.text.primary,
-                      }}
-                    >
-                      Student List
+                    <h3 className="text-base font-bold text-slate-900">
+                      Student Attendance Roll Call
                     </h3>
                   </div>
 
-                  {/* Student Error */}
                   {studentError && (
-                    <div style={{ marginBottom: "16px" }}>
-                      <Alert
-                        type="error"
-                        message="Error"
-                        description={studentError}
-                      />
+                    <div className="mb-4">
+                      <Alert type="error" message={studentError} />
                     </div>
                   )}
 
-                  {/* Loading Students */}
                   {loadingStudents ? (
-                    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <div className="flex flex-col items-center justify-center py-12">
                       <LoadingSpinner />
-                      <p
-                        style={{
-                          marginTop: "12px",
-                          color: theme.colors.text.secondary,
-                        }}
-                      >
-                        Loading students...
+                      <p className="mt-3 text-xs font-semibold text-slate-500">
+                        Loading student list...
                       </p>
                     </div>
                   ) : students.length === 0 && !studentError ? (
-                    <div
-                      style={{
-                        textAlign: "center",
-                        padding: "40px 20px",
-                        backgroundColor: theme.colors.neutral[50],
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <p style={{ fontSize: "48px", marginBottom: "12px" }}>
-                        📚
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: theme.colors.text.secondary,
-                        }}
-                      >
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-8 text-center">
+                      <BookOpen size={36} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                      <p className="text-xs font-semibold text-slate-600">
                         No students found for this session
                       </p>
                     </div>
@@ -1026,10 +691,10 @@ export default function TeacherMarkAttendance() {
                 </div>
               )}
 
-              {/* Continue Button */}
+              {/* Action Button */}
               {selectedAssignment && (
-                <div className="mt-6 flex flex-wrap justify-end gap-3 w-full border-t border-slate-200 pt-6">
-                  <button
+                <div className="mt-6 flex flex-wrap justify-end gap-3 w-full border-t border-slate-200/80 pt-6">
+                  <Button
                     onClick={handleSaveAttendance}
                     disabled={
                       !isContinueEnabled() ||
@@ -1039,32 +704,23 @@ export default function TeacherMarkAttendance() {
                       students.length === 0 ||
                       savingReport
                     }
-                    className={`
-                      flex items-center justify-center gap-2 w-full sm:w-auto px-6 sm:px-8 py-3.5 
-                      rounded-xl font-extrabold text-sm sm:text-base transition-all duration-300 shadow-sm
-                      ${isContinueEnabled()
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md hover:-translate-y-0.5'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'}
-                    `}
+                    loading={savingReport}
+                    variant="primary"
+                    size="lg"
                   >
-                    {savingReport ? (
-                      <>
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Saving...
-                      </>
-                    ) : "Save Attendance & Generate Report"}
-                  </button>
+                    Save Attendance & Generate Report
+                  </Button>
                 </div>
               )}
 
               {reportError && (
-                <div style={{ marginTop: "16px" }}>
-                  <Alert type="error" message="Error" description={reportError} />
+                <div className="mt-4">
+                  <Alert type="error" message={reportError} />
                 </div>
               )}
               {reportSuccess && (
-                <div style={{ marginTop: "16px" }}>
-                  <Alert type="success" message="Success" description={reportSuccess} />
+                <div className="mt-4">
+                  <Alert type="success" message={reportSuccess} />
                 </div>
               )}
 
@@ -1085,7 +741,6 @@ export default function TeacherMarkAttendance() {
         </>
       )}
 
-      {/* Edit Attendance Modal Component */}
       <EditAttendanceModal
         isOpen={showEditModal}
         onClose={handleCancelEdit}
@@ -1093,26 +748,10 @@ export default function TeacherMarkAttendance() {
         isLoading={savingReport}
       />
 
-      {/* Info Footer */}
-      <div
-        style={{
-          marginTop: "32px",
-          padding: "16px",
-          backgroundColor: theme.colors.neutral[50],
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: "8px",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "13px",
-            color: theme.colors.text.secondary,
-            margin: 0,
-          }}
-        >
-          <strong>ℹ️ Note:</strong> Only your assigned teaching sessions for the
-          current academic year are displayed. After selecting a session, you'll be
-          able to mark attendance for students in the next step.
+      <div className="mt-8 p-4 bg-white border border-slate-200/80 rounded-2xl text-xs text-slate-600 flex gap-2.5 items-start font-medium shadow-xs">
+        <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong>Note:</strong> Only your assigned teaching sessions for the current academic year are displayed. After marking attendance, click "Save Attendance" to log entries and generate reports.
         </p>
       </div>
     </DashboardLayout>

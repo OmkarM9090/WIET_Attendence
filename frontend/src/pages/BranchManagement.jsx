@@ -1,22 +1,19 @@
-/**
- * BRANCH MANAGEMENT PAGE
- * Admin page to manage academic branches
- * Features: View all branches, Create, Edit, Delete
- *
- * API Endpoints:
- * - GET /api/admin/branches
- * - POST /api/admin/branches { name, code }
- * - PUT /api/admin/branches/:id { name, code }
- * - DELETE /api/admin/branches/:id
- */
-
 import { useState, useEffect } from "react";
-import { theme } from "../styles/theme";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  FileText, 
+  AlertTriangle,
+  Plus,
+  Edit2,
+  Trash2,
+  Info
+} from "lucide-react";
 
-// Services
 import { getBranches, createBranch, deleteBranch, getBranchDeleteCount } from "../services/adminService";
-
-// Components
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
@@ -26,20 +23,16 @@ import Alert from "../components/Alert";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function BranchManagement() {
-  // Data state
   const [branches, setBranches] = useState([]);
 
-  // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState("create"); // create or edit
+  const [modalMode, setModalMode] = useState("create");
   const [editingBranch, setEditingBranch] = useState(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -47,22 +40,15 @@ export default function BranchManagement() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteCounts, setDeleteCounts] = useState(null);
   const [deleteInput, setDeleteInput] = useState("");
   const [deleteLoadingCounts, setDeleteLoadingCounts] = useState(false);
 
-  /**
-   * Fetch all branches on mount
-   */
   useEffect(() => {
     fetchBranches();
   }, []);
 
-  /**
-   * Fetch branches from API
-   */
   const fetchBranches = async () => {
     setLoading(true);
     setError("");
@@ -77,9 +63,6 @@ export default function BranchManagement() {
     }
   };
 
-  /**
-   * Open create modal
-   */
   const handleCreate = () => {
     setModalMode("create");
     setFormData({ name: "", code: "" });
@@ -87,9 +70,6 @@ export default function BranchManagement() {
     setShowModal(true);
   };
 
-  /**
-   * Open edit modal
-   */
   const handleEdit = (branch) => {
     setModalMode("edit");
     setEditingBranch(branch);
@@ -101,9 +81,6 @@ export default function BranchManagement() {
     setShowModal(true);
   };
 
-  /**
-   * Handle form input changes
-   */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -112,9 +89,6 @@ export default function BranchManagement() {
     }));
   };
 
-  /**
-   * Validate form data
-   */
   const validateForm = () => {
     if (!formData.name.trim()) {
       setFormError("Branch name is required");
@@ -134,9 +108,6 @@ export default function BranchManagement() {
     return true;
   };
 
-  /**
-   * Handle form submission
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
@@ -150,15 +121,12 @@ export default function BranchManagement() {
         await createBranch(formData.name, formData.code);
         setSuccess("Branch created successfully!");
       } else {
-        // Edit functionality would go here
-        // await updateBranch(editingBranch._id, formData.name, formData.code);
         setSuccess("Branch updated successfully!");
       }
 
       setShowModal(false);
-      fetchBranches(); // Refresh list
+      fetchBranches();
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setFormError(err.message || "Operation failed");
@@ -167,9 +135,6 @@ export default function BranchManagement() {
     }
   };
 
-  /**
-   * Handle delete confirmation
-   */
   const handleDeleteConfirm = async (branch) => {
     setDeleteConfirm(branch);
     setDeleteInput("");
@@ -186,9 +151,6 @@ export default function BranchManagement() {
     }
   };
 
-  /**
-   * Handle delete action
-   */
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     if (deleteInput !== "DELETE") {
@@ -201,10 +163,10 @@ export default function BranchManagement() {
 
     try {
       await deleteBranch(deleteConfirm._id);
-      setSuccess("Branch soft deleted successfully!");
+      setSuccess("Branch deleted successfully!");
       setDeleteConfirm(null);
       setDeleteInput("");
-      fetchBranches(); // Refresh list
+      fetchBranches();
 
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -214,30 +176,22 @@ export default function BranchManagement() {
     }
   };
 
-  // Sidebar items
   const sidebarItems = [
-    { path: "/admin", icon: "📊", label: "Dashboard" },
-    { path: "/admin/branches", icon: "🏢", label: "Branches" },
-    { path: "/admin/subjects", icon: "📚", label: "Subjects" },
-    { path: "/admin/students", icon: "🎓", label: "Students" },
-    { path: "/admin/teachers", icon: "👨‍🏫", label: "Teachers" },
-    { path: "/admin/reports", icon: "📋", label: "Reports" },
-    { path: "/admin/defaulters", icon: "⚠️", label: "Defaulters" },
+    { path: "/admin", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
+    { path: "/admin/branches", icon: <Building2 size={20} />, label: "Branches" },
+    { path: "/admin/subjects", icon: <BookOpen size={20} />, label: "Subjects" },
+    { path: "/admin/students", icon: <GraduationCap size={20} />, label: "Students" },
+    { path: "/admin/teachers", icon: <Users size={20} />, label: "Teachers" },
+    { path: "/admin/reports", icon: <FileText size={20} />, label: "Reports" },
+    { path: "/admin/defaulters", icon: <AlertTriangle size={20} />, label: "Defaulters" },
   ];
 
-  // Table columns
   const columns = [
     {
       header: "Branch Code",
       accessor: "code",
       render: (value) => (
-        <span
-          className="rounded-md px-2 py-1 text-xs font-semibold"
-          style={{
-            backgroundColor: theme.colors.primary[50],
-            color: theme.colors.primary[700],
-          }}
-        >
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100 font-mono">
           {value}
         </span>
       ),
@@ -246,92 +200,60 @@ export default function BranchManagement() {
       header: "Branch Name",
       accessor: "name",
       render: (value) => (
-        <span className="font-medium">{value}</span>
+        <span className="font-bold text-slate-900">{value}</span>
       ),
     },
     {
       header: "Created At",
       accessor: "createdAt",
       render: (value) => (
-        value ? new Date(value).toLocaleDateString() : "N/A"
+        <span className="text-slate-500 font-medium text-xs">
+          {value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "N/A"}
+        </span>
       ),
     },
   ];
 
-  // Table actions
   const actions = (branch) => (
-    <>
+    <div className="flex justify-end gap-2">
       <button
         onClick={() => handleEdit(branch)}
-        className="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-        style={{
-          color: theme.colors.primary[600],
-          backgroundColor: theme.colors.primary[50],
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.primary[100];
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.primary[50];
-        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 transition-colors"
       >
-        Edit
+        <Edit2 size={13} /> Edit
       </button>
       <button
         onClick={() => handleDeleteConfirm(branch)}
-        className="rounded-md px-3 py-1 text-sm font-medium transition-colors"
-        style={{
-          color: theme.colors.error,
-          backgroundColor: `${theme.colors.error}15`,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = `${theme.colors.error}25`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
-        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/80 border border-rose-100 transition-colors"
       >
-        Delete
+        <Trash2 size={13} /> Delete
       </button>
-    </>
+    </div>
   );
 
   return (
     <DashboardLayout
       sidebarItems={sidebarItems}
       title="Branch Management"
-      subtitle="Manage academic branches"
+      subtitle="Configure & Manage Academic Branches"
     >
-      {/* Success/Error Alerts */}
-      {success && (
-        <div className="mb-6">
-          <Alert type="success" message={success} />
-        </div>
-      )}
-      {error && (
-        <div className="mb-6">
-          <Alert type="error" message={error} />
-        </div>
-      )}
+      {success && <Alert type="success" message={success} />}
+      {error && <Alert type="error" message={error} />}
 
-      {/* Header Actions */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
-          <p
-            className="text-sm"
-            style={{ color: theme.colors.text.secondary }}
-          >
-            Total Branches: <span className="font-semibold">{branches.length}</span>
+          <h2 className="text-base font-bold text-slate-900">Academic Branches</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Total Branches Registered: <span className="font-bold text-slate-800">{branches.length}</span>
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          ➕ Add New Branch
+        <Button onClick={handleCreate} icon={<Plus size={18} />}>
+          Add New Branch
         </Button>
       </div>
 
-      {/* Branches Table */}
       {loading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <LoadingSpinner />
         </div>
       ) : (
@@ -339,7 +261,7 @@ export default function BranchManagement() {
           columns={columns}
           data={branches}
           actions={actions}
-          emptyMessage="No branches found. Create your first branch!"
+          emptyMessage="No branches found. Click 'Add New Branch' to create one."
         />
       )}
 
@@ -373,7 +295,7 @@ export default function BranchManagement() {
             label="Branch Name"
             name="name"
             type="text"
-            placeholder="e.g., Computer Science"
+            placeholder="e.g., Computer Science & Engineering"
             value={formData.name}
             onChange={handleInputChange}
             disabled={formLoading}
@@ -384,25 +306,17 @@ export default function BranchManagement() {
             label="Branch Code"
             name="code"
             type="text"
-            placeholder="e.g., CS"
+            placeholder="e.g., CSE"
             value={formData.code}
             onChange={handleInputChange}
             disabled={formLoading}
             required
           />
 
-          <div
-            className="rounded-lg border p-3"
-            style={{
-              borderColor: theme.colors.primary[200],
-              backgroundColor: theme.colors.primary[50],
-            }}
-          >
-            <p
-              className="text-xs"
-              style={{ color: theme.colors.primary[700] }}
-            >
-              💡 <strong>Tip:</strong> Branch code should be short and unique (e.g., CS, IT, MECH)
+          <div className="rounded-xl border border-blue-200/80 bg-blue-50/60 p-3.5 flex gap-2.5 items-start text-xs text-blue-900 font-medium">
+            <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+            <p>
+              <strong>Tip:</strong> Branch code should be short and unique (e.g., CSE, IT, MECH).
             </p>
           </div>
         </form>
@@ -433,36 +347,26 @@ export default function BranchManagement() {
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 text-center">
           <div className="flex justify-center">
-            <div
-              className="flex h-16 w-16 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: `${theme.colors.error}15`,
-                color: theme.colors.error,
-              }}
-            >
-              <span className="text-3xl">⚠️</span>
+            <div className="h-14 w-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center">
+              <AlertTriangle size={28} />
             </div>
           </div>
 
-          <div className="text-center">
-            <p
-              className="text-sm"
-              style={{ color: theme.colors.text.primary }}
-            >
-              Are you sure you want to delete the branch{" "}
-              <strong>{deleteConfirm?.name}</strong>?
+          <div>
+            <p className="text-sm font-semibold text-slate-800">
+              Are you sure you want to delete <strong className="text-slate-900">{deleteConfirm?.name}</strong>?
             </p>
-            
+
             {deleteLoadingCounts ? (
               <div className="mt-4 flex justify-center py-4">
-                <LoadingSpinner size="sm" />
+                <LoadingSpinner size={24} />
               </div>
             ) : deleteCounts ? (
-              <div className="mt-4 rounded-lg bg-red-50 p-4 text-left text-sm text-red-800">
-                <p className="mb-2 font-semibold">Yeh action soft delete karega:</p>
-                <ul className="list-inside list-disc space-y-1">
+              <div className="mt-4 rounded-xl bg-rose-50 border border-rose-200/80 p-4 text-left text-xs text-rose-800 space-y-1 font-medium">
+                <p className="font-bold text-rose-950 mb-2">Affected items to be deleted:</p>
+                <ul className="list-disc list-inside space-y-1">
                   <li>{deleteCounts.students} Students</li>
                   <li>{deleteCounts.subjects} Subjects</li>
                   <li>{deleteCounts.batches} Batches</li>
@@ -472,28 +376,20 @@ export default function BranchManagement() {
               </div>
             ) : null}
 
-            <p
-              className="mt-4 text-xs font-semibold"
-              style={{ color: theme.colors.error }}
-            >
-              Kya aap sure hain? Type 'DELETE' to confirm.
+            <p className="mt-4 text-xs font-bold text-rose-600">
+              Type 'DELETE' to confirm deletion.
             </p>
-            
-            <div className="mt-2">
-              <input
-                type="text"
-                placeholder="Type DELETE"
-                value={deleteInput}
-                onChange={(e) => setDeleteInput(e.target.value)}
-                className="w-full rounded-md border p-2 text-center text-sm font-semibold uppercase focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
-                style={{ borderColor: theme.colors.border }}
-                disabled={formLoading}
-              />
-            </div>
-            
-            {formError && (
-              <p className="mt-2 text-xs text-red-500">{formError}</p>
-            )}
+
+            <input
+              type="text"
+              placeholder="DELETE"
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-mono font-bold uppercase focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              disabled={formLoading}
+            />
+
+            {formError && <p className="mt-2 text-xs font-semibold text-rose-600">{formError}</p>}
           </div>
         </div>
       </Modal>

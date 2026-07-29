@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "../components/DashboardLayout";
-import DashboardHeader from "../components/DashboardHeader";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import FormSelect from "../components/FormSelect";
@@ -8,9 +7,18 @@ import FormInput from "../components/FormInput";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Alert from "../components/Alert";
 import StatsCard from "../components/StatsCard";
-import { theme } from "../styles/theme";
 import { getMonthlyAttendance } from "../services/attendanceService";
 import axiosInstance from "../utils/axios";
+import {
+  LayoutDashboard,
+  UserCheck,
+  History,
+  FileText,
+  BookOpen,
+  BarChart3,
+  AlertTriangle,
+  Filter
+} from "lucide-react";
 
 export default function TeacherReports() {
   const [loading, setLoading] = useState(true);
@@ -18,23 +26,20 @@ export default function TeacherReports() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Teacher data
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState("");
 
-  // Filters
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [academicYear, setAcademicYear] = useState("2024-25");
 
-  // Report data
   const [reportData, setReportData] = useState(null);
 
   const sidebarItems = [
-    { label: "Dashboard", path: "/teacher", icon: "🏠" },
-    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: "✓" },
-    { label: "View Attendance", path: "/teacher/attendance-history", icon: "📋" },
-    { label: "Reports", path: "/teacher/reports", icon: "📊" },
+    { label: "Dashboard", path: "/teacher", icon: <LayoutDashboard size={18} /> },
+    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: <UserCheck size={18} /> },
+    { label: "View Attendance", path: "/teacher/attendance-history", icon: <History size={18} /> },
+    { label: "Reports", path: "/teacher/reports", icon: <FileText size={18} /> },
   ];
 
   useEffect(() => {
@@ -143,10 +148,9 @@ export default function TeacherReports() {
   return (
     <DashboardLayout 
       title="Attendance Reports"
-      subtitle="Generate detailed attendance reports for your classes"
+      subtitle="Generate detailed attendance reports for your assigned classes"
       sidebarItems={sidebarItems}
     >
-
       {error && (
         <div className="mb-4">
           <Alert message={error} type="error" onClose={() => setError("")} />
@@ -161,11 +165,8 @@ export default function TeacherReports() {
 
       {/* Filters */}
       <Card className="mb-6">
-        <h3
-          className="mb-4 text-lg font-semibold"
-          style={{ color: theme.colors.text.primary }}
-        >
-          Generate Report
+        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <Filter size={15} /> Generate Attendance Report
         </h3>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -206,11 +207,12 @@ export default function TeacherReports() {
           />
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-5 flex justify-end">
           <Button
             onClick={handleGenerateReport}
             disabled={generating || !selectedAssignment}
             loading={generating}
+            variant="primary"
           >
             {generating ? "Generating..." : "Generate Report"}
           </Button>
@@ -220,23 +222,23 @@ export default function TeacherReports() {
       {/* Report Summary */}
       {reportData && (
         <>
-          <div className="mb-6 grid gap-6 md:grid-cols-3">
+          <div className="mb-6 grid gap-4 md:grid-cols-3">
             <StatsCard
               title="Total Lectures"
               value={stats.totalLectures}
-              icon="📚"
+              icon={<BookOpen size={22} />}
               color="primary"
             />
             <StatsCard
               title="Avg Attendance"
               value={`${stats.avgAttendance}%`}
-              icon="📈"
+              icon={<BarChart3 size={22} />}
               color="success"
             />
             <StatsCard
               title="Low Attendance"
               value={stats.lowAttendance}
-              icon="⚠️"
+              icon={<AlertTriangle size={22} />}
               color="warning"
             />
           </div>
@@ -245,67 +247,40 @@ export default function TeacherReports() {
           {assignment && (
             <Card className="mb-6">
               <div className="mb-4">
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: theme.colors.text.primary }}
-                >
-                  Report Details
+                <h3 className="text-sm font-bold text-slate-900">
+                  Report Summary Details
                 </h3>
               </div>
-              <div className="grid gap-3 md:grid-cols-4">
-                <div>
-                  <div
-                    className="text-xs font-medium uppercase"
-                    style={{ color: theme.colors.text.secondary }}
-                  >
+              <div className="grid gap-4 md:grid-cols-4 text-xs">
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div className="font-bold uppercase tracking-wider text-slate-500 text-[11px]">
                     Subject
                   </div>
-                  <div
-                    className="text-sm font-semibold"
-                    style={{ color: theme.colors.text.primary }}
-                  >
+                  <div className="font-extrabold text-slate-900 mt-0.5">
                     {assignment.subject?.name} ({assignment.subject?.code})
                   </div>
                 </div>
-                <div>
-                  <div
-                    className="text-xs font-medium uppercase"
-                    style={{ color: theme.colors.text.secondary }}
-                  >
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div className="font-bold uppercase tracking-wider text-slate-500 text-[11px]">
                     Class
                   </div>
-                  <div
-                    className="text-sm font-semibold"
-                    style={{ color: theme.colors.text.primary }}
-                  >
+                  <div className="font-extrabold text-slate-900 mt-0.5">
                     {assignment.branch?.name} {assignment.year}-{assignment.division}
                   </div>
                 </div>
-                <div>
-                  <div
-                    className="text-xs font-medium uppercase"
-                    style={{ color: theme.colors.text.secondary }}
-                  >
-                    Period
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div className="font-bold uppercase tracking-wider text-slate-500 text-[11px]">
+                    Date Range
                   </div>
-                  <div
-                    className="text-sm font-semibold"
-                    style={{ color: theme.colors.text.primary }}
-                  >
+                  <div className="font-extrabold text-slate-900 mt-0.5">
                     {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
                   </div>
                 </div>
-                <div>
-                  <div
-                    className="text-xs font-medium uppercase"
-                    style={{ color: theme.colors.text.secondary }}
-                  >
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div className="font-bold uppercase tracking-wider text-slate-500 text-[11px]">
                     Academic Year
                   </div>
-                  <div
-                    className="text-sm font-semibold"
-                    style={{ color: theme.colors.text.primary }}
-                  >
+                  <div className="font-extrabold text-slate-900 mt-0.5">
                     {academicYear}
                   </div>
                 </div>
@@ -317,98 +292,55 @@ export default function TeacherReports() {
           {reportData.subjects && reportData.subjects.length > 0 && (
             <Card>
               <div className="mb-4 flex items-center justify-between">
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: theme.colors.text.primary }}
-                >
-                  Student-wise Attendance
+                <h3 className="text-sm font-bold text-slate-900">
+                  Student Attendance Breakdown
                 </h3>
               </div>
 
-              {reportData.subjects.map((subject, idx) => (
+              {reportData.subjects.map((subj, idx) => (
                 <div key={idx} className="mb-6 last:mb-0">
                   <div className="mb-3 flex items-center justify-between">
-                    <h4
-                      className="font-semibold"
-                      style={{ color: theme.colors.text.primary }}
-                    >
-                      {subject.subject?.name || "Subject"} ({subject.subject?.code || ""})
+                    <h4 className="text-xs font-bold text-slate-900">
+                      {subj.subject?.name || "Subject"} ({subj.subject?.code || ""})
                     </h4>
-                    <span
-                      className="text-sm"
-                      style={{ color: theme.colors.text.secondary }}
-                    >
-                      Total Lectures: {subject.totalLectures || 0}
+                    <span className="text-xs font-semibold text-slate-500">
+                      Total Lectures: {subj.totalLectures || 0}
                     </span>
                   </div>
 
-                  {subject.students && subject.students.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead
-                          style={{
-                            backgroundColor: theme.colors.neutral[50],
-                            borderBottom: `2px solid ${theme.colors.border}`,
-                          }}
-                        >
+                  {subj.students && subj.students.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
                           <tr>
-                            {["Roll No", "Student Name", "Attended", "Total", "Percentage"].map(
-                              (label) => (
-                                <th
-                                  key={label}
-                                  className="px-4 py-2 text-left text-xs font-semibold uppercase"
-                                  style={{ color: theme.colors.text.secondary }}
-                                >
-                                  {label}
-                                </th>
-                              )
-                            )}
+                            <th className="px-4 py-2.5 text-left">Roll No</th>
+                            <th className="px-4 py-2.5 text-left">Student Name</th>
+                            <th className="px-4 py-2.5 text-left">Attended</th>
+                            <th className="px-4 py-2.5 text-left">Total</th>
+                            <th className="px-4 py-2.5 text-left">Percentage</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {subject.students.map((student, studentIdx) => {
+                        <tbody className="divide-y divide-slate-100 bg-white font-medium">
+                          {subj.students.map((student, studentIdx) => {
                             const percentage = student.percentage || 0;
-                            const color =
-                              percentage >= 75
-                                ? theme.colors.success
-                                : percentage >= 50
-                                ? theme.colors.warning
-                                : theme.colors.error;
-
                             return (
-                              <tr
-                                key={studentIdx}
-                                style={{ borderBottom: `1px solid ${theme.colors.border}` }}
-                              >
-                                <td
-                                  className="px-4 py-3 text-sm"
-                                  style={{ color: theme.colors.text.primary }}
-                                >
+                              <tr key={studentIdx} className="hover:bg-slate-50">
+                                <td className="px-4 py-2 font-mono font-bold text-slate-800">
                                   {student.rollNo || "N/A"}
                                 </td>
-                                <td
-                                  className="px-4 py-3 text-sm"
-                                  style={{ color: theme.colors.text.primary }}
-                                >
+                                <td className="px-4 py-2 font-bold text-slate-900">
                                   {student.name || "N/A"}
                                 </td>
-                                <td
-                                  className="px-4 py-3 text-sm"
-                                  style={{ color: theme.colors.text.primary }}
-                                >
+                                <td className="px-4 py-2 text-slate-700">
                                   {student.attended || 0}
                                 </td>
-                                <td
-                                  className="px-4 py-3 text-sm"
-                                  style={{ color: theme.colors.text.primary }}
-                                >
-                                  {subject.totalLectures || 0}
+                                <td className="px-4 py-2 text-slate-700">
+                                  {subj.totalLectures || 0}
                                 </td>
-                                <td
-                                  className="px-4 py-3 text-sm font-semibold"
-                                  style={{ color }}
-                                >
-                                  {percentage.toFixed(1)}%
+                                <td className="px-4 py-2 font-bold">
+                                  <span className={percentage >= 75 ? "text-emerald-600" : "text-rose-600"}>
+                                    {percentage.toFixed(1)}%
+                                  </span>
                                 </td>
                               </tr>
                             );
@@ -417,10 +349,7 @@ export default function TeacherReports() {
                       </table>
                     </div>
                   ) : (
-                    <p
-                      className="text-center text-sm"
-                      style={{ color: theme.colors.text.secondary }}
-                    >
+                    <p className="text-center text-xs font-medium text-slate-400 py-4">
                       No student data available
                     </p>
                   )}
@@ -433,16 +362,13 @@ export default function TeacherReports() {
 
       {!reportData && !generating && (
         <Card>
-          <div className="py-12 text-center">
-            <div className="mb-4 text-6xl">📊</div>
-            <h3
-              className="mb-2 text-lg font-semibold"
-              style={{ color: theme.colors.text.primary }}
-            >
+          <div className="py-12 text-center text-slate-400">
+            <BarChart3 size={36} className="mx-auto mb-2 opacity-40 text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-700 mb-1">
               No Report Generated
             </h3>
-            <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
-              Select a class, date range, and click "Generate Report" to view attendance statistics
+            <p className="text-xs text-slate-500 font-medium">
+              Select a class, date range, and click "Generate Report" to view attendance statistics.
             </p>
           </div>
         </Card>

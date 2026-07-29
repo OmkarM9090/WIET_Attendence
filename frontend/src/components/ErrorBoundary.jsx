@@ -1,5 +1,5 @@
 import React from 'react';
-import { theme } from '../styles/theme';
+import { AlertTriangle } from 'lucide-react';
 import Button from './Button';
 
 class ErrorBoundary extends React.Component {
@@ -26,8 +26,8 @@ class ErrorBoundary extends React.Component {
         <div className="flex h-screen w-full flex-col items-center justify-center p-6 bg-slate-50">
           <div className="max-w-md text-center rounded-2xl bg-white p-8 shadow-xl border border-slate-100">
             <div className="mb-6 flex justify-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-red-500 text-4xl">
-                ⚠️
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 border border-rose-100">
+                <AlertTriangle size={32} />
               </div>
             </div>
             <h2 className="mb-2 text-2xl font-bold text-slate-800">Something went wrong</h2>

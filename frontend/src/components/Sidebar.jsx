@@ -1,49 +1,27 @@
-/**
- * SIDEBAR COMPONENT
- * Navigation sidebar for Admin/Teacher/Student dashboards
- * Shows menu items based on user role
- * Highlights active route
- */
-
 import { Link, useLocation } from "react-router-dom";
-import { theme } from "../styles/theme";
-import { X } from "lucide-react";
+import { X, GraduationCap, ChevronRight } from "lucide-react";
 
 export default function Sidebar({ items, onClose }) {
   const location = useLocation();
 
-  /**
-   * Check if menu item is active based on current route
-   */
   const isActive = (path) => {
     return location.pathname === path;
   };
 
   return (
-    <aside
-      className="flex h-full flex-col shadow-xl z-20 w-[280px]"
-      style={{
-        backgroundColor: "#1E293B",
-        borderRight: `1px solid rgba(255,255,255,0.05)`,
-      }}
-    >
-      {/* Logo/Brand Section */}
-      <div
-        className="flex items-center justify-between p-6"
-        style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}
-      >
+    <aside className="flex h-full flex-col shadow-2xl z-30 w-[280px] bg-slate-900 text-slate-300 border-r border-slate-800">
+      {/* Brand Header */}
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800/80">
         <div className="flex items-center gap-3">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-500/30"
-          >
-            <span className="text-xl">📚</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/25">
+            <GraduationCap size={22} className="stroke-[2.2]" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white tracking-wide">
-              WIET System
+            <h2 className="text-base font-bold text-white tracking-wide">
+              WIET Attendance
             </h2>
             <p className="text-xs text-slate-400 font-medium">
-              Attendance Manager
+              Management Portal
             </p>
           </div>
         </div>
@@ -51,71 +29,63 @@ export default function Sidebar({ items, onClose }) {
         {/* Mobile Close Button */}
         <button
           onClick={onClose}
-          className="md:hidden text-slate-400 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors focus:outline-none"
+          className="md:hidden text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-lg transition-colors focus:outline-none"
           aria-label="Close sidebar"
         >
           <X size={20} />
         </button>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto p-4">
-        <ul className="space-y-1">
-          {items.map((item, index) => {
-            const active = isActive(item.path);
+      {/* Navigation Links */}
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 custom-scrollbar">
+        <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+          Navigation Menu
+        </div>
+        {items.map((item, index) => {
+          const active = isActive(item.path);
 
-            return (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  onClick={onClose}
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all duration-300 min-h-[44px]"
-                  style={{
-                    backgroundColor: active ? "rgba(79, 70, 229, 0.15)" : "transparent",
-                    color: active ? "#818cf8" : "#94a3b8",
-                    fontWeight: active ? 600 : 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-                      e.currentTarget.style.color = "#f1f5f9";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = "#94a3b8";
-                    }
-                  }}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="text-sm">{item.label}</span>
-                  {item.badge && (
-                    <span
-                      className="ml-auto rounded-full px-2 py-1 text-xs font-semibold"
-                      style={{
-                        backgroundColor: theme.colors.error,
-                        color: theme.colors.text.inverse,
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+          return (
+            <Link
+              key={index}
+              to={item.path}
+              onClick={onClose}
+              className={`group flex items-center gap-3.5 rounded-xl px-3.5 py-3 text-sm font-medium transition-all duration-200 min-h-[44px] relative ${
+                active
+                  ? "bg-blue-600/15 text-blue-400 font-semibold shadow-sm border border-blue-500/20"
+                  : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+              }`}
+            >
+              {/* Active Indicator Bar */}
+              {active && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-blue-500 shadow-sm" />
+              )}
+
+              <span className={`text-lg transition-transform duration-200 group-hover:scale-110 ${active ? "text-blue-400" : "text-slate-400"}`}>
+                {typeof item.icon === "string" ? item.icon : item.icon}
+              </span>
+              
+              <span className="truncate flex-1">{item.label}</span>
+
+              {item.badge && (
+                <span className="ml-auto rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 text-xs font-bold">
+                  {item.badge}
+                </span>
+              )}
+
+              {active && (
+                <ChevronRight size={14} className="text-blue-400 opacity-80" />
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Footer */}
-      <div
-        className="p-4 mt-auto"
-        style={{ borderTop: `1px solid rgba(255,255,255,0.05)` }}
-      >
-        <p className="text-center text-xs text-slate-500 font-medium tracking-wide">
-          © 2026 WIET SYSTEM
-        </p>
+      {/* Footer Info */}
+      <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span className="font-medium tracking-wide">WIET System</span>
+          <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-400">v2.0</span>
+        </div>
       </div>
     </aside>
   );

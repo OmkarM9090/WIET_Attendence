@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
   getClassInfo, 
@@ -8,7 +8,7 @@ import {
 } from '../../services/adminService';
 
 const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
-  const [step, setStep] = useState(1); // 1: Select Class, 2: Upload File, 3: Preview
+  const [step, setStep] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('');
@@ -30,7 +30,6 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     setTimeout(() => setSuccessMsg(''), 5000);
   };
   
-  // Fetch class info when all 3 fields selected
   useEffect(() => {
     if (selectedBranch && selectedYear && selectedDivision) {
       fetchClassInfo();
@@ -65,7 +64,6 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
     
-    // Validate file
     if (!selectedFile.name.endsWith('.xlsx')) {
       showError('Only .xlsx files supported');
       return;
@@ -78,19 +76,16 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     
     setFile(selectedFile);
     
-    // Parse for preview
     try {
       const buffer = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       
-      // Skip header rows (first 3 rows are class info + instructions + headers)
       const dataRows = rows.slice(3).filter(row => row.length > 0);
       
-      // Parse and validate
       const parsed = dataRows.map((row, idx) => {
-        const rowNum = idx + 4; // Since we skipped 3 rows
+        const rowNum = idx + 4;
         const rollNo = row[0]?.toString().trim() || '';
         const name = row[1]?.toString().trim() || '';
         const email = row[2]?.toString().trim() || '';
@@ -116,7 +111,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
       });
       
       setPreviewData(parsed);
-      setStep(3); // Move to preview
+      setStep(3);
     } catch (error) {
       showError('Failed to parse Excel file');
       console.error(error);
@@ -151,27 +146,27 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
   const invalidCount = previewData?.filter(r => !r.isValid).length || 0;
   
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto pt-10 pb-10">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full flex flex-col my-auto max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto pt-10 pb-10">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full flex flex-col my-auto max-h-[90vh] border border-slate-200/80">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-purple-50 shrink-0">
+        <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <button onClick={() => step === 3 && !uploadResult ? setStep(1) : onClose()} className="p-1 hover:bg-slate-200 rounded-lg transition-colors mr-1">
-                 {step === 3 && !uploadResult ? <ArrowLeft className="w-5 h-5"/> : '🎯'}
+                 {step === 3 && !uploadResult ? <ArrowLeft className="w-4 h-4"/> : <Upload className="w-5 h-5 text-blue-600"/>}
               </button>
               Quick Upload Students
             </h2>
             {classInfo && (
-              <p className="text-sm text-slate-600 mt-1 ml-9">
+              <p className="text-xs text-slate-500 font-medium mt-0.5 ml-9">
                 {classInfo.displayName}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
           >
             <X className="w-5 h-5" />
           </button>
@@ -179,39 +174,36 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
         
         {/* Messages */}
         {errorMsg && (
-          <div className="bg-red-50 text-red-600 p-3 mx-6 mt-4 rounded-lg flex items-center gap-2 border border-red-200">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="bg-rose-50 text-rose-700 text-xs font-semibold p-3 mx-6 mt-4 rounded-xl flex items-center gap-2 border border-rose-200">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             {errorMsg}
           </div>
         )}
         {successMsg && (
-          <div className="bg-green-50 text-green-600 p-3 mx-6 mt-4 rounded-lg flex items-center gap-2 border border-green-200">
-            <CheckCircle className="w-5 h-5" />
+          <div className="bg-emerald-50 text-emerald-700 text-xs font-semibold p-3 mx-6 mt-4 rounded-xl flex items-center gap-2 border border-emerald-200">
+            <CheckCircle className="w-4 h-4 shrink-0" />
             {successMsg}
           </div>
         )}
         
         {/* Body */}
         <div className="p-6 overflow-y-auto flex-1">
-          
-          {/* Step 1: Class Selection */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                  📍 Step 1: Select Class Details
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
+                  Step 1: Select Class Details
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Branch */}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Branch <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Branch <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={selectedBranch}
                       onChange={(e) => setSelectedBranch(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium"
                     >
                       <option value="">-- Select --</option>
                       {branches.map(b => (
@@ -222,15 +214,14 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                     </select>
                   </div>
                   
-                  {/* Year */}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Year <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Year <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={selectedYear}
                       onChange={(e) => setSelectedYear(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium"
                     >
                       <option value="">-- Select --</option>
                       <option value="1">1st Year (FE)</option>
@@ -240,15 +231,14 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                     </select>
                   </div>
                   
-                  {/* Division */}
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Division <span className="text-red-500">*</span>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Division <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={selectedDivision}
                       onChange={(e) => setSelectedDivision(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium"
                     >
                       <option value="">-- Select --</option>
                       <option value="A">Division A</option>
@@ -258,18 +248,16 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                   </div>
                 </div>
                 
-                {/* Class Info Display */}
                 {classInfo && (
-                  <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div className="mt-4 bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4">
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                       <div>
-                        <p className="font-semibold text-green-900">
+                        <p className="font-bold text-emerald-950 text-xs">
                           {classInfo.displayName}
                         </p>
-                        <p className="text-sm text-green-700 mt-1">
-                          Academic Year: {classInfo.academicYear} | 
-                          Current Students: {classInfo.currentStudentCount}
+                        <p className="text-xs text-emerald-700 mt-0.5 font-medium">
+                          Academic Year: {classInfo.academicYear} | Current Students: {classInfo.currentStudentCount}
                         </p>
                       </div>
                     </div>
@@ -279,19 +267,18 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
               
               {classInfo && (
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                    📥 Step 2: Download Template
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    Step 2: Download Template
                   </h3>
                   
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                    <p className="text-sm text-blue-900 mb-3">
-                      Template mein sirf <strong>Roll No</strong> aur <strong>Name of the Student</strong> mandatory hai. 
-                      Email aur Batch optional hain (auto-generate honge if empty).
+                  <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-4">
+                    <p className="text-xs text-blue-900 font-medium mb-3">
+                      Roll No and Name are mandatory. Email and Batch are optional.
                     </p>
                     
                     <button
                       onClick={handleDownloadTemplate}
-                      className="bg-white border border-blue-300 hover:bg-blue-50 text-blue-700 font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                      className="bg-white border border-blue-300 hover:bg-blue-50 text-blue-700 font-semibold px-4 py-2 rounded-lg text-xs flex items-center gap-2 transition-colors shadow-2xs"
                     >
                       <Download className="w-4 h-4" />
                       Download Template for {classInfo.displayName}
@@ -302,22 +289,22 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
               
               {classInfo && (
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                    📤 Step 3: Upload Excel File
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    Step 3: Upload Excel File
                   </h3>
                   
-                  <label className="block border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
+                  <label className="block border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50/30 transition-colors">
                     <input
                       type="file"
                       accept=".xlsx"
                       onChange={handleFileSelect}
                       className="hidden"
                     />
-                    <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                    <p className="text-slate-700 font-medium">
+                    <Upload className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-slate-700">
                       Click to upload or drag file here
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
                       .xlsx files only, max 5MB
                     </p>
                   </label>
@@ -326,69 +313,66 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
             </div>
           )}
           
-          {/* Step 3: Preview (Show parsed data) */}
           {step === 3 && previewData && !uploadResult && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                <FileSpreadsheet className="w-6 h-6 text-indigo-600" />
+              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <FileSpreadsheet className="w-6 h-6 text-blue-600 shrink-0" />
                 <div className="flex-1">
-                  <p className="font-semibold text-slate-900">{file.name}</p>
-                  <p className="text-sm text-slate-600">
-                    {(file.size / 1024).toFixed(1)} KB | 
-                    Total: {previewData.length} | 
-                    Valid: {validCount} ✅ | 
-                    Invalid: {invalidCount} ❌
+                  <p className="font-bold text-xs text-slate-900">{file.name}</p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {(file.size / 1024).toFixed(1)} KB | Total: {previewData.length} | Valid: {validCount} | Invalid: {invalidCount}
                   </p>
                 </div>
               </div>
               
               {invalidCount > 0 && (
-                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                <div className="bg-amber-50 border border-amber-200/80 p-3.5 rounded-xl text-xs">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold text-amber-900">
-                        {invalidCount} rows have issues
+                      <p className="font-bold text-amber-950">
+                        {invalidCount} rows have validation issues
                       </p>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Sirf valid rows upload honge. Invalid rows skip ho jayenge.
+                      <p className="text-amber-800 mt-0.5 font-medium">
+                        Only valid rows will be uploaded. Invalid rows will be skipped.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
               
-              {/* Preview Table */}
               <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto max-h-80">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                <div className="overflow-x-auto max-h-80 custom-scrollbar">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 text-slate-700 font-bold">
                       <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Row</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Roll No</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Name of the Student</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Email</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Batch</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-700">Status</th>
+                        <th className="px-4 py-2.5 text-left">Row</th>
+                        <th className="px-4 py-2.5 text-left">Roll No</th>
+                        <th className="px-4 py-2.5 text-left">Name</th>
+                        <th className="px-4 py-2.5 text-left">Email</th>
+                        <th className="px-4 py-2.5 text-left">Batch</th>
+                        <th className="px-4 py-2.5 text-left">Status</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100 bg-white font-medium">
                       {previewData.map((row) => (
                         <tr 
                           key={row.rowNumber}
-                          className={`border-b border-slate-100 ${!row.isValid ? 'bg-red-50' : ''}`}
+                          className={`hover:bg-slate-50 ${!row.isValid ? 'bg-rose-50/40' : ''}`}
                         >
-                          <td className="px-4 py-2 text-slate-600">{row.rowNumber}</td>
-                          <td className="px-4 py-2 font-mono">{row.rollNo || '-'}</td>
-                          <td className="px-4 py-2">{row.name || '-'}</td>
-                          <td className="px-4 py-2 text-xs text-slate-600">{row.email}</td>
+                          <td className="px-4 py-2 text-slate-500">{row.rowNumber}</td>
+                          <td className="px-4 py-2 font-mono font-bold">{row.rollNo || '-'}</td>
+                          <td className="px-4 py-2 font-bold text-slate-900">{row.name || '-'}</td>
+                          <td className="px-4 py-2 font-mono text-slate-500">{row.email}</td>
                           <td className="px-4 py-2">{row.batch || '-'}</td>
                           <td className="px-4 py-2">
                             {row.isValid ? (
-                              <span className="text-green-600 font-medium">✅ OK</span>
+                              <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                                <CheckCircle2 size={13} /> OK
+                              </span>
                             ) : (
-                              <span className="text-red-600 font-medium" title={row.errors.join(', ')}>
-                                ❌ Error
+                              <span className="inline-flex items-center gap-1 text-rose-700 font-bold" title={row.errors.join(', ')}>
+                                <XCircle size={13} /> Error
                               </span>
                             )}
                           </td>
@@ -401,25 +385,24 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
             </div>
           )}
           
-          {/* Success Result View */}
           {uploadResult && (
             <div className="text-center py-8">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+              <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-600">
+                <CheckCircle className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                Upload Successful!
+              <h3 className="text-xl font-bold text-slate-900 mb-1">
+                Upload Completed
               </h3>
-              <p className="text-lg text-slate-600 mb-8">
+              <p className="text-xs font-semibold text-slate-600 mb-6">
                 Added {uploadResult.summary.successful} students to {classInfo.displayName}
               </p>
               
               {uploadResult.summary.failed > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left mb-6 max-h-48 overflow-y-auto">
-                  <h4 className="font-semibold text-red-800 mb-2">
-                    ⚠️ {uploadResult.summary.failed} rows failed:
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-left mb-6 max-h-48 overflow-y-auto text-xs">
+                  <h4 className="font-bold text-rose-900 mb-2">
+                    {uploadResult.summary.failed} rows failed:
                   </h4>
-                  <ul className="text-sm text-red-700 space-y-1 list-disc pl-5">
+                  <ul className="text-rose-800 space-y-1 list-disc pl-5 font-medium">
                     {uploadResult.failedRows.map((f, i) => (
                       <li key={i}>{f.simpleMessage}</li>
                     ))}
@@ -429,7 +412,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
               
               <button 
                 onClick={onClose}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-8 rounded-lg transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-xl text-xs transition-colors shadow-2xs"
               >
                 Done
               </button>
@@ -437,12 +420,11 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
           )}
         </div>
         
-        {/* Footer Actions (Preview Mode) */}
         {step === 3 && !uploadResult && (
-          <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
+          <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
             <button 
               onClick={() => setStep(1)}
-              className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium transition-colors"
+              className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 text-xs font-bold transition-colors"
               disabled={uploading}
             >
               Cancel
@@ -450,7 +432,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
             <button 
               onClick={handleUpload}
               disabled={validCount === 0 || uploading}
-              className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-2 shadow-2xs"
             >
               {uploading ? (
                 <>
@@ -458,7 +440,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                   Uploading...
                 </>
               ) : (
-                `✅ Add ${validCount} Students to ${classInfo.displayName.split(' ')[0]}`
+                `Add ${validCount} Students to ${classInfo.displayName.split(' ')[0]}`
               )}
             </button>
           </div>

@@ -1,7 +1,10 @@
-export default function LoadingSpinner() {
+import { Loader2 } from "lucide-react";
+
+export default function LoadingSpinner({ label = "Loading...", size = 32 }) {
   return (
-    <div className="flex items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
+    <div className="flex flex-col items-center justify-center p-8 gap-3">
+      <Loader2 size={size} className="animate-spin text-blue-600" />
+      {label && <p className="text-xs font-semibold text-slate-500 tracking-wide">{label}</p>}
     </div>
   );
 }

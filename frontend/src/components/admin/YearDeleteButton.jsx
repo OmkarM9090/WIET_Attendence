@@ -9,7 +9,7 @@ export default function YearDeleteButton({ yearCode, count = 0, onClick }) {
       onClick={onClick}
       disabled={disabled}
       title={disabled ? `No ${yearCode} students to delete` : `Delete ${yearCode} students`}
-      className="min-w-[140px] rounded-lg border-2 border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-700 transition-all hover:border-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-white"
+      className="min-w-[140px] rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700 shadow-xs transition-all duration-200 hover:border-rose-400 hover:bg-rose-50/80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-rose-200 disabled:hover:bg-white"
     >
       <span className="flex items-center justify-center gap-2 whitespace-nowrap">
         <Trash2 className="h-4 w-4" />

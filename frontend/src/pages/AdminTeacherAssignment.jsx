@@ -1,18 +1,5 @@
-/**
- * ADMIN TEACHER ASSIGNMENT PAGE
- * Manage timetable assignments for teachers
- * 
- * Features:
- * - Create teacher assignments with full timetable details
- * - View all assignments in sortable table
- * - Real-time validation
- * - Responsive design
- */
-
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../utils/axios";
-import { theme } from "../styles/theme";
-
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
@@ -20,8 +7,19 @@ import FormSelect from "../components/FormSelect";
 import Alert from "../components/Alert";
 import Table from "../components/Table";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  Calendar, 
+  FileText, 
+  AlertTriangle,
+  Plus,
+  Clock
+} from "lucide-react";
 
-// Constants
 const DAY_OPTIONS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 const SESSION_TYPES = ["LECTURE", "PRACTICAL"];
 const YEAR_OPTIONS = [1, 2, 3, 4];
@@ -37,21 +35,18 @@ const timeToMinutes = (timeStr) => {
 };
 
 export default function AdminTeacherAssignment() {
-  // Dropdown data
   const [teachers, setTeachers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [batches, setBatches] = useState([]);
   const [assignments, setAssignments] = useState([]);
 
-  // UI state
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Form state
   const [formData, setFormData] = useState({
     teacherId: "",
     branchId: "",
@@ -69,18 +64,15 @@ export default function AdminTeacherAssignment() {
   const [validationErrors, setValidationErrors] = useState({});
 
   const sidebarItems = [
-    { label: "Dashboard", path: "/admin", icon: "🏠" },
-    { label: "Branches", path: "/admin/branches", icon: "🌿" },
-    { label: "Subjects", path: "/admin/subjects", icon: "📘" },
-    { label: "Students", path: "/admin/students", icon: "🎓" },
-    { label: "Teachers", path: "/admin/teachers", icon: "👩‍🏫" },
-    { label: "Timetable", path: "/admin/teacher-assignments", icon: "🗓️" },
-    { label: "Reports", path: "/admin/defaulters", icon: "📊" },
+    { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={18} /> },
+    { label: "Branches", path: "/admin/branches", icon: <Building2 size={18} /> },
+    { label: "Subjects", path: "/admin/subjects", icon: <BookOpen size={18} /> },
+    { label: "Students", path: "/admin/students", icon: <GraduationCap size={18} /> },
+    { label: "Teachers", path: "/admin/teachers", icon: <Users size={18} /> },
+    { label: "Timetable", path: "/admin/teacher-assignments", icon: <Calendar size={18} /> },
+    { label: "Reports", path: "/admin/defaulters", icon: <AlertTriangle size={18} /> },
   ];
 
-  // ============================================
-  // INITIALIZATION
-  // ============================================
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -101,10 +93,6 @@ export default function AdminTeacherAssignment() {
 
     initialize();
   }, []);
-
-  // ============================================
-  // API CALLS
-  // ============================================
 
   const fetchTeachers = async () => {
     try {
@@ -156,7 +144,6 @@ export default function AdminTeacherAssignment() {
       const data = response?.data?.data || response?.data || [];
       const dataArray = Array.isArray(data) ? data : [];
       
-      // Sort by day and time
       const sorted = [...dataArray].sort((a, b) => {
         const dayA = dayOrder.get(a.dayOfWeek) ?? 99;
         const dayB = dayOrder.get(b.dayOfWeek) ?? 99;
@@ -173,28 +160,21 @@ export default function AdminTeacherAssignment() {
     }
   };
 
-  // ============================================
-  // FORM HANDLERS
-  // ============================================
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      // Auto-clear batch when switching to LECTURE
       if (name === "sessionType" && value === "LECTURE") {
         next.batchId = "";
       }
       return next;
     });
-    // Clear validation error for this field
     setValidationErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateForm = () => {
     const errors = {};
 
-    // Required fields
     if (!formData.teacherId) errors.teacherId = "Teacher is required";
     if (!formData.branchId) errors.branchId = "Branch is required";
     if (!formData.subjectId) errors.subjectId = "Subject is required";
@@ -205,7 +185,6 @@ export default function AdminTeacherAssignment() {
     if (!formData.endTime) errors.endTime = "End time is required";
     if (!formData.academicYear) errors.academicYear = "Academic year is required";
 
-    // Session type validation
     if (formData.sessionType === "PRACTICAL" && !formData.batchId) {
       errors.batchId = "Batch is required for PRACTICAL sessions";
     }
@@ -213,7 +192,6 @@ export default function AdminTeacherAssignment() {
       errors.batchId = "Batch must be empty for LECTURE sessions";
     }
 
-    // Time validation
     if (formData.startTime && formData.endTime) {
       const start = timeToMinutes(formData.startTime);
       const end = timeToMinutes(formData.endTime);
@@ -222,7 +200,6 @@ export default function AdminTeacherAssignment() {
       }
     }
 
-    // Academic year format (YYYY-YYYY)
     if (formData.academicYear) {
       const yearRegex = /^\d{4}-\d{4}$/;
       if (!yearRegex.test(formData.academicYear)) {
@@ -278,23 +255,18 @@ export default function AdminTeacherAssignment() {
         academicYear: formData.academicYear,
       });
 
-      setSuccess("✅ Teacher assignment created successfully!");
+      setSuccess("Teacher assignment created successfully!");
       resetForm();
       await fetchAssignments();
       
-      // Auto-clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Failed to create assignment";
-      setError(`❌ ${errorMsg}`);
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
   };
-
-  // ============================================
-  // DROPDOWN OPTIONS (MEMOIZED)
-  // ============================================
 
   const teacherOptions = useMemo(
     () => [
@@ -378,10 +350,6 @@ export default function AdminTeacherAssignment() {
     []
   );
 
-  // ============================================
-  // TABLE COLUMNS (MEMOIZED)
-  // ============================================
-
   const tableColumns = useMemo(
     () => [
       {
@@ -389,7 +357,11 @@ export default function AdminTeacherAssignment() {
         accessor: "teacherId",
         render: (value) => {
           if (!value) return "N/A";
-          return `${value.name || "Unknown"} (${value.email || ""})`;
+          return (
+            <div className="font-bold text-slate-900">
+              {value.name || "Unknown"} <span className="text-xs text-slate-500 font-medium">({value.email || ""})</span>
+            </div>
+          );
         },
       },
       {
@@ -418,35 +390,27 @@ export default function AdminTeacherAssignment() {
       {
         header: "Day",
         accessor: "dayOfWeek",
+        render: (value) => <span className="font-semibold text-slate-700">{value}</span>,
       },
       {
         header: "Time",
         accessor: "startTime",
-        render: (value, row) => `${value || "—"} - ${row.endTime || ""}`,
+        render: (value, row) => (
+          <span className="font-mono text-xs font-bold text-slate-700">
+            {value || "—"} - {row.endTime || ""}
+          </span>
+        ),
       },
       {
         header: "Type",
         accessor: "sessionType",
         render: (value) => (
           <span
-            style={{
-              padding: "4px 8px",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontWeight: "600",
-              backgroundColor:
-                value === "PRACTICAL"
-                  ? "#fef3c7"
-                  : value === "LECTURE"
-                  ? "#dbeafe"
-                  : "#f3f4f6",
-              color:
-                value === "PRACTICAL"
-                  ? "#92400e"
-                  : value === "LECTURE"
-                  ? "#1e40af"
-                  : "#4b5563",
-            }}
+            className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${
+              value === "PRACTICAL"
+                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                : "bg-blue-50 text-blue-700 border border-blue-200"
+            }`}
           >
             {value}
           </span>
@@ -455,246 +419,159 @@ export default function AdminTeacherAssignment() {
       {
         header: "Academic Year",
         accessor: "academicYear",
+        render: (value) => <span className="text-xs text-slate-500 font-medium">{value}</span>
       },
     ],
     []
   );
 
-  // ============================================
-  // RENDER
-  // ============================================
-
   return (
-    <DashboardLayout sidebarItems={sidebarItems} title="Timetable Management">
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Page Header */}
-        <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "8px" }}>
-            🗓️ Timetable Management
-          </h1>
-          <p style={{ color: theme.colors.text.secondary, fontSize: "14px" }}>
-            Create and manage teacher assignments across days and time slots
-          </p>
-        </div>
+    <DashboardLayout 
+      sidebarItems={sidebarItems} 
+      title="Timetable Management"
+      subtitle="Schedule & Assign Teacher Timetable Slots"
+    >
+      <div className="space-y-6">
+        {error && <Alert message={error} type="error" onClose={() => setError("")} />}
+        {success && <Alert message={success} type="success" onClose={() => setSuccess("")} />}
 
-        {/* Alerts */}
-        {error && (
-          <Alert message={error} type="error" onClose={() => setError("")} />
-        )}
-        {success && (
-          <Alert message={success} type="success" onClose={() => setSuccess("")} />
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px" }}>
-          {/* ======================== FORM SECTION ======================== */}
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              border: `1px solid ${theme.colors.border}`,
-              padding: "24px",
-            }}
-          >
-            <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "20px" }}>
-              ➕ Create Assignment
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Form Card */}
+          <div className="lg:col-span-5 bg-white border border-slate-200/60 rounded-xl p-6 shadow-2xs">
+            <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Plus size={16} className="text-blue-600" /> Create Assignment
             </h2>
 
             {loadingDropdowns ? (
-              <LoadingSpinner />
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
             ) : (
-              <form onSubmit={handleSubmit}>
-                {/* Row 1: Teacher, Branch, Subject */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", marginBottom: "16px" }}>
-                  <div>
-                    <FormSelect
-                      label="Teacher"
-                      name="teacherId"
-                      value={formData.teacherId}
-                      onChange={handleChange}
-                      options={teacherOptions}
-                      required
-                    />
-                    {validationErrors.teacherId && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.teacherId}
-                      </p>
-                    )}
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <FormSelect
+                  label="Teacher"
+                  name="teacherId"
+                  value={formData.teacherId}
+                  onChange={handleChange}
+                  options={teacherOptions}
+                  required
+                />
+                {validationErrors.teacherId && (
+                  <p className="text-xs text-rose-600 font-semibold">{validationErrors.teacherId}</p>
+                )}
 
-                  <div>
-                    <FormSelect
-                      label="Branch"
-                      name="branchId"
-                      value={formData.branchId}
-                      onChange={handleChange}
-                      options={branchOptions}
-                      required
-                    />
-                    {validationErrors.branchId && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.branchId}
-                      </p>
-                    )}
-                  </div>
+                <FormSelect
+                  label="Branch"
+                  name="branchId"
+                  value={formData.branchId}
+                  onChange={handleChange}
+                  options={branchOptions}
+                  required
+                />
+                {validationErrors.branchId && (
+                  <p className="text-xs text-rose-600 font-semibold">{validationErrors.branchId}</p>
+                )}
 
-                  <div>
-                    <FormSelect
-                      label="Subject"
-                      name="subjectId"
-                      value={formData.subjectId}
-                      onChange={handleChange}
-                      options={subjectOptions}
-                      required
-                    />
-                    {validationErrors.subjectId && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.subjectId}
-                      </p>
-                    )}
-                  </div>
+                <FormSelect
+                  label="Subject"
+                  name="subjectId"
+                  value={formData.subjectId}
+                  onChange={handleChange}
+                  options={subjectOptions}
+                  required
+                />
+                {validationErrors.subjectId && (
+                  <p className="text-xs text-rose-600 font-semibold">{validationErrors.subjectId}</p>
+                )}
+
+                <div className="grid grid-cols-3 gap-3">
+                  <FormSelect
+                    label="Year"
+                    name="year"
+                    value={formData.year}
+                    onChange={handleChange}
+                    options={yearOptions}
+                    required
+                  />
+                  <FormSelect
+                    label="Division"
+                    name="division"
+                    value={formData.division}
+                    onChange={handleChange}
+                    options={divisionOptions}
+                    required
+                  />
+                  <FormSelect
+                    label="Type"
+                    name="sessionType"
+                    value={formData.sessionType}
+                    onChange={handleChange}
+                    options={sessionTypeOptions}
+                    required
+                  />
                 </div>
 
-                {/* Row 2: Year, Division, Session Type */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                {formData.sessionType === "PRACTICAL" && (
                   <div>
                     <FormSelect
-                      label="Year"
-                      name="year"
-                      value={formData.year}
+                      label="Batch (Practical Only)"
+                      name="batchId"
+                      value={formData.batchId}
                       onChange={handleChange}
-                      options={yearOptions}
-                      required
+                      options={batchOptions}
+                      required={formData.sessionType === "PRACTICAL"}
                     />
-                    {validationErrors.year && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.year}
-                      </p>
+                    {validationErrors.batchId && (
+                      <p className="text-xs text-rose-600 font-semibold">{validationErrors.batchId}</p>
                     )}
                   </div>
+                )}
 
-                  <div>
-                    <FormSelect
-                      label="Division"
-                      name="division"
-                      value={formData.division}
-                      onChange={handleChange}
-                      options={divisionOptions}
-                      required
-                    />
-                    {validationErrors.division && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.division}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <FormSelect
-                      label="Session Type"
-                      name="sessionType"
-                      value={formData.sessionType}
-                      onChange={handleChange}
-                      options={sessionTypeOptions}
-                      required
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormSelect
+                    label="Day of Week"
+                    name="dayOfWeek"
+                    value={formData.dayOfWeek}
+                    onChange={handleChange}
+                    options={dayOptions}
+                    required
+                  />
+                  <FormInput
+                    label="Academic Year"
+                    name="academicYear"
+                    type="text"
+                    placeholder="2025-2026"
+                    value={formData.academicYear}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
 
-                {/* Row 3: Batch (conditional), Day, Academic Year */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-                  {formData.sessionType === "PRACTICAL" && (
-                    <div>
-                      <FormSelect
-                        label="Batch (Practical Only)"
-                        name="batchId"
-                        value={formData.batchId}
-                        onChange={handleChange}
-                        options={batchOptions}
-                        required={formData.sessionType === "PRACTICAL"}
-                      />
-                      {validationErrors.batchId && (
-                        <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                          {validationErrors.batchId}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <div>
-                    <FormSelect
-                      label="Day of Week"
-                      name="dayOfWeek"
-                      value={formData.dayOfWeek}
-                      onChange={handleChange}
-                      options={dayOptions}
-                      required
-                    />
-                    {validationErrors.dayOfWeek && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.dayOfWeek}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <FormInput
-                      label="Academic Year"
-                      name="academicYear"
-                      type="text"
-                      placeholder="2025-2026"
-                      value={formData.academicYear}
-                      onChange={handleChange}
-                      required
-                    />
-                    {validationErrors.academicYear && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.academicYear}
-                      </p>
-                    )}
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormInput
+                    label="Start Time"
+                    name="startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={handleChange}
+                    required
+                  />
+                  <FormInput
+                    label="End Time"
+                    name="endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
 
-                {/* Row 4: Start Time, End Time */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
-                  <div>
-                    <FormInput
-                      label="Start Time"
-                      name="startTime"
-                      type="time"
-                      value={formData.startTime}
-                      onChange={handleChange}
-                      required
-                    />
-                    {validationErrors.startTime && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.startTime}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <FormInput
-                      label="End Time"
-                      name="endTime"
-                      type="time"
-                      value={formData.endTime}
-                      onChange={handleChange}
-                      required
-                    />
-                    {validationErrors.endTime && (
-                      <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
-                        {validationErrors.endTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   loading={submitting}
                   disabled={submitting}
-                  style={{ width: "100%" }}
+                  fullWidth
+                  variant="primary"
                 >
                   Assign Teacher
                 </Button>
@@ -702,36 +579,23 @@ export default function AdminTeacherAssignment() {
             )}
           </div>
 
-          {/* ======================== TABLE SECTION ======================== */}
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "12px",
-              border: `1px solid ${theme.colors.border}`,
-              padding: "24px",
-            }}
-          >
-            <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "20px" }}>
-              📋 Assigned Timetable
+          {/* Table Card */}
+          <div className="lg:col-span-7 bg-white border border-slate-200/60 rounded-xl p-6 shadow-2xs">
+            <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Calendar size={16} className="text-blue-600" /> Assigned Timetables
             </h2>
 
             {loadingAssignments ? (
-              <LoadingSpinner />
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
             ) : assignments.length === 0 ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 20px",
-                  color: theme.colors.text.secondary,
-                }}
-              >
-                <p style={{ fontSize: "48px", marginBottom: "8px" }}>📭</p>
-                <p>No teaching assignments created yet</p>
+              <div className="text-center py-12 text-slate-400">
+                <Clock size={36} className="mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-semibold text-slate-500">No teaching assignments created yet</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <Table columns={tableColumns} data={assignments} />
-              </div>
+              <Table columns={tableColumns} data={assignments} />
             )}
           </div>
         </div>

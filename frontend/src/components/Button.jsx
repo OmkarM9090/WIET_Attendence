@@ -1,10 +1,4 @@
-/**
- * BUTTON COMPONENT
- * Reusable button with variants and loading state
- * Theme-controlled styling
- */
-
-import { theme } from "../styles/theme";
+import { Loader2 } from "lucide-react";
 
 export default function Button({
   children,
@@ -16,131 +10,55 @@ export default function Button({
   loading = false,
   size = "md",
   className = "",
+  icon = null,
 }) {
-  // Base styles
-  const sizeStyles = {
-    sm: {
-      padding: "0.375rem 0.75rem",
-      fontSize: theme.typography.fontSize.xs,
-    },
-    md: {
-      padding: "0.625rem 1.5rem",
-      fontSize: theme.typography.fontSize.sm,
-    },
-    lg: {
-      padding: "0.875rem 2rem",
-      fontSize: theme.typography.fontSize.base,
-    },
+  const sizeClasses = {
+    sm: "px-3.5 py-1.5 text-xs font-bold rounded-lg min-h-[36px]",
+    md: "px-5 py-2 text-xs sm:text-sm font-bold rounded-xl min-h-[40px]",
+    lg: "px-6 py-2.5 text-sm sm:text-base font-bold rounded-xl min-h-[44px]",
   };
 
-  const baseStyles = {
-    ...sizeStyles[size] || sizeStyles.md,
-    borderRadius: theme.borderRadius.md,
-    fontWeight: theme.typography.fontWeight.medium,
-    transition: theme.transitions.base,
-    cursor: disabled || loading ? "not-allowed" : "pointer",
-    border: "1px solid transparent",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.5rem",
-    minHeight: "44px", // Better touch target for mobile
+  const variantClasses = {
+    primary:
+      "bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20 active:bg-blue-800 border border-blue-600",
+    secondary:
+      "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200/80 active:bg-slate-300",
+    outline:
+      "bg-transparent hover:bg-blue-50 text-blue-600 border border-blue-600/80 active:bg-blue-100/50",
+    danger:
+      "bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-500/20 active:bg-rose-800 border border-rose-600",
+    success:
+      "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20 active:bg-emerald-800 border border-emerald-600",
+    ghost:
+      "bg-transparent hover:bg-slate-100 text-slate-700 active:bg-slate-200 border border-transparent",
   };
 
-  // Variant styles
-  const getVariantStyles = () => {
-    if (disabled || loading) {
-      return {
-        backgroundColor: theme.colors.disabled,
-        color: theme.colors.text.secondary,
-        cursor: "not-allowed",
-        opacity: 0.6,
-      };
-    }
-
-    const variants = {
-      primary: {
-        backgroundColor: theme.colors.primary[500],
-        color: theme.colors.text.inverse,
-        hover: {
-          backgroundColor: theme.colors.primary[600],
-        },
-      },
-      secondary: {
-        backgroundColor: theme.colors.neutral[100],
-        color: theme.colors.text.primary,
-        hover: {
-          backgroundColor: theme.colors.neutral[200],
-        },
-      },
-      outline: {
-        backgroundColor: "transparent",
-        color: theme.colors.primary[500],
-        borderColor: theme.colors.primary[500],
-        hover: {
-          backgroundColor: theme.colors.primary[50],
-        },
-      },
-      danger: {
-        backgroundColor: theme.colors.error,
-        color: theme.colors.text.inverse,
-        hover: {
-          backgroundColor: "#dc2626",
-        },
-      },
-      success: {
-        backgroundColor: theme.colors.success,
-        color: theme.colors.text.inverse,
-        hover: {
-          backgroundColor: "#059669",
-        },
-      },
-    };
-
-    return variants[variant] || variants.primary;
-  };
-
-  const variantStyles = getVariantStyles();
-
-  const handleMouseEnter = (e) => {
-    if (!disabled && !loading && variantStyles.hover) {
-      Object.assign(e.currentTarget.style, variantStyles.hover);
-    }
-  };
-
-  const handleMouseLeave = (e) => {
-    if (!disabled && !loading) {
-      e.currentTarget.style.backgroundColor = variantStyles.backgroundColor;
-      if (variant === "outline") {
-        e.currentTarget.style.backgroundColor = "transparent";
-      }
-    }
-  };
+  const disabledClasses =
+    "bg-slate-200 text-slate-400 border-slate-200 cursor-not-allowed shadow-none opacity-70";
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${fullWidth ? 'w-full ' : ''}${className}`}
-      style={{
-        ...baseStyles,
-        ...variantStyles,
-        border: variant === "outline" ? `1px solid ${variantStyles.borderColor}` : "1px solid transparent",
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/25 ${
+        sizeClasses[size] || sizeClasses.md
+      } ${
+        disabled || loading
+          ? disabledClasses
+          : variantClasses[variant] || variantClasses.primary
+      } ${fullWidth ? "w-full" : ""} ${className}`}
     >
       {loading ? (
         <>
-          <div
-            className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-            style={{ opacity: 0.7 }}
-          />
+          <Loader2 size={16} className="animate-spin text-current shrink-0" />
           <span>Loading...</span>
         </>
       ) : (
-        children
+        <>
+          {icon && <span className="shrink-0">{icon}</span>}
+          {children}
+        </>
       )}
     </button>
   );

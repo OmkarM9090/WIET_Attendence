@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
-import DashboardHeader from "../components/DashboardHeader";
 import StatsCard from "../components/StatsCard";
 import Card from "../components/Card";
 import FormSelect from "../components/FormSelect";
@@ -9,8 +8,20 @@ import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Alert from "../components/Alert";
 import AttendanceDetailPanel from "../components/AttendanceDetailPanel";
-import { theme } from "../styles/theme";
 import { getTeacherAttendance } from "../services/attendanceService";
+import { 
+  LayoutDashboard, 
+  UserCheck, 
+  History, 
+  FileText, 
+  Search, 
+  BookOpen, 
+  TrendingUp, 
+  AlertTriangle,
+  Calendar,
+  Filter,
+  ChevronDown
+} from "lucide-react";
 
 export default function AttendanceHistory() {
   const [loading, setLoading] = useState(true);
@@ -27,10 +38,10 @@ export default function AttendanceHistory() {
   });
 
   const sidebarItems = [
-    { label: "Dashboard", path: "/teacher", icon: "🏠" },
-    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: "✓" },
-    { label: "View Attendance", path: "/teacher/attendance-history", icon: "📋" },
-    { label: "Reports", path: "/teacher/reports", icon: "📊" },
+    { label: "Dashboard", path: "/teacher", icon: <LayoutDashboard size={20} /> },
+    { label: "Mark Attendance", path: "/teacher/mark-attendance", icon: <UserCheck size={20} /> },
+    { label: "View Attendance", path: "/teacher/attendance-history", icon: <History size={20} /> },
+    { label: "Reports", path: "/teacher/reports", icon: <FileText size={20} /> },
   ];
 
   useEffect(() => {
@@ -107,8 +118,10 @@ export default function AttendanceHistory() {
 
   if (loading) {
     return (
-      <DashboardLayout sidebarItems={sidebarItems}>
-        <LoadingSpinner />
+      <DashboardLayout sidebarItems={sidebarItems} title="Attendance History">
+        <div className="flex justify-center py-16">
+          <LoadingSpinner />
+        </div>
       </DashboardLayout>
     );
   }
@@ -116,23 +129,27 @@ export default function AttendanceHistory() {
   return (
     <DashboardLayout 
       title="Attendance History"
-      subtitle="Review your past attendance sessions"
+      subtitle="Review past sessions, inspect roll calls, and export data"
       sidebarItems={sidebarItems}
     >
-
       {error && (
-        <div className="mb-4">
+        <div className="mb-6">
           <Alert message={error} type="error" onClose={() => setError("")} />
         </div>
       )}
 
-      <div className="mb-6 grid gap-6 md:grid-cols-3">
-        <StatsCard title="Total Sessions" value={summary.total} icon="📚" color="primary" />
-        <StatsCard title="Avg Attendance" value={`${summary.avg}%`} icon="📈" color="success" />
-        <StatsCard title="Total Absences" value={summary.absences} icon="⚠️" color="warning" />
+      {/* Summary Cards */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <StatsCard title="Total Sessions" value={summary.total} icon={<BookOpen size={24} />} color="primary" />
+        <StatsCard title="Avg Attendance" value={`${summary.avg}%`} icon={<TrendingUp size={24} />} color="success" />
+        <StatsCard title="Total Absences" value={summary.absences} icon={<AlertTriangle size={24} />} color="warning" />
       </div>
 
+      {/* Filter Section */}
       <Card className="mb-6">
+        <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <Filter size={14} /> Filter Sessions
+        </div>
         <div className="grid gap-4 md:grid-cols-5">
           <FormSelect
             label="Subject"
@@ -168,6 +185,7 @@ export default function AttendanceHistory() {
             placeholder="Subject or branch"
             value={filters.query}
             onChange={(e) => setFilters((prev) => ({ ...prev, query: e.target.value }))}
+            icon={<Search size={16} />}
           />
         </div>
         <div className="mt-4 flex justify-end">
@@ -182,42 +200,28 @@ export default function AttendanceHistory() {
         </div>
       </Card>
 
+      {/* Sessions Table */}
       {filteredSessions.length === 0 ? (
-        <Card>
-          <p className="text-center text-sm" style={{ color: theme.colors.text.secondary }}>
+        <Card className="text-center py-12">
+          <p className="text-sm font-semibold text-slate-500">
             No attendance sessions match the selected filters.
           </p>
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead
-                style={{
-                  backgroundColor: theme.colors.neutral[50],
-                  borderBottom: `2px solid ${theme.colors.border}`,
-                }}
-              >
-                <tr>
-                  {[
-                    "Date",
-                    "Subject",
-                    "Class",
-                    "Type",
-                    "Attendance",
-                    "Absentees",
-                  ].map((label) => (
-                    <th
-                      key={label}
-                      className="px-4 py-2 text-left text-xs font-semibold uppercase"
-                      style={{ color: theme.colors.text.secondary }}
-                    >
-                      {label}
-                    </th>
-                  ))}
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-600">
+                  <th className="px-6 py-3.5">Date</th>
+                  <th className="px-6 py-3.5">Subject</th>
+                  <th className="px-6 py-3.5">Class</th>
+                  <th className="px-6 py-3.5">Type</th>
+                  <th className="px-6 py-3.5">Attendance</th>
+                  <th className="px-6 py-3.5">Absentees</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredSessions.map((session) => {
                   const absent = session.absentStudents?.length || 0;
                   const present = (session.totalStudents || 0) - absent;
@@ -225,44 +229,47 @@ export default function AttendanceHistory() {
                     ? Math.round((present / session.totalStudents) * 100)
                     : 0;
 
+                  const isExpanded = expandedSessionId === session._id;
+
                   return (
                     <React.Fragment key={session._id}>
                       <tr
-                        onClick={() => setExpandedSessionId(expandedSessionId === session._id ? null : session._id)}
-                        className="hover:bg-indigo-50 transition-colors cursor-pointer group"
-                        style={{ 
-                          borderBottom: expandedSessionId === session._id ? 'none' : `1px solid ${theme.colors.border}`,
-                          backgroundColor: expandedSessionId === session._id ? '#f0fdf4' : 'transparent'
-                        }}
+                        onClick={() => setExpandedSessionId(isExpanded ? null : session._id)}
+                        className={`transition-colors duration-150 cursor-pointer group hover:bg-slate-50/80 ${
+                          isExpanded ? 'bg-blue-50/30' : ''
+                        }`}
                       >
-                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
-                          {new Date(session.date).toLocaleDateString("en-IN")}
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-800 whitespace-nowrap">
+                          {new Date(session.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="px-4 py-3 text-sm font-medium group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
-                          {session.subject?.name || "N/A"} ({session.subject?.code || ""})
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900 whitespace-nowrap">
+                          {session.subject?.name || "N/A"} <span className="text-slate-500 font-mono text-xs font-normal">({session.subject?.code || ""})</span>
                         </td>
-                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-700 whitespace-nowrap">
                           {session.branch?.code || session.branch?.name || ""} {session.year}-{session.division}
                         </td>
-                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
-                          {session.sessionType}
+                        <td className="px-6 py-4 text-sm whitespace-nowrap">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                            session.sessionType === "PRACTICAL"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-blue-50 text-blue-700 border border-blue-200"
+                          }`}>
+                            {session.sessionType}
+                          </span>
                         </td>
-                        <td
-                          className="px-4 py-3 text-sm font-medium group-hover:text-indigo-900 transition-colors"
-                          style={{
-                            color: percentage >= 75 ? theme.colors.success : theme.colors.error,
-                          }}
-                        >
-                          {present}/{session.totalStudents} ({percentage}%)
+                        <td className="px-6 py-4 text-sm font-bold whitespace-nowrap">
+                          <span className={percentage >= 75 ? "text-emerald-600" : "text-rose-600"}>
+                            {present}/{session.totalStudents} ({percentage}%)
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-sm group-hover:text-indigo-900 transition-colors" style={{ color: theme.colors.text.primary }}>
+                        <td className="px-6 py-4 text-sm font-semibold text-rose-600 whitespace-nowrap">
                           {absent}
                         </td>
                       </tr>
-                      {expandedSessionId === session._id && (
+                      {isExpanded && (
                         <tr>
-                          <td colSpan="6" className="p-0 border-b border-indigo-100">
-                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <td colSpan="6" className="p-0 border-b border-slate-200">
+                            <div className="animate-in fade-in duration-200">
                               <AttendanceDetailPanel 
                                 sessionId={session._id} 
                                 onClose={() => setExpandedSessionId(null)} 
@@ -277,7 +284,7 @@ export default function AttendanceHistory() {
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
     </DashboardLayout>
   );

@@ -1,12 +1,5 @@
-/**
- * MODAL COMPONENT
- * Reusable dialog/modal for forms and confirmations
- * Backdrop click to close, ESC key support
- */
-
 import { useEffect } from "react";
-import { theme } from "../styles/theme";
-import Button from "./Button";
+import { X } from "lucide-react";
 
 export default function Modal({
   isOpen,
@@ -16,7 +9,6 @@ export default function Modal({
   footer,
   size = "md",
 }) {
-  // Close on ESC key
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onClose();
@@ -33,7 +25,6 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  // Size variants
   const sizeClasses = {
     sm: "max-w-md",
     md: "max-w-lg",
@@ -42,10 +33,7 @@ export default function Modal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
         className="absolute inset-0"
@@ -53,68 +41,32 @@ export default function Modal({
         aria-hidden="true"
       />
 
-      {/* Modal Content */}
+      {/* Modal Card */}
       <div
-        className={`relative w-full ${sizeClasses[size]} rounded-lg`}
-        style={{
-          backgroundColor: theme.colors.background,
-          boxShadow: theme.shadows.xl,
-          maxHeight: "90vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className={`relative w-full ${sizeClasses[size] || sizeClasses.md} rounded-2xl bg-white shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden transform transition-all duration-200 scale-100`}
       >
         {/* Header */}
-        <div
-          className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: theme.colors.border }}
-        >
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: theme.colors.text.primary }}
-          >
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             {title}
           </h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 transition-colors"
-            style={{
-              color: theme.colors.text.secondary,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.hover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
+            className="rounded-xl p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors focus:outline-none"
+            aria-label="Close modal"
           >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              strokeWidth="2"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X size={20} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 custom-scrollbar text-slate-800">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div
-            className="border-t px-6 py-4"
-            style={{ borderColor: theme.colors.border }}
-          >
+          <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50 flex justify-end gap-3">
             {footer}
           </div>
         )}

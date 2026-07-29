@@ -11,7 +11,7 @@ import Card from "../components/Card";
 import { theme } from "../styles/theme";
 import { createAttendance } from "../services/attendanceService";
 import { getStudents } from "../services/adminService";
-import axiosInstance from "../utils/axios";
+import { LayoutDashboard, UserCheck, History, FileText, BookOpen, Users } from "lucide-react";
 
 const MarkAttendance = () => {
   const navigate = useNavigate();
@@ -33,10 +33,10 @@ const MarkAttendance = () => {
   const [absentStudents, setAbsentStudents] = useState(new Set());
 
   const sidebarItems = [
-    { path: "/teacher", label: "Dashboard", icon: "📊" },
-    { path: "/teacher/mark-attendance", label: "Mark Attendance", icon: "✓" },
-    { path: "/teacher/attendance-history", label: "View Attendance", icon: "📖" },
-    { path: "/teacher/reports", label: "Reports", icon: "📄" },
+    { path: "/teacher", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+    { path: "/teacher/mark-attendance", label: "Mark Attendance", icon: <UserCheck size={18} /> },
+    { path: "/teacher/attendance-history", label: "View Attendance", icon: <History size={18} /> },
+    { path: "/teacher/reports", label: "Reports", icon: <FileText size={18} /> },
   ];
 
   // Fetch teacher assignments on mount
@@ -429,11 +429,8 @@ const MarkAttendance = () => {
           {assignment && (
             <Card>
               <div className="flex items-start gap-3 mb-4">
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: theme.colors.primary.light }}
-                >
-                  <span className="text-2xl">📋</span>
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                  <FileText size={20} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: theme.typography.h3, fontWeight: 600, marginBottom: theme.spacing.xs }}>
@@ -492,11 +489,8 @@ const MarkAttendance = () => {
           {students.length > 0 && (
             <Card>
               <div className="flex items-start gap-3 mb-4">
-                <div
-                  className="p-3 rounded-lg"
-                  style={{ backgroundColor: theme.colors.success.light }}
-                >
-                  <span className="text-2xl">👥</span>
+                <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <Users size={20} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: theme.typography.h3, fontWeight: 600, marginBottom: theme.spacing.xs }}>

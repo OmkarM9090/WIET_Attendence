@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from "./Modal";
 import Button from "./Button";
-import { CheckCircle2, XCircle, AlertTriangle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, AlertCircle, Lightbulb } from 'lucide-react';
 
 export default function UploadResultModal({ isOpen, onClose, result, type = 'student' }) {
   if (!result) return null;
@@ -21,19 +21,19 @@ export default function UploadResultModal({ isOpen, onClose, result, type = 'stu
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="📊 Upload Results"
-      size="xl"
+      title="Upload Results Summary"
+      size="lg"
     >
       <div className="space-y-6 max-w-2xl mx-auto">
         
         {/* Status Alert */}
         {state === 'success' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-            <CheckCircle2 className="w-6 h-6 text-green-500 shrink-0 mt-0.5" />
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-green-800 font-bold">Upload Successful!</h4>
-              <p className="text-sm text-green-700 mt-1">
-                All {success} {isStudent ? 'students' : 'teachers'} were uploaded and created successfully.
+              <h4 className="text-emerald-900 font-bold">Upload Successful!</h4>
+              <p className="text-sm text-emerald-800 mt-1">
+                All {success} {isStudent ? 'students' : 'teachers'} were processed and created successfully.
               </p>
             </div>
           </div>
@@ -41,10 +41,10 @@ export default function UploadResultModal({ isOpen, onClose, result, type = 'stu
 
         {state === 'warning' && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-amber-800 font-bold">Partial Success</h4>
-              <p className="text-sm text-amber-700 mt-1">
+              <h4 className="text-amber-900 font-bold">Partial Success</h4>
+              <p className="text-sm text-amber-800 mt-1">
                 {success} {isStudent ? 'students' : 'teachers'} were uploaded, but {failed} failed due to errors.
               </p>
             </div>
@@ -52,55 +52,55 @@ export default function UploadResultModal({ isOpen, onClose, result, type = 'stu
         )}
 
         {state === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-            <XCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+            <XCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-red-800 font-bold">Upload Failed</h4>
-              <p className="text-sm text-red-700 mt-1">
-                None of the records could be uploaded. Please check the errors below.
+              <h4 className="text-rose-900 font-bold">Upload Failed</h4>
+              <p className="text-sm text-rose-800 mt-1">
+                None of the records could be uploaded. Please review the issues below.
               </p>
             </div>
           </div>
         )}
 
-        {/* Summary Grid */}
+        {/* Summary Metric Grid */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
             <h4 className="text-xs uppercase tracking-wider font-bold text-slate-500 mb-1">Total</h4>
-            <p className="text-3xl font-black text-slate-800">{total}</p>
+            <p className="text-3xl font-extrabold text-slate-900">{total}</p>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-            <h4 className="text-xs uppercase tracking-wider font-bold text-green-600 mb-1">Created</h4>
-            <p className="text-3xl font-black text-green-700">{success}</p>
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 text-center">
+            <h4 className="text-xs uppercase tracking-wider font-bold text-emerald-700 mb-1">Created</h4>
+            <p className="text-3xl font-extrabold text-emerald-700">{success}</p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-            <h4 className="text-xs uppercase tracking-wider font-bold text-red-500 mb-1">Failed</h4>
-            <p className="text-3xl font-black text-red-600">{failed}</p>
+          <div className="bg-rose-50/60 border border-rose-200 rounded-xl p-4 text-center">
+            <h4 className="text-xs uppercase tracking-wider font-bold text-rose-700 mb-1">Failed</h4>
+            <p className="text-3xl font-extrabold text-rose-700">{failed}</p>
           </div>
         </div>
 
         {/* Failed Rows Detail */}
         {failed > 0 && failedRows && failedRows.length > 0 && (
           <div>
-            <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
+            <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
               Failed Records ({failedRows.length})
             </h4>
             
-            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {failedRows.map((fail, idx) => (
-                <div key={idx} className="bg-red-50/50 border border-red-100 p-3 rounded-lg flex flex-col sm:flex-row sm:items-start gap-2">
-                  <div className="bg-red-100 text-red-700 font-mono text-xs px-2 py-1 rounded inline-block whitespace-nowrap self-start">
+                <div key={idx} className="bg-rose-50/50 border border-rose-200/80 p-3 rounded-xl flex flex-col sm:flex-row sm:items-start gap-2">
+                  <div className="bg-rose-100 text-rose-800 font-mono text-xs px-2.5 py-1 rounded-md inline-block whitespace-nowrap self-start font-bold">
                     Row {fail.rowNumber}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 truncate">
+                    <p className="font-bold text-slate-900 text-sm truncate">
                       {fail.data?.name || "Unknown Name"} 
-                      <span className="text-slate-500 font-normal text-sm ml-2">
+                      <span className="text-slate-500 font-medium text-xs ml-2">
                         ({fail.data?.email || "No Email"})
                       </span>
                     </p>
-                    <p className="text-sm text-red-600 mt-1 font-medium bg-red-100/50 px-2 py-1 rounded inline-block">
+                    <p className="text-xs text-rose-700 mt-1 font-semibold bg-rose-100/60 px-2 py-0.5 rounded-md inline-block">
                       {fail.simpleMessage || fail.reason || "Unknown validation error"}
                     </p>
                   </div>
@@ -108,10 +108,10 @@ export default function UploadResultModal({ isOpen, onClose, result, type = 'stu
               ))}
             </div>
             
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-4 text-sm text-slate-600 flex items-start gap-2">
-              <span className="text-lg leading-none">💡</span>
-              <p>
-                <strong>Tip:</strong> Fix these specific rows in your original Excel file, delete the successful rows (so they don't duplicate), and re-upload the fixed rows.
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-4 text-xs text-slate-700 flex items-start gap-2.5">
+              <Lightbulb size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                <strong>Tip:</strong> Fix these specific rows in your original Excel file, remove the already processed rows to prevent duplicates, and re-upload.
               </p>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function UploadResultModal({ isOpen, onClose, result, type = 'stu
 
         {/* Footer Actions */}
         <div className="flex justify-end pt-2">
-          <Button onClick={onClose} className="px-6">
+          <Button onClick={onClose} variant="primary" className="px-6">
             Got it, Thanks!
           </Button>
         </div>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { theme } from "../styles/theme";
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
@@ -9,23 +8,32 @@ import Table from "../components/Table";
 import { getBranches } from "../services/adminService";
 import { getDefaultersReport } from "../services/attendanceService";
 import axiosInstance from "../utils/axios";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  FileText, 
+  AlertTriangle,
+  Download,
+  Filter,
+  FileSpreadsheet
+} from "lucide-react";
 
 export default function DefaulterManagement() {
-  // Data
   const [branches, setBranches] = useState([]);
   const [defaulters, setDefaulters] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
-  // Filters
   const [branch, setBranch] = useState("");
   const [year, setYear] = useState("");
   const [division, setDivision] = useState("");
-  const [academicYear, setAcademicYear] = useState("");  // Academic Year
+  const [academicYear, setAcademicYear] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [threshold, setThreshold] = useState("75");
 
-  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,12 +41,12 @@ export default function DefaulterManagement() {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const sidebarItems = [
-    { label: "Dashboard", path: "/admin", icon: "🏠" },
-    { label: "Branches", path: "/admin/branches", icon: "🌿" },
-    { label: "Subjects", path: "/admin/subjects", icon: "📘" },
-    { label: "Students", path: "/admin/students", icon: "🎓" },
-    { label: "Teachers", path: "/admin/teachers", icon: "👩‍🏫" },
-    { label: "Reports", path: "/admin/defaulters", icon: "📊" },
+    { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={18} /> },
+    { label: "Branches", path: "/admin/branches", icon: <Building2 size={18} /> },
+    { label: "Subjects", path: "/admin/subjects", icon: <BookOpen size={18} /> },
+    { label: "Students", path: "/admin/students", icon: <GraduationCap size={18} /> },
+    { label: "Teachers", path: "/admin/teachers", icon: <Users size={18} /> },
+    { label: "Reports", path: "/admin/defaulters", icon: <AlertTriangle size={18} /> },
   ];
 
   useEffect(() => {
@@ -46,9 +54,7 @@ export default function DefaulterManagement() {
       try {
         const branchesRes = await getBranches();
         setBranches(branchesRes);
-      } catch (err) {
-        // non-blocking
-      }
+      } catch (err) {}
     };
     init();
   }, []);
@@ -64,7 +70,7 @@ export default function DefaulterManagement() {
         branchId: branch,
         year: Number(year),
         division,
-        academicYear,  // Include academic year
+        academicYear,
         startDate,
         endDate,
         threshold: Number(threshold),
@@ -73,7 +79,7 @@ export default function DefaulterManagement() {
       const res = await getDefaultersReport(filters);
       setDefaulters(res.defaulters || []);
       setSubjects(res.subjects || []);
-      setSuccess(`Generated report: ${res.defaulters?.length || 0} defaulters found`);
+      setSuccess(`Report generated: ${res.defaulters?.length || 0} defaulters identified`);
     } catch (err) {
       setError(err.message || "Failed to generate defaulters report");
       setDefaulters([]);
@@ -98,7 +104,7 @@ export default function DefaulterManagement() {
         branch: selectedBranch?.name || "N/A",
         year,
         division,
-        academicYear: academicYear || "N/A",  // Include in PDF
+        academicYear: academicYear || "N/A",
         startDate,
         endDate,
         threshold,
@@ -164,11 +170,18 @@ export default function DefaulterManagement() {
     }
   };
 
-  // Build dynamic columns from subjects
   const buildColumns = () => {
     const cols = [
-      { header: "Roll No", accessor: "rollNo" },
-      { header: "Name", accessor: "name" },
+      { 
+        header: "Roll No", 
+        accessor: "rollNo",
+        render: (val) => <span className="font-mono text-xs font-bold text-slate-800">{val}</span>
+      },
+      { 
+        header: "Name", 
+        accessor: "name",
+        render: (val) => <span className="font-bold text-slate-900">{val}</span>
+      },
       { header: "Batch", accessor: "batch" },
     ];
 
@@ -179,35 +192,43 @@ export default function DefaulterManagement() {
           accessor: "subjects",
           render: (val) => {
             const subData = val?.[sub.code];
-            return subData ? `${subData.total}%` : "-";
+            const pct = subData ? subData.total : null;
+            return pct !== null ? (
+              <span className={`font-bold ${pct < 75 ? "text-rose-600" : "text-emerald-600"}`}>
+                {pct}%
+              </span>
+            ) : "-";
           },
         });
       });
     }
 
-    cols.push({ header: "Remark", accessor: "remark" });
+    cols.push({ 
+      header: "Remark", 
+      accessor: "remark",
+      render: (val) => (
+        <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded bg-rose-50 text-rose-700 border border-rose-100">
+          {val || "Defaulter"}
+        </span>
+      )
+    });
     return cols;
   };
 
   return (
     <DashboardLayout
-      title="Defaulters Report"
-      subtitle="Generate attendance defaulters report with filters"
+      title="Defaulters Management"
+      subtitle="Identify & Export Low Attendance Student Reports"
       sidebarItems={sidebarItems}
     >
-      {/* Alerts */}
       <div className="mb-4 space-y-2">
         {error && <Alert message={error} type="error" onClose={() => setError("")} />}
         {success && <Alert message={success} type="success" onClose={() => setSuccess("")} />}
       </div>
 
-      {/* Filters Form */}
-      <section
-        className="mb-6 rounded-lg border p-6"
-        style={{ borderColor: theme.colors.border, backgroundColor: theme.colors.background }}
-      >
-        <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-          Filters
+      <section className="mb-6 bg-white p-6 rounded-xl border border-slate-200/60 shadow-2xs">
+        <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <Filter size={15} /> Defaulter Query Criteria
         </h3>
 
         <form onSubmit={handleGenerateReport}>
@@ -285,28 +306,29 @@ export default function DefaulterManagement() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} variant="primary">
               {loading ? "Generating..." : "Generate Report"}
             </Button>
-            <Button variant="outline" onClick={handleExportPDF} disabled={exportingPdf || defaulters.length === 0}>
+            <Button variant="outline" onClick={handleExportPDF} disabled={exportingPdf || defaulters.length === 0} icon={<Download size={15} />}>
               {exportingPdf ? "Exporting..." : "Export PDF"}
             </Button>
-            <Button variant="outline" onClick={handleExportExcel} disabled={exportingExcel || defaulters.length === 0}>
+            <Button variant="outline" onClick={handleExportExcel} disabled={exportingExcel || defaulters.length === 0} icon={<FileSpreadsheet size={15} />}>
               {exportingExcel ? "Exporting..." : "Export Excel"}
             </Button>
           </div>
         </form>
       </section>
 
-      {/* Defaulters Table */}
       <div>
-        <h4 className="mb-3 text-lg font-semibold" style={{ color: theme.colors.text.primary }}>
-          Defaulters List ({defaulters.length})
-        </h4>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-sm font-bold text-slate-900">
+            Defaulter Roster List ({defaulters.length})
+          </h4>
+        </div>
         <Table
           columns={buildColumns()}
           data={defaulters}
-          emptyMessage={loading ? "Loading defaulters..." : "No defaulters found. Generate a report to see data."}
+          emptyMessage={loading ? "Generating report..." : "No defaulters match the criteria."}
           actions={() => null}
         />
       </div>
