@@ -11,7 +11,8 @@ import { getMyTeachingAssignments } from "../services/teacherService";
 import axiosInstance from "../utils/axios";
 import SessionSelector from "../components/teacher/SessionSelector";
 import StudentAttendanceList from "../components/teacher/StudentAttendanceList";
-import { LayoutDashboard, UserCheck, History, FileText, Calendar, CheckCircle2, AlertTriangle, Info, BookOpen, Inbox, ArrowLeft } from "lucide-react";
+import ProxyClassForm from "../components/teacher/ProxyClassForm";
+import { LayoutDashboard, UserCheck, History, FileText, Calendar, CheckCircle2, AlertTriangle, Info, BookOpen, Inbox, ArrowLeft, Zap } from "lucide-react";
 
 export default function TeacherMarkAttendance() {
   const { sessionId } = useParams();
@@ -57,7 +58,10 @@ export default function TeacherMarkAttendance() {
   }, []);
 
   useEffect(() => {
-    if (sessionId && assignments.length > 0) {
+    if (sessionId === 'proxy') {
+      setSelectedAssignment({ isProxyPlaceholder: true });
+      setError("");
+    } else if (sessionId && assignments.length > 0) {
       const selected = assignments.find((a) => a._id === sessionId);
       if (selected) {
         setSelectedAssignment(selected);
@@ -164,13 +168,20 @@ export default function TeacherMarkAttendance() {
       setLoadingStudents(true);
       setStudentError("");
 
+      const params = selectedAssignment.isProxy ? {
+        isProxy: true,
+        proxyBranchId: selectedAssignment.branch?._id || selectedAssignment.branch,
+        proxyYear: selectedAssignment.year,
+        proxyDivision: selectedAssignment.division,
+        proxySessionType: selectedAssignment.sessionType,
+        proxyBatchId: selectedAssignment.batch?.name || selectedAssignment.batch || "",
+      } : {
+        teachingAssignmentId: selectedAssignment._id,
+      };
+
       const response = await axiosInstance.get(
         "/attendance/students-for-session",
-        {
-          params: {
-            teachingAssignmentId: selectedAssignment._id,
-          },
-        }
+        { params }
       );
 
       if (response.data.success) {
@@ -271,13 +282,29 @@ export default function TeacherMarkAttendance() {
         return;
       }
 
+      const payload = selectedAssignment.isProxy ? {
+        date: selectedDate,
+        absentRollNumbers,
+        isSubstitute: selectedAssignment.isSubstitute,
+        substituteReason: selectedAssignment.substituteReason,
+        isExtraLecture: selectedAssignment.isExtraLecture,
+        extraLectureReason: selectedAssignment.extraLectureReason,
+        proxyBranchId: selectedAssignment.branch?._id || selectedAssignment.branch,
+        proxyYear: selectedAssignment.year,
+        proxyDivision: selectedAssignment.division,
+        proxySubjectId: selectedAssignment.subject?._id || selectedAssignment.subject,
+        proxySessionType: selectedAssignment.sessionType,
+        proxyBatchId: selectedAssignment.batch?.name || selectedAssignment.batch || "",
+        originalTeacherId: selectedAssignment.originalTeacherId || undefined
+      } : {
+        teachingAssignmentId: selectedAssignment._id,
+        date: selectedDate,
+        absentRollNumbers
+      };
+
       const response = await axiosInstance.post(
         "/attendance/mark-and-generate",
-        {
-          teachingAssignmentId: selectedAssignment._id,
-          date: selectedDate,
-          absentRollNumbers
-        }
+        payload
       );
 
       if (response.data?.alreadyExists === true) {
@@ -494,7 +521,7 @@ export default function TeacherMarkAttendance() {
     return (
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs mb-6">
         <h3 className="text-base font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-          Session Details
+          {selectedAssignment.isSubstitute ? "Substitute Proxy Details" : selectedAssignment.isExtraLecture ? "Extra Lecture Details" : "Session Details"}
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-4 gap-x-6 text-sm">
@@ -517,7 +544,9 @@ export default function TeacherMarkAttendance() {
 
           <div className="flex flex-col gap-1">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule</span>
-            <span className="font-bold text-slate-900 font-mono">{dayOfWeek}, {startTime} – {endTime}</span>
+            <span className="font-bold text-slate-900 font-mono">
+              {dayOfWeek ? `${dayOfWeek}, ${startTime} – ${endTime}` : `Date: ${selectedDate}`}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -535,10 +564,12 @@ export default function TeacherMarkAttendance() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Academic Year</span>
-            <span className="font-semibold text-slate-900">{academicYear}</span>
-          </div>
+          {!selectedAssignment.isProxy && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Academic Year</span>
+              <span className="font-semibold text-slate-900">{academicYear}</span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -605,7 +636,25 @@ export default function TeacherMarkAttendance() {
                   Click on any teaching session card above to mark attendance for that session. Found {assignments.length} session{assignments.length > 1 ? "s" : ""}.
                 </p>
               )}
+
+              <div className="mt-6 pt-5 border-t border-slate-100 flex justify-center">
+                <button
+                  onClick={() => handleSessionSelect('proxy')}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl transition-all shadow-sm"
+                >
+                  <Zap size={18} className="text-indigo-600" />
+                  Take Proxy / Extra Class
+                </button>
+              </div>
             </div>
+          ) : sessionId === 'proxy' && selectedAssignment?.isProxyPlaceholder ? (
+            <ProxyClassForm 
+               myAssignments={assignments}
+               onContinue={(mockAssignment) => {
+                 setSelectedAssignment(mockAssignment);
+               }}
+               onCancel={() => navigate('/teacher/mark-attendance')}
+            />
           ) : (
             /* DEDICATED MARK ATTENDANCE PAGE FOR SPECIFIC SESSION */
             <>

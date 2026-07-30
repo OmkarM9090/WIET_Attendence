@@ -24,7 +24,7 @@ const router = express.Router();
 
 // BRANCH
 router.post("/branches", protect, allowRoles("admin"), createBranch);
-router.get("/branches", protect, allowRoles("admin"), getBranches);
+router.get("/branches", protect, allowRoles("admin", "teacher"), getBranches);
 router.get("/branches/:id/delete-count", protect, allowRoles("admin"), getBranchDeleteCount);
 router.delete("/branches/:id", protect, allowRoles("admin"), deleteBranch);
 

@@ -452,94 +452,159 @@ export const getTeacherAttendance = async (req, res) => {
  */
 export const getStudentsForSession = async (req, res) => {
   try {
-    const { teachingAssignmentId } = req.query;
+    const { 
+      teachingAssignmentId,
+      isProxy,           // Boolean flag
+      proxyBranchId,     // For proxy
+      proxyYear,         // For proxy
+      proxyDivision,     // For proxy
+      proxySessionType,  // For proxy (LECTURE/PRACTICAL)
+      proxyBatchId       // For proxy practicals
+    } = req.query;
+    
     const teacherId = req.user.id;
+    const isProxySession = isProxy === 'true' || isProxy === true;
 
-    // Validate required parameter
-    if (!teachingAssignmentId) {
+    // Validate required parameters based on flow
+    if (!isProxySession && !teachingAssignmentId) {
       return res.status(400).json({
         success: false,
-        message: "Teaching assignment ID is required"
+        message: "Teaching assignment ID is required for regular sessions"
       });
     }
 
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
+    if (isProxySession && (!proxyBranchId || !proxyYear || !proxyDivision)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid teaching assignment ID format"
+        message: "branch, year, division are required for proxy sessions"
       });
     }
 
-    // Fetch teaching assignment
-    const assignment = await TeachingAssignment.findById(teachingAssignmentId)
-      .populate("subjectId", "name code")
-      .populate("branchId", "name code")
-      .populate("batchId", "name");
+    let effectiveBranchId;
+    let effectiveYear;
+    let effectiveDivision;
+    let effectiveSessionType = "LECTURE";
+    let effectiveBatchId = null;
+    let effectiveAcademicYear;
+    let sessionDetails = {};
 
-    // Check if assignment exists
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: "Teaching assignment not found"
-      });
-    }
+    // ── Current Academic Year Logic ──
+    const now = new Date();
+    const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+    const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
+    const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
 
-    // Verify teacher authorization
-    // Teacher must own this assignment
-    if (assignment.teacherId.toString() !== teacherId) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to access this teaching assignment"
-      });
-    }
-
-    // Verify assignment is active
-    if (!assignment.isActive) {
-      return res.status(400).json({
-        success: false,
-        message: "This teaching assignment is not active"
-      });
-    }
-
-    // Build student query based on session type
-    let studentQuery = {
-      status: "active",
-      academicYear: assignment.academicYear
-    };
-
-    if (assignment.sessionType === "PRACTICAL") {
-      // PRACTICAL: Filter by branch, year, division, and batch name
-      if (!assignment.batchId) {
+    if (!isProxySession) {
+      // ── REGULAR FLOW ──
+      if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
         return res.status(400).json({
           success: false,
-          message: "Batch information is required for practical sessions"
+          message: "Invalid teaching assignment ID format"
         });
       }
 
-      studentQuery.branch = assignment.branchId;
-      studentQuery.year = assignment.year;
-      studentQuery.division = assignment.division;
+      const assignment = await TeachingAssignment.findById(teachingAssignmentId)
+        .populate("subjectId", "name code")
+        .populate("branchId", "name code")
+        .populate("batchId", "name");
 
-      const batchName = assignment.batchId?.name;
-      if (batchName) {
-        studentQuery.$or = [{ batch: batchName }, { batchName }];
+      if (!assignment) {
+        return res.status(404).json({
+          success: false,
+          message: "Teaching assignment not found"
+        });
       }
+
+      if (assignment.teacherId.toString() !== teacherId) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to access this teaching assignment"
+        });
+      }
+
+      if (!assignment.isActive) {
+        return res.status(400).json({
+          success: false,
+          message: "This teaching assignment is not active"
+        });
+      }
+
+      effectiveBranchId = assignment.branchId;
+      effectiveYear = assignment.year;
+      effectiveDivision = assignment.division;
+      effectiveSessionType = assignment.sessionType;
+      effectiveAcademicYear = assignment.academicYear;
+
+      if (effectiveSessionType === "PRACTICAL") {
+        if (!assignment.batchId) {
+          return res.status(400).json({
+            success: false,
+            message: "Batch information is required for practical sessions"
+          });
+        }
+        effectiveBatchId = assignment.batchId;
+      }
+      
+      sessionDetails = {
+        subject: assignment.subjectId?.name,
+        subjectCode: assignment.subjectId?.code,
+        branch: assignment.branchId?.name,
+        year: assignment.year,
+        division: assignment.division,
+        batch: assignment.batchId?.name,
+        dayOfWeek: assignment.dayOfWeek,
+        startTime: assignment.startTime,
+        endTime: assignment.endTime
+      };
     } else {
-      // LECTURE: Filter by branch, year, division
-      studentQuery.branch = assignment.branchId;
-      studentQuery.year = assignment.year;
-      studentQuery.division = assignment.division;
+      // ── PROXY FLOW ──
+      effectiveBranchId = proxyBranchId;
+      effectiveYear = parseInt(proxyYear, 10);
+      effectiveDivision = proxyDivision;
+      effectiveSessionType = proxySessionType || "LECTURE";
+      effectiveAcademicYear = currentAcademicYear;
+      
+      if (effectiveSessionType === "PRACTICAL") {
+        if (!proxyBatchId) {
+          return res.status(400).json({
+            success: false,
+            message: "Batch information is required for practical proxy sessions"
+          });
+        }
+        effectiveBatchId = { name: proxyBatchId };
+      }
+      
+      sessionDetails = {
+        branch: "Proxy Class",
+        year: effectiveYear,
+        division: effectiveDivision,
+        batch: effectiveSessionType === "PRACTICAL" ? proxyBatchId : null,
+        isProxy: true
+      };
     }
 
-    // Fetch students and sort by roll number
+    // Build student query
+    let studentQuery = {
+      status: "active",
+      academicYear: effectiveAcademicYear,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision
+    };
+
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      const batchName = effectiveBatchId.name;
+      studentQuery.$or = [{ batch: batchName }, { batchName }];
+    }
+
+    // Fetch students
     const students = await Student.find(studentQuery)
       .populate("userId", "name email")
       .populate("branch", "name code")
       .select("rollNo userId branch year division batch batchName academicYear status")
       .sort({ rollNo: 1 });
 
-    // Resolve missing user details if populate didn't return a user document
+    // Resolve missing user details
     const missingUserIds = students
       .filter((student) => student.userId && !student.userId.name)
       .map((student) => student.userId.toString());
@@ -582,18 +647,8 @@ export const getStudentsForSession = async (req, res) => {
     res.json({
       success: true,
       count: formattedStudents.length,
-      sessionType: assignment.sessionType,
-      sessionDetails: {
-        subject: assignment.subjectId?.name,
-        subjectCode: assignment.subjectId?.code,
-        branch: assignment.branchId?.name,
-        year: assignment.year,
-        division: assignment.division,
-        batch: assignment.batchId?.name,
-        dayOfWeek: assignment.dayOfWeek,
-        startTime: assignment.startTime,
-        endTime: assignment.endTime
-      },
+      sessionType: effectiveSessionType,
+      sessionDetails,
       data: formattedStudents
     });
   } catch (error) {
