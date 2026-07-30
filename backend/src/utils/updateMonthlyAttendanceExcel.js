@@ -484,9 +484,15 @@ const addMissingStudents = async (worksheet, students, sessionType) => {
  * 
  * @returns {number} - Column index for this date
  */
-const findOrCreateDateColumn = (worksheet, date, sessionType) => {
+const findOrCreateDateColumn = (worksheet, date, sessionType, attendanceSession) => {
   const dateObj = new Date(date);
-  const dateStr = dateObj.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  let dateStr = dateObj.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  
+  if (attendanceSession?.isSubstitute) {
+    dateStr += " (Proxy)";
+  } else if (attendanceSession?.isExtraLecture) {
+    dateStr += " (Extra)";
+  }
 
   const headerRow = worksheet.getRow(6);
   const baseColumns = sessionType === "PRACTICAL" ? 3 : 2; // Roll, Name, (Batch)
@@ -508,7 +514,7 @@ const findOrCreateDateColumn = (worksheet, date, sessionType) => {
       
       // Track last date column (before Total Present)
       if (cellValue && cellValue !== "Total Present" && cellValue !== "Total Absent" && cellValue !== "Percentage") {
-        if (typeof cellValue === "string" && cellValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        if (typeof cellValue === "string" && cellValue.match(/^\d{4}-\d{2}-\d{2}( \((Proxy|Extra)\))?$/)) {
           lastDateColumn = colNumber;
         }
       }
@@ -617,7 +623,7 @@ const recalculateTotalsAndPercentages = (worksheet, sessionType) => {
         totalAbsentCol = colNumber;
       } else if (value === "Percentage") {
         percentageCol = colNumber;
-      } else if (value && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      } else if (value && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}( \((Proxy|Extra)\))?$/)) {
         dateColumns.push(colNumber);
       }
     }
