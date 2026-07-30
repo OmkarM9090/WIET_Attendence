@@ -27,3 +27,4 @@ pids
 # Optional: System files
 .DS_Store
 Thumbs.db
+backend/exports/**/*.xlsx

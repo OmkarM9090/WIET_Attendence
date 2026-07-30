@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { getSessionDetails } from '../services/attendanceService';
-import { X, Download, Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { getSessionDetails, exportSessionExcel } from '../services/attendanceService';
+import { X, Download, Edit2, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const AttendanceDetailPanel = ({ sessionId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [details, setDetails] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -29,6 +35,105 @@ const AttendanceDetailPanel = ({ sessionId, onClose }) => {
       fetchDetails();
     }
   }, [sessionId]);
+
+  const handleDownloadExcel = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await exportSessionExcel(sessionId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Attendance_Session_${sessionId}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export Excel file. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!details) return;
+    
+    try {
+      setIsExportingPDF(true);
+      const { session, attendanceRecords } = details;
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setTextColor(30, 58, 138); // Blue 900
+      doc.text("Attendance Report", 14, 22);
+      
+      // Session Info
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85); // Slate 700
+      
+      const formattedDate = new Date(session.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' });
+      const className = `${session.batch?.branch || session.branch?.name || session.branch?.code || ''} ${session.batch?.year || session.year || ''}-${session.batch?.division || session.division || ''} ${session.batch?.name ? `(Batch ${session.batch.name})` : ''}`.trim();
+      
+      doc.text(`Subject: ${session.subject?.name} (${session.subject?.code})`, 14, 32);
+      doc.text(`Date: ${formattedDate}`, 14, 38);
+      doc.text(`Class: ${className}`, 14, 44);
+      doc.text(`Type: ${session.type || session.sessionType}`, 14, 50);
+      
+      // Summary Counts
+      const presentCount = session.presentCount ?? ((session.totalStudents || 0) - (session.absentStudents?.length || 0));
+      const absentCount = session.absentCount ?? (session.absentStudents?.length || 0);
+      
+      doc.text(`Total Students: ${session.totalStudents}`, 140, 32);
+      doc.text(`Present: ${presentCount}`, 140, 38);
+      doc.text(`Absent: ${absentCount}`, 140, 44);
+
+      // Table
+      const tableColumn = ["#", "Roll No", "Student Name", "Status"];
+      const tableRows = [];
+
+      attendanceRecords.forEach((record, index) => {
+        const rowData = [
+          index + 1,
+          record.rollNo,
+          record.studentName,
+          record.status === 'present' ? 'Present' : 'Absent'
+        ];
+        tableRows.push(rowData);
+      });
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 56,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 58, 138] }, // Blue 900
+        styles: { fontSize: 10, cellPadding: 3 },
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 3) {
+            if (data.cell.raw === 'Present') {
+              data.cell.styles.textColor = [5, 150, 105]; // Emerald 600
+              data.cell.styles.fontStyle = 'bold';
+            } else {
+              data.cell.styles.textColor = [225, 29, 72]; // Rose 600
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      });
+
+      doc.save(`Attendance_${formattedDate.replace(/ /g, '_')}_${session.subject?.code || 'Session'}.pdf`);
+    } catch (err) {
+      console.error('PDF Export failed:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/teacher/mark-attendance?edit=${sessionId}`);
+  };
 
   if (loading) {
     return (
@@ -74,13 +179,13 @@ const AttendanceDetailPanel = ({ sessionId, onClose }) => {
             <p><span className="font-bold text-slate-700">Subject:</span> {session.subject?.name} ({session.subject?.code})</p>
             <div className="flex flex-wrap gap-x-6 gap-y-1">
               <p><span className="font-bold text-slate-700">Date:</span> {new Date(session.date).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-              <p><span className="font-bold text-slate-700">Class:</span> {session.batch.branch} {session.batch.year}-{session.batch.division} {session.batch.name ? `(Batch ${session.batch.name})` : ''}</p>
-              <p><span className="font-bold text-slate-700">Type:</span> <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">{session.type}</span></p>
+              <p><span className="font-bold text-slate-700">Class:</span> {session.batch?.branch || session.branch?.name || session.branch?.code || ''} {session.batch?.year || session.year || ''}-{session.batch?.division || session.division || ''} {session.batch?.name ? `(Batch ${session.batch.name})` : ''}</p>
+              <p><span className="font-bold text-slate-700">Type:</span> <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">{session.type || session.sessionType}</span></p>
             </div>
             <div className="flex gap-6 mt-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
               <p className="text-slate-700 text-xs font-medium">Total: <span className="font-bold text-slate-900 text-sm ml-1">{session.totalStudents}</span></p>
-              <p className="text-emerald-700 text-xs font-medium">Present: <span className="font-bold text-emerald-700 text-sm ml-1">{session.presentCount}</span></p>
-              <p className="text-rose-700 text-xs font-medium">Absent: <span className="font-bold text-rose-700 text-sm ml-1">{session.absentCount}</span></p>
+              <p className="text-emerald-700 text-xs font-medium">Present: <span className="font-bold text-emerald-700 text-sm ml-1">{session.presentCount ?? ((session.totalStudents || 0) - (session.absentStudents?.length || 0))}</span></p>
+              <p className="text-rose-700 text-xs font-medium">Absent: <span className="font-bold text-rose-700 text-sm ml-1">{session.absentCount ?? (session.absentStudents?.length || 0)}</span></p>
             </div>
           </div>
         </div>
@@ -122,14 +227,22 @@ const AttendanceDetailPanel = ({ sessionId, onClose }) => {
         </table>
       </div>
 
-      <div className="flex justify-end gap-3 mt-6">
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-          <Download size={16} /> PDF
+      <div className="flex flex-wrap justify-end gap-3 mt-6">
+        <button 
+          onClick={handleDownloadPDF}
+          disabled={isExportingPDF}
+          className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 flex-1 sm:flex-none">
+          <Download size={16} /> {isExportingPDF ? 'Generating...' : 'PDF'}
         </button>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-          <Download size={16} /> Excel
+        <button 
+          onClick={handleDownloadExcel}
+          disabled={isExporting}
+          className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 flex-1 sm:flex-none">
+          <Download size={16} /> {isExporting ? 'Exporting...' : 'Excel'}
         </button>
-        <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600 rounded-xl hover:bg-blue-700 shadow-xs transition-colors">
+        <button 
+          onClick={handleEdit}
+          className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600 rounded-xl hover:bg-blue-700 shadow-xs transition-colors w-full sm:w-auto">
           <Edit2 size={16} /> Edit Attendance
         </button>
       </div>

@@ -141,3 +141,18 @@ export const getSessionDetails = async (sessionId) => {
     throw error.response?.data || { message: "Failed to fetch session details" };
   }
 };
+
+/**
+ * Export specific session attendance to Excel
+ * @param {string} sessionId - ID of the attendance session
+ */
+export const exportSessionExcel = async (sessionId) => {
+  try {
+    const response = await axiosInstance.get(`/attendance/download-excel/${sessionId}`, {
+      responseType: "blob",
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to export Excel" };
+  }
+};
