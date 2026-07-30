@@ -169,6 +169,35 @@ const generateAutoEmail = (rollNumber, branchCode) => {
   return `${rollNumber}.${branchCode.toLowerCase()}@college.edu`;
 };
 
+const normalizeHeaderText = (value) => String(value || "").trim().toLowerCase();
+
+const detectStudentDataStartRow = (sheet) => {
+  const maxScanRow = Math.min(sheet.rowCount, 25);
+
+  for (let rowIdx = 1; rowIdx <= maxScanRow; rowIdx++) {
+    const row = sheet.getRow(rowIdx);
+    const col1 = normalizeHeaderText(getCellValue(row.getCell(1)));
+    const col2 = normalizeHeaderText(getCellValue(row.getCell(2)));
+
+    const hasRollHeader = col1.includes("roll");
+    const hasNameHeader = col2.includes("name");
+
+    if (hasRollHeader && hasNameHeader) {
+      return rowIdx + 1;
+    }
+  }
+
+  return 2;
+};
+
+const hasStudentRowData = (row) => {
+  const c1 = String(getCellValue(row.getCell(1)) || "").trim();
+  const c2 = String(getCellValue(row.getCell(2)) || "").trim();
+  const c3 = String(getCellValue(row.getCell(3)) || "").trim();
+  const c4 = String(getCellValue(row.getCell(4)) || "").trim();
+  return !!(c1 || c2 || c3 || c4);
+};
+
 export const downloadSimpleTemplate = async (req, res) => {
   try {
     const { branchCode = 'COMP', year = 2, division = 'A' } = req.query;
@@ -296,60 +325,77 @@ export const uploadStudentsSimple = async (req, res) => {
     const failed = [];
     const processedRollNumbers = new Set();
     const processedEmails = new Set();
-    
-    for (let rowIdx = 2; rowIdx <= sheet.rowCount; rowIdx++) {
+
+    const dataStartRow = detectStudentDataStartRow(sheet);
+    let logicalRowNumber = 0;
+    let totalDataRows = 0;
+
+    const pushFailedRow = (excelRowNumber, data, reason, simpleMessage) => {
+      failed.push({
+        rowNumber: logicalRowNumber,
+        excelRowNumber,
+        data,
+        reason,
+        simpleMessage
+      });
+    };
+
+    for (let rowIdx = dataStartRow; rowIdx <= sheet.rowCount; rowIdx++) {
       const row = sheet.getRow(rowIdx);
-      
+
+      if (!hasStudentRowData(row)) continue;
+
+      logicalRowNumber += 1;
+      totalDataRows += 1;
+
       const rawRollNo = getCellValue(row.getCell(1));
       const rollNo = rawRollNo ? String(rawRollNo).trim() : '';
       const name = getCellValue(row.getCell(2));
       const emailCell = getCellValue(row.getCell(3));
       const batchCell = getCellValue(row.getCell(4));
-      
-      if (!name && !rollNo) continue;
-      
+
       if (!name) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo }, reason: 'Name missing', simpleMessage: `Row ${rowIdx} mein name empty hai` });
+        pushFailedRow(rowIdx, { name, rollNo }, 'Name missing', `Row ${logicalRowNumber} mein name empty hai`);
         continue;
       }
-      
+
       if (!rollNo) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo }, reason: 'Roll number missing', simpleMessage: `Row ${rowIdx} mein roll number empty hai` });
+        pushFailedRow(rowIdx, { name, rollNo }, 'Roll number missing', `Row ${logicalRowNumber} mein roll number empty hai`);
         continue;
       }
-      
+
       if (!/^\d+$/.test(rollNo)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo }, reason: 'Invalid roll number', simpleMessage: `Row ${rowIdx}: Roll number sirf numbers hone chahiye` });
+        pushFailedRow(rowIdx, { name, rollNo }, 'Invalid roll number', `Row ${logicalRowNumber}: Roll number sirf numbers hone chahiye`);
         continue;
       }
-      
+
       if (existingRollNumbers.has(rollNo)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo }, reason: 'Duplicate roll number', simpleMessage: `Row ${rowIdx}: Roll number ${rollNo} is class mein pehle se exist karta hai` });
+        pushFailedRow(rowIdx, { name, rollNo }, 'Duplicate roll number', `Row ${logicalRowNumber}: Roll number ${rollNo} is class mein pehle se exist karta hai`);
         continue;
       }
-      
+
       if (processedRollNumbers.has(rollNo)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo }, reason: 'Duplicate in Excel', simpleMessage: `Row ${rowIdx}: Roll number ${rollNo} Excel mein multiple baar hai` });
+        pushFailedRow(rowIdx, { name, rollNo }, 'Duplicate in Excel', `Row ${logicalRowNumber}: Roll number ${rollNo} Excel mein multiple baar hai`);
         continue;
       }
-      
+
       let email = emailCell;
       if (!email || email === '') {
         email = generateAutoEmail(rollNo, branch.code);
       }
-      
+
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo, email }, reason: 'Invalid email', simpleMessage: `Row ${rowIdx}: Email format galat hai (${email})` });
+        pushFailedRow(rowIdx, { name, rollNo, email }, 'Invalid email', `Row ${logicalRowNumber}: Email format galat hai (${email})`);
         continue;
       }
-      
+
       if (allExistingEmails.has(email)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo, email }, reason: 'Duplicate email', simpleMessage: `Row ${rowIdx}: Email ${email} pehle se registered hai` });
+        pushFailedRow(rowIdx, { name, rollNo, email }, 'Duplicate email', `Row ${logicalRowNumber}: Email ${email} pehle se registered hai`);
         continue;
       }
-      
+
       if (processedEmails.has(email)) {
-        failed.push({ rowNumber: rowIdx, data: { name, rollNo, email }, reason: 'Duplicate email in Excel', simpleMessage: `Row ${rowIdx}: Email ${email} Excel mein multiple baar hai` });
+        pushFailedRow(rowIdx, { name, rollNo, email }, 'Duplicate email in Excel', `Row ${logicalRowNumber}: Email ${email} Excel mein multiple baar hai`);
         continue;
       }
       
@@ -392,7 +438,7 @@ export const uploadStudentsSimple = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Koi valid students nahi mile Excel mein',
-        summary: { total: sheet.rowCount - 3, successful: 0, failed: failed.length }, // -3 because of our 3 header rows
+        summary: { total: totalDataRows, successful: 0, failed: failed.length },
         failedRows: failed
       });
     }
@@ -451,7 +497,7 @@ export const uploadStudentsSimple = async (req, res) => {
         academicYear
       },
       summary: {
-        total: sheet.rowCount - 3, // header rows
+        total: totalDataRows,
         successful: addedStudents.length,
         failed: failed.length,
         timeTakenMs: timeTaken

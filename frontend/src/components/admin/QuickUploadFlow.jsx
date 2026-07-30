@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
@@ -29,21 +29,43 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 5000);
   };
-  
-  useEffect(() => {
-    if (selectedBranch && selectedYear && selectedDivision) {
-      fetchClassInfo();
+
+  const normalizeCellText = (value) => String(value || '').trim().toLowerCase();
+
+  const detectDataStartIndex = (rows) => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const c1 = normalizeCellText(row[0]);
+      const c2 = normalizeCellText(row[1]);
+
+      const hasRollHeader = c1.includes('roll');
+      const hasNameHeader = c2.includes('name');
+
+      if (hasRollHeader && hasNameHeader) {
+        return i + 1;
+      }
     }
-  }, [selectedBranch, selectedYear, selectedDivision]);
+
+    return 0;
+  };
+
+  const hasMeaningfulData = (row = []) =>
+    row.slice(0, 4).some((cell) => String(cell ?? '').trim() !== '');
   
-  const fetchClassInfo = async () => {
+  const fetchClassInfo = useCallback(async () => {
     try {
       const res = await getClassInfo(selectedBranch, selectedYear, selectedDivision);
       setClassInfo(res.classInfo);
     } catch (error) {
       showError(error.message || 'Class info fetch failed');
     }
-  };
+  }, [selectedBranch, selectedYear, selectedDivision]);
+
+  useEffect(() => {
+    if (selectedBranch && selectedYear && selectedDivision) {
+      fetchClassInfo();
+    }
+  }, [selectedBranch, selectedYear, selectedDivision, fetchClassInfo]);
   
   const handleDownloadTemplate = async () => {
     if (!classInfo) return;
@@ -55,7 +77,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
         classInfo.division
       );
       showSuccess('Template downloaded!');
-    } catch (error) {
+    } catch {
       showError('Template download failed');
     }
   };
@@ -81,16 +103,21 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      
-      const dataRows = rows.slice(3).filter(row => row.length > 0);
-      
-      const parsed = dataRows.map((row, idx) => {
-        const rowNum = idx + 4;
+
+      const dataStartIndex = detectDataStartIndex(rows);
+      const parsed = [];
+      let logicalRowNumber = 0;
+
+      for (let sourceRowIndex = dataStartIndex; sourceRowIndex < rows.length; sourceRowIndex++) {
+        const row = rows[sourceRowIndex] || [];
+        if (!hasMeaningfulData(row)) continue;
+
+        logicalRowNumber += 1;
         const rollNo = row[0]?.toString().trim() || '';
         const name = row[1]?.toString().trim() || '';
         const email = row[2]?.toString().trim() || '';
         const batch = row[3]?.toString().trim() || '';
-        
+
         const errors = [];
         if (!name) errors.push('Name required');
         if (!rollNo) errors.push('Roll no required');
@@ -98,17 +125,18 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           errors.push('Invalid email');
         }
-        
-        return {
-          rowNumber: rowNum,
+
+        parsed.push({
+          rowNumber: logicalRowNumber,
+          sourceRowNumber: sourceRowIndex + 1,
           name,
           rollNo,
           email: email || `${rollNo}.${classInfo.branchCode.toLowerCase()}@college.edu`,
           batch,
           isValid: errors.length === 0,
           errors
-        };
-      });
+        });
+      }
       
       setPreviewData(parsed);
       setStep(3);
