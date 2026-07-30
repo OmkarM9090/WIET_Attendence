@@ -1082,7 +1082,9 @@ export const markAndGenerateAttendance = async (req, res) => {
       {
         ...attendance.toObject(),
         startTime: assignment?.startTime || null,
-        endTime: assignment?.endTime || null
+        endTime: assignment?.endTime || null,
+        branchName: assignment?.branchId?.name || null,
+        branchCode: assignment?.branchId?.code || null
       },
       absentStudentsList,
       teacher,
@@ -1307,7 +1309,9 @@ export const updateAttendance = async (req, res) => {
       {
         ...updatedAttendance,
         startTime: assignment.startTime,
-        endTime: assignment.endTime
+        endTime: assignment.endTime,
+        branchName: assignment?.branchId?.name || null,
+        branchCode: assignment?.branchId?.code || null
       },
       absentStudents,
       teacher,

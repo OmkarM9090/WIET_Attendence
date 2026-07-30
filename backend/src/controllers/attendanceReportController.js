@@ -13,7 +13,26 @@ const formatDateDDMMYYYY = (date) => {
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
-  return `${day}-${month}-${year}`;
+  return `${day}/${month}/${year}`;
+};
+
+const formatAcademicYearShort = (dateValue) => {
+  const date = new Date(dateValue);
+  const startYear = date.getMonth() >= 5 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${startYear}-${String(startYear + 1).slice(-2)}`;
+};
+
+const getBranchLabel = (branch) => {
+  const code = String(branch?.code || "").trim().toUpperCase();
+  const name = String(branch?.name || "").trim().toLowerCase();
+
+  if (code === "COMP" || code === "COMPUTER" || name.includes("computer")) return "Comp";
+  if (code === "IT" || name.includes("information")) return "IT";
+  if (code === "ENTC" || name.includes("electronics")) return "ENTC";
+  if (code === "MECH" || name.includes("mechanical")) return "Mech";
+  if (code === "CIVIL" || name.includes("civil")) return "Civil";
+
+  return "";
 };
 
 /**
@@ -21,9 +40,9 @@ const formatDateDDMMYYYY = (date) => {
  */
 const formatTime12Hour = (time) => {
   const [hours, minutes] = time.split(":").map(Number);
-  const period = hours >= 12 ? "PM" : "AM";
+  const period = hours >= 12 ? "pm" : "Am";
   const normalizedHours = hours % 12 || 12;
-  return `${String(normalizedHours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${period}`;
+  return `${String(normalizedHours).padStart(2, "0")}.${String(minutes).padStart(2, "0")} ${period}`;
 };
 
 /**
@@ -35,26 +54,26 @@ const isValidTime = (time) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
  * GENERATE DAILY ATTENDANCE REPORT TEXT
  */
 const buildReportText = ({
-  collegeName,
   classLabel,
+  academicYear,
   subjectName,
   dateText,
   timeText,
   teacherName,
   absentStudents
 }) => {
-  let report = `${collegeName}\n\n`;
-  report += `Daily Attendance Report\n`;
+  let report = `Daily Attendance Report\n`;
   report += `Class: ${classLabel}\n`;
+  report += `A.Y.: ${academicYear}\n`;
   report += `Subject: ${subjectName}\n`;
   report += `Date: ${dateText}\n`;
   report += `Time: ${timeText}\n`;
   report += `Subject Teacher: ${teacherName}\n\n`;
-  report += `Absent Students:\n`;
-  report += `Roll No   Name\n`;
+  report += `Details of Absent Students\n`;
+  report += `Roll No.  Name of the Students\n`;
 
   absentStudents.forEach((student) => {
-    const roll = String(student.rollNo).padEnd(8, " ");
+    const roll = String(student.rollNo).padEnd(4, " ");
     report += `${roll}${student.name}\n`;
   });
 
@@ -238,13 +257,16 @@ export const createDailyAttendanceReport = async (req, res) => {
       4: "BE"
     };
 
-    const classLabel = `${yearMap[parseInt(year)] || year} Div ${division}`;
+    const branchLabel = getBranchLabel(branch);
+    const classLabel = branchLabel
+      ? `${yearMap[parseInt(year)] || year} ${branchLabel} Div: ${division}`
+      : `${yearMap[parseInt(year)] || year} Div: ${division}`;
     const dateText = formatDateDDMMYYYY(new Date());
     const timeText = `${formatTime12Hour(startTime)} to ${formatTime12Hour(endTime)}`;
 
     const reportText = buildReportText({
-      collegeName: "Watumull College Of Engineering And Technology",
       classLabel,
+      academicYear: formatAcademicYearShort(new Date()),
       subjectName: subject.name,
       dateText,
       timeText,
