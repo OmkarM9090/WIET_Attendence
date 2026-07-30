@@ -18,6 +18,7 @@ import { parseAttendanceExcel } from "../utils/excelParser.js";
 const generateWhatsAppMessage = (
   institution,
   className,
+  academicYear,
   subjectName,
   date,
   sessionType,
@@ -36,6 +37,7 @@ const generateWhatsAppMessage = (
   // Build the message
   let message = `${institution}\nDaily Attendance Report\n\n`;
   message += `Class: ${className}\n`;
+  message += `Academic Year: ${academicYear || "2026-2027"}\n`;
   message += `Subject: ${subjectName}\n`;
   message += `Date: ${formattedDate}\n`;
   message += `Session Type: ${sessionType}\n`;
@@ -329,6 +331,7 @@ export const createAttendance = async (req, res) => {
     let whatsappText = generateWhatsAppMessage(
       institution,
       className,
+      academicYear,
       subject.name,
       date,
       sessionType,

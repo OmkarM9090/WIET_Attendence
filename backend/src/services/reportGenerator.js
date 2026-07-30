@@ -43,6 +43,7 @@ export const generateDailyReport = (
   let report = "Watumull College of Engineering and Technology\n\n";
   report += "Daily Attendance Report\n";
   report += `Class: ${classLabel}\n`;
+  report += `Academic Year: ${attendanceSession.academicYear || "2026-2027"}\n`;
   report += `Subject: ${subject?.name || ""}\n`;
   report += `Date: ${dateText}\n`;
   report += `Time: ${timeText}\n`;
