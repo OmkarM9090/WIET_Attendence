@@ -13,6 +13,9 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedDiv, setSelectedDiv] = useState('');
   
+  const [teachers, setTeachers] = useState([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const [subjects, setSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
@@ -29,7 +32,7 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
     const fetchBranches = async () => {
       try {
         const res = await axiosInstance.get('/admin/branches');
-        setBranches(res.data?.data || []);
+        setBranches(Array.isArray(res.data) ? res.data : res.data?.data || []);
       } catch (err) {
         console.error("Failed to fetch branches", err);
       }
@@ -37,16 +40,50 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
     fetchBranches();
   }, []);
 
-  // Fetch subjects when class selected for substitute
+  // Fetch teachers when class selected for substitute
   useEffect(() => {
     if (proxyType === 'substitute' && selectedBranch && selectedYear && selectedDiv) {
-      const fetchSubjects = async () => {
+      const fetchTeachers = async () => {
         try {
-          setLoadingSubjects(true);
+          setLoadingTeachers(true);
+          setTeachers([]);
+          setSelectedTeacherId('');
           setSubjects([]);
           setSelectedSubjectId('');
-          const res = await axiosInstance.get('/attendance/subjects-for-class', {
+          const res = await axiosInstance.get('/proxy/teachers-for-class', {
             params: { branchId: selectedBranch, year: selectedYear, division: selectedDiv }
+          });
+          setTeachers(res.data?.data || []);
+        } catch (err) {
+          setError(err.response?.data?.message || "Failed to fetch teachers");
+        } finally {
+          setLoadingTeachers(false);
+        }
+      };
+      fetchTeachers();
+    } else {
+      setTeachers([]);
+      setSelectedTeacherId('');
+      setSubjects([]);
+      setSelectedSubjectId('');
+    }
+  }, [proxyType, selectedBranch, selectedYear, selectedDiv]);
+
+  // Fetch subjects when teacher selected for substitute
+  useEffect(() => {
+    if (proxyType === 'substitute' && selectedBranch && selectedYear && selectedDiv && selectedTeacherId) {
+      const fetchSubjects = async () => {
+        try {
+          setSubjects([]);
+          setSelectedSubjectId('');
+          setLoadingSubjects(true);
+          const res = await axiosInstance.get('/proxy/subjects-for-class', {
+            params: {
+              branchId: selectedBranch,
+              year: selectedYear,
+              division: selectedDiv,
+              teacherId: selectedTeacherId
+            }
           });
           setSubjects(res.data?.data || []);
         } catch (err) {
@@ -56,21 +93,24 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
         }
       };
       fetchSubjects();
+    } else {
+      setSubjects([]);
+      setSelectedSubjectId('');
     }
-  }, [proxyType, selectedBranch, selectedYear, selectedDiv]);
+  }, [proxyType, selectedBranch, selectedYear, selectedDiv, selectedTeacherId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
     if (proxyType === 'substitute') {
-      if (!selectedBranch || !selectedYear || !selectedDiv || !selectedSubjectId || !substituteReason) {
+      if (!selectedBranch || !selectedYear || !selectedDiv || !selectedTeacherId || !selectedSubjectId || !substituteReason) {
         setError('All fields are required for substitute proxy');
         return;
       }
       
       const branchObj = branches.find(b => b._id === selectedBranch);
-      const subjectObj = subjects.find(s => `${s._id}_${s.sessionType}` === selectedSubjectId);
+      const subjectObj = subjects.find(s => String(s.assignmentId || `${s._id}_${s.sessionType}`) === selectedSubjectId);
       
       if (!subjectObj) return;
 
@@ -85,6 +125,7 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
         division: selectedDiv,
         subject: { _id: subjectObj._id, name: subjectObj.name, code: subjectObj.code },
         sessionType: subjectObj.sessionType,
+        batch: subjectObj.batch || null,
         originalTeacherId: subjectObj.originalTeacherId
       };
       onContinue(mockAssignment);
@@ -178,12 +219,26 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
             
             {(selectedBranch && selectedYear && selectedDiv) && (
               <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Original Teacher</label>
+                <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)} disabled={loadingTeachers} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none cursor-pointer">
+                  <option value="">{loadingTeachers ? "Loading..." : "Select original teacher"}</option>
+                  {teachers.map(t => (
+                    <option key={t._id} value={t._id}>
+                      {t.name}{t.assignmentCount ? ` (${t.assignmentCount} subject${t.assignmentCount > 1 ? 's' : ''})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(selectedBranch && selectedYear && selectedDiv && selectedTeacherId) && (
+              <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Subject (Original Timetable)</label>
                 <select value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} disabled={loadingSubjects} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none cursor-pointer">
                   <option value="">{loadingSubjects ? "Loading..." : "Select Subject to substitute"}</option>
                   {subjects.map(s => (
-                    <option key={`${s._id}_${s.sessionType}`} value={`${s._id}_${s.sessionType}`}>
-                      {s.name} ({s.sessionType}) - Original: {s.originalTeacherName || 'Unknown'}
+                    <option key={s.assignmentId || `${s._id}_${s.sessionType}`} value={s.assignmentId || `${s._id}_${s.sessionType}`}>
+                      {s.name} ({s.sessionType}{s.batch?.name ? ` - Batch ${s.batch.name}` : ''})
                     </option>
                   ))}
                 </select>

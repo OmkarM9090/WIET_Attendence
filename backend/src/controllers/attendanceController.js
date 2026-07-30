@@ -11,6 +11,62 @@ import { generateDailyReport } from "../services/reportGenerator.js";
 import { updateMonthlyAttendanceExcel } from "../utils/updateMonthlyAttendanceExcel.js";
 import { parseAttendanceExcel } from "../utils/excelParser.js";
 
+const getCurrentAcademicYear = () => {
+  const now = new Date();
+  const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+  const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
+  return process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
+};
+
+const validateProxyOriginalAssignment = async ({
+  originalTeacherId,
+  proxyBranchId,
+  proxyYear,
+  proxyDivision,
+  proxySubjectId,
+  proxySessionType,
+  proxyBatchId,
+  currentAcademicYear
+}) => {
+  if (!originalTeacherId || !mongoose.Types.ObjectId.isValid(originalTeacherId)) {
+    return null;
+  }
+
+  const assignment = await TeachingAssignment.findOne({
+    teacherId: originalTeacherId,
+    branchId: proxyBranchId,
+    year: parseInt(proxyYear, 10),
+    division: proxyDivision,
+    subjectId: proxySubjectId,
+    sessionType: proxySessionType || "LECTURE",
+    academicYear: currentAcademicYear,
+    isActive: true
+  })
+    .populate("teacherId", "name email")
+    .populate("subjectId", "name code")
+    .populate("batchId", "name")
+    .lean();
+
+  if (!assignment) {
+    return null;
+  }
+
+  if (assignment.sessionType === "PRACTICAL") {
+    const assignmentBatchId = assignment.batchId?._id?.toString();
+    const assignmentBatchName = assignment.batchId?.name;
+    const requestedBatch = proxyBatchId ? String(proxyBatchId) : "";
+
+    if (
+      !requestedBatch ||
+      (requestedBatch !== assignmentBatchId && requestedBatch !== assignmentBatchName)
+    ) {
+      return null;
+    }
+  }
+
+  return assignment;
+};
+
 /**
  * FORMAT WHATSAPP ATTENDANCE MESSAGE
  * Generates a formatted attendance report for WhatsApp
@@ -672,6 +728,8 @@ export const getStudentsForSession = async (req, res) => {
  * @access Private (Teacher only)
  */
 export const markAndGenerateAttendance = async (req, res) => {
+  let isProxySession = false;
+
   try {
     const {
       teachingAssignmentId,
@@ -695,7 +753,7 @@ export const markAndGenerateAttendance = async (req, res) => {
     const teacherId = req.user.id;
 
     // ── Determine proxy session ──────────────────────────────────────────
-    const isProxySession = isSubstitute === true || isExtraLecture === true;
+    isProxySession = isSubstitute === true || isExtraLecture === true;
 
     // ============ 1. VALIDATE REQUIRED FIELDS ============
     if (!date || !Array.isArray(absentRollNumbers)) {
@@ -741,10 +799,7 @@ export const markAndGenerateAttendance = async (req, res) => {
     validateAttendanceDate(date);
 
     // ── Academic year compute karo ───────────────────────────────────────
-    const now = new Date();
-    const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
-    const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
-    const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
+    const currentAcademicYear = getCurrentAcademicYear();
 
     // ── Session ke liye semester calculate karo ──────────────────────────
     const sessionMonth = new Date(date).getMonth();
@@ -832,8 +887,29 @@ export const markAndGenerateAttendance = async (req, res) => {
       effectiveSubjectId       = proxySubjectId;
       effectiveSessionType     = proxySessionType || "LECTURE";
       effectiveAcademicYear    = currentAcademicYear;
-      // Substitute: assigned teacher = original teacher; Extra: assigned = actual teacher
-      effectiveAssignedTeacher = originalTeacherId || teacherId;
+      if (isSubstitute === true) {
+        const originalAssignment = await validateProxyOriginalAssignment({
+          originalTeacherId,
+          proxyBranchId,
+          proxyYear,
+          proxyDivision,
+          proxySubjectId,
+          proxySessionType: effectiveSessionType,
+          proxyBatchId,
+          currentAcademicYear
+        });
+
+        if (!originalAssignment) {
+          return res.status(403).json({
+            success: false,
+            message: "Invalid original teacher for this proxy class. Please select the teacher and subject from the proxy dropdowns."
+          });
+        }
+
+        effectiveAssignedTeacher = originalAssignment.teacherId._id || originalAssignment.teacherId;
+      } else {
+        effectiveAssignedTeacher = teacherId;
+      }
 
       const semBase = (effectiveYear - 1) * 2;
       effectiveSemester = sessionMonth >= 6 ? semBase + 1 : semBase + 2;
@@ -857,17 +933,17 @@ export const markAndGenerateAttendance = async (req, res) => {
         origTeacherName = origTeacher?.name || "N/A";
       }
 
-      console.log(`[PROXY] ============================================`);
-      console.log(`[PROXY] Teacher : ${proxyTeacher?.name || teacherId} (${proxyTeacher?.email || ""})`);
-      console.log(`[PROXY] Type    : ${isSubstitute ? "SUBSTITUTE" : "EXTRA LECTURE"}`);
-      console.log(`[PROXY] Subject : ${proxySubjectId}`);
-      console.log(`[PROXY] Class   : Branch=${proxyBranchId}, Year=${proxyYear}, Div=${proxyDivision}`);
-      console.log(`[PROXY] SessType: ${effectiveSessionType}`);
-      console.log(`[PROXY] Orig.   : ${origTeacherName}`);
-      console.log(`[PROXY] Reason  : ${substituteReason || extraLectureReason || "None"}`);
-      console.log(`[PROXY] Date    : ${date}`);
-      console.log(`[PROXY] Time    : ${new Date().toISOString()}`);
-      console.log(`[PROXY] ============================================`);
+      console.log(`[PROXY-AUDIT] ============================================`);
+      console.log(`[PROXY-AUDIT] Teacher : ${proxyTeacher?.name || teacherId} (${proxyTeacher?.email || ""})`);
+      console.log(`[PROXY-AUDIT] Type    : ${isSubstitute ? "SUBSTITUTE" : "EXTRA LECTURE"}`);
+      console.log(`[PROXY-AUDIT] Subject : ${proxySubjectId}`);
+      console.log(`[PROXY-AUDIT] Class   : Branch=${proxyBranchId}, Year=${proxyYear}, Div=${proxyDivision}`);
+      console.log(`[PROXY-AUDIT] SessType: ${effectiveSessionType}`);
+      console.log(`[PROXY-AUDIT] Orig.   : ${origTeacherName}`);
+      console.log(`[PROXY-AUDIT] Reason  : ${substituteReason || extraLectureReason || "None"}`);
+      console.log(`[PROXY-AUDIT] Date    : ${date}`);
+      console.log(`[PROXY-AUDIT] Time    : ${new Date().toISOString()}`);
+      console.log(`[PROXY-AUDIT] ============================================`);
     }
 
     // ============ 4. LOAD STUDENTS ============
@@ -1650,7 +1726,7 @@ export const downloadExcel = async (req, res) => {
  */
 export const getSubjectsForClass = async (req, res) => {
   try {
-    const { branchId, year, division } = req.query;
+    const { branchId, year, division, teacherId } = req.query;
 
     if (!branchId || !year || !division) {
       return res.status(400).json({
@@ -1659,13 +1735,25 @@ export const getSubjectsForClass = async (req, res) => {
       });
     }
 
-    // Fetch active assignments for this class
-    const assignments = await TeachingAssignment.find({
+    const assignmentQuery = {
       branchId,
       year: parseInt(year, 10),
       division,
       isActive: true
-    })
+    };
+
+    if (teacherId) {
+      if (!mongoose.Types.ObjectId.isValid(teacherId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid teacherId format"
+        });
+      }
+      assignmentQuery.teacherId = teacherId;
+    }
+
+    // Fetch active assignments for this class
+    const assignments = await TeachingAssignment.find(assignmentQuery)
       .populate("subjectId", "name code")
       .populate("teacherId", "name email")
       .populate("batchId", "name")
@@ -1678,13 +1766,20 @@ export const getSubjectsForClass = async (req, res) => {
     assignments.forEach(assign => {
       if (!assign.subjectId) return;
 
-      const key = `${assign.subjectId._id}_${assign.sessionType}`;
+      const key = `${assign.subjectId._id}_${assign.sessionType}_${assign.batchId?._id || "lecture"}_${assign.teacherId?._id}`;
       if (!subjectMap.has(key)) {
         subjectMap.set(key, {
           _id: assign.subjectId._id,
+          assignmentId: assign._id,
           name: assign.subjectId.name,
           code: assign.subjectId.code,
           sessionType: assign.sessionType,
+          batch: assign.batchId
+            ? {
+                _id: assign.batchId._id,
+                name: assign.batchId.name
+              }
+            : null,
           originalTeacherId: assign.teacherId?._id,
           originalTeacherName: assign.teacherId?.name
         });
@@ -1702,6 +1797,75 @@ export const getSubjectsForClass = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch subjects for class",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * GET TEACHERS FOR CLASS (For Substitute Proxy)
+ *
+ * @route GET /api/proxy/teachers-for-class
+ * @access Private (Teacher only)
+ */
+export const getTeachersForClass = async (req, res) => {
+  try {
+    const { branchId, year, division } = req.query;
+
+    if (!branchId || !year || !division) {
+      return res.status(400).json({
+        success: false,
+        message: "branchId, year, division are required"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(branchId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid branchId format"
+      });
+    }
+
+    const assignments = await TeachingAssignment.find({
+      branchId,
+      year: parseInt(year, 10),
+      division,
+      academicYear: getCurrentAcademicYear(),
+      isActive: true
+    })
+      .populate("teacherId", "name email")
+      .lean();
+
+    const teacherMap = new Map();
+
+    assignments.forEach((assignment) => {
+      if (!assignment.teacherId?._id) return;
+
+      const teacherKey = assignment.teacherId._id.toString();
+      if (!teacherMap.has(teacherKey)) {
+        teacherMap.set(teacherKey, {
+          _id: assignment.teacherId._id,
+          name: assignment.teacherId.name,
+          email: assignment.teacherId.email,
+          assignmentCount: 0
+        });
+      }
+
+      const entry = teacherMap.get(teacherKey);
+      entry.assignmentCount += 1;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: Array.from(teacherMap.values()).sort((a, b) =>
+        String(a.name || "").localeCompare(String(b.name || ""))
+      )
+    });
+  } catch (error) {
+    console.error("GET TEACHERS FOR CLASS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch teachers for class",
       error: error.message
     });
   }
