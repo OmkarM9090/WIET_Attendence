@@ -8,7 +8,8 @@ import {
   manualExcelUpdate,
   getSessionDetails,
   importAttendanceExcel,
-  downloadExcel
+  downloadExcel,
+  getSubjectsForClass
 } from "../controllers/attendanceController.js";
 import { generateDefaulters } from "../controllers/defaulterController.js";
 import { getMonthlyAttendance } from "../controllers/monthlyAttendanceController.js";
@@ -55,6 +56,15 @@ router.get(
   allowRoles("teacher"),
   getStudentsForSession
 );
+
+// Route for proxy substitute: Get subjects for a class
+router.get(
+  "/subjects-for-class",
+  protect,
+  allowRoles("teacher"),
+  getSubjectsForClass
+);
+
 
 router.post(
   "/import-excel",

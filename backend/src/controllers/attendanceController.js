@@ -1585,3 +1585,70 @@ export const downloadExcel = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET SUBJECTS FOR CLASS (For Substitute Proxy)
+ * Fetches all active teaching assignments for a specific class
+ * 
+ * @route GET /api/attendance/subjects-for-class
+ * @access Private (Teacher only)
+ */
+export const getSubjectsForClass = async (req, res) => {
+  try {
+    const { branchId, year, division } = req.query;
+
+    if (!branchId || !year || !division) {
+      return res.status(400).json({
+        success: false,
+        message: "branchId, year, division are required"
+      });
+    }
+
+    // Fetch active assignments for this class
+    const assignments = await TeachingAssignment.find({
+      branchId,
+      year: parseInt(year, 10),
+      division,
+      isActive: true
+    })
+      .populate("subjectId", "name code")
+      .populate("teacherId", "name email")
+      .populate("batchId", "name")
+      .lean();
+
+    // Group by subject to avoid duplicates (e.g. multiple practical batches for same subject)
+    // but keep sessionType info
+    const subjectMap = new Map();
+
+    assignments.forEach(assign => {
+      if (!assign.subjectId) return;
+
+      const key = `${assign.subjectId._id}_${assign.sessionType}`;
+      if (!subjectMap.has(key)) {
+        subjectMap.set(key, {
+          _id: assign.subjectId._id,
+          name: assign.subjectId.name,
+          code: assign.subjectId.code,
+          sessionType: assign.sessionType,
+          originalTeacherId: assign.teacherId?._id,
+          originalTeacherName: assign.teacherId?.name
+        });
+      }
+    });
+
+    const subjects = Array.from(subjectMap.values());
+
+    res.status(200).json({
+      success: true,
+      data: subjects
+    });
+  } catch (error) {
+    console.error("GET SUBJECTS FOR CLASS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch subjects for class",
+      error: error.message
+    });
+  }
+};
+
