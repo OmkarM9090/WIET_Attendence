@@ -606,89 +606,228 @@ export const getStudentsForSession = async (req, res) => {
 };
 
 /**
- * MARK ATTENDANCE + GENERATE REPORT
- * Unified API for saving attendance and generating WhatsApp report text.
- * 
+ * MARK ATTENDANCE + GENERATE REPORT (PROXY-AWARE)
+ *
+ * Regular flow:  teachingAssignmentId se class details lete hain.
+ * Proxy flow:    isSubstitute=true ya isExtraLecture=true ke saath
+ *                directly proxyBranchId/proxyYear/proxyDivision/proxySubjectId pass karo.
+ *                TeachingAssignment ownership check bypass hota hai.
+ *
  * @route POST /api/attendance/mark-and-generate
  * @access Private (Teacher only)
  */
 export const markAndGenerateAttendance = async (req, res) => {
   try {
-    const { teachingAssignmentId, date, absentRollNumbers } = req.body;
+    const {
+      teachingAssignmentId,
+      date,
+      absentRollNumbers,
+      // ── Proxy / Extra-Lecture fields ─────────────────────────────────
+      isSubstitute,        // Boolean – kya ye substitute class hai?
+      substituteReason,    // String  – substitute ka reason (required if isSubstitute=true)
+      isExtraLecture,      // Boolean – kya ye extra/compensation class hai?
+      extraLectureReason,  // String  – extra lecture ka reason (required if isExtraLecture=true)
+      // Proxy ke liye raw class details (teachingAssignmentId nahi chahiye):
+      proxyBranchId,       // ObjectId string – target class ka branch
+      proxyYear,           // Number – target class ka year (1-4)
+      proxyDivision,       // String – target class ka division (A/B/C)
+      proxySubjectId,      // ObjectId string – padhane wala subject
+      proxySessionType,    // String – LECTURE | PRACTICAL (default: LECTURE)
+      proxyBatchId,        // String – PRACTICAL ke liye batch name (optional)
+      originalTeacherId    // ObjectId string – original timetable teacher (substitute ke liye)
+    } = req.body;
+
     const teacherId = req.user.id;
 
-    // 1. Validate required fields
-    if (!teachingAssignmentId || !date || !Array.isArray(absentRollNumbers)) {
+    // ── Determine proxy session ──────────────────────────────────────────
+    const isProxySession = isSubstitute === true || isExtraLecture === true;
+
+    // ============ 1. VALIDATE REQUIRED FIELDS ============
+    if (!date || !Array.isArray(absentRollNumbers)) {
       return res.status(400).json({
         success: false,
-        message: "teachingAssignmentId, date and absentRollNumbers are required"
+        message: "date and absentRollNumbers are required"
+      });
+    }
+
+    // Regular session ke liye teachingAssignmentId mandatory hai
+    if (!isProxySession && !teachingAssignmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "teachingAssignmentId is required for regular attendance"
+      });
+    }
+
+    // Proxy session ke liye raw class details mandatory hain
+    if (isProxySession && (!proxyBranchId || !proxyYear || !proxyDivision || !proxySubjectId)) {
+      return res.status(400).json({
+        success: false,
+        message: "proxyBranchId, proxyYear, proxyDivision, proxySubjectId are required for proxy/extra sessions"
+      });
+    }
+
+    // Substitute ke liye reason mandatory hai
+    if (isSubstitute && (!substituteReason || !substituteReason.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "substituteReason is required for substitute sessions"
+      });
+    }
+
+    // Extra lecture ke liye reason mandatory hai
+    if (isExtraLecture && (!extraLectureReason || !extraLectureReason.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "extraLectureReason is required for extra lecture sessions"
       });
     }
 
     // 2. Date validation (today or yesterday only)
     validateAttendanceDate(date);
 
-    // 3. Fetch TeachingAssignment
-    if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid teachingAssignmentId format"
-      });
-    }
-
-    const assignment = await TeachingAssignment.findById(teachingAssignmentId)
-      .populate("subjectId", "name code")
-      .populate("branchId", "name code")
-      .populate("batchId", "name")
-      .lean();
-
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: "Teaching assignment not found"
-      });
-    }
-
-    // Validate teacher ownership
-    if (assignment.teacherId.toString() !== teacherId) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to mark attendance for this session"
-      });
-    }
-
-    // Academic year must be current
+    // ── Academic year compute karo ───────────────────────────────────────
     const now = new Date();
     const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
     const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
     const currentAcademicYear = process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
-    
-    if (assignment.academicYear !== currentAcademicYear) {
-      return res.status(400).json({
-        success: false,
-        message: "Attendance can only be marked for the current academic year"
-      });
-    }
 
-    // 4. Load students based on session type
-    const studentQuery = {
-      status: "active",
-      academicYear: assignment.academicYear,
-      branch: assignment.branchId,
-      year: assignment.year,
-      division: assignment.division
-    };
+    // ── Session ke liye semester calculate karo ──────────────────────────
+    const sessionMonth = new Date(date).getMonth();
 
-    if (assignment.sessionType === "PRACTICAL") {
-      if (!assignment.batchId?.name) {
+    // ── Variables jo dono flows mein use honge ──────────────────────────
+    let assignment = null;
+    let effectiveBranchId;
+    let effectiveYear;
+    let effectiveDivision;
+    let effectiveSubjectId;
+    let effectiveSessionType;
+    let effectiveBatchId = null;
+    let effectiveAcademicYear;
+    let effectiveSemester;
+    let effectiveAssignedTeacher;
+
+    if (!isProxySession) {
+      // ==============================================================
+      // REGULAR FLOW – existing TeachingAssignment se data lo
+      // ==============================================================
+
+      if (!mongoose.Types.ObjectId.isValid(teachingAssignmentId)) {
         return res.status(400).json({
           success: false,
-          message: "Batch is required for practical sessions"
+          message: "Invalid teachingAssignmentId format"
         });
       }
+
+      assignment = await TeachingAssignment.findById(teachingAssignmentId)
+        .populate("subjectId", "name code")
+        .populate("branchId", "name code")
+        .populate("batchId", "name")
+        .lean();
+
+      if (!assignment) {
+        return res.status(404).json({
+          success: false,
+          message: "Teaching assignment not found"
+        });
+      }
+
+      // Regular flow: teacher apna hi assignment mark kar sakta hai
+      if (assignment.teacherId.toString() !== teacherId) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to mark attendance for this session"
+        });
+      }
+
+      if (assignment.academicYear !== currentAcademicYear) {
+        return res.status(400).json({
+          success: false,
+          message: "Attendance can only be marked for the current academic year"
+        });
+      }
+
+      effectiveBranchId        = assignment.branchId;
+      effectiveYear            = assignment.year;
+      effectiveDivision        = assignment.division;
+      effectiveSubjectId       = assignment.subjectId;
+      effectiveSessionType     = assignment.sessionType;
+      effectiveBatchId         = assignment.batchId?.name || null;
+      effectiveAcademicYear    = assignment.academicYear;
+      effectiveAssignedTeacher = assignment.teacherId;
+
+      const semBase = (assignment.year - 1) * 2;
+      effectiveSemester = sessionMonth >= 6 ? semBase + 1 : semBase + 2;
+
+    } else {
+      // ==============================================================
+      // PROXY / EXTRA LECTURE FLOW – raw class details use karo
+      // Koi bhi teacher kisi bhi class ka proxy le sakta hai
+      // ==============================================================
+
+      if (!mongoose.Types.ObjectId.isValid(proxyBranchId)) {
+        return res.status(400).json({ success: false, message: "Invalid proxyBranchId format" });
+      }
+      if (!mongoose.Types.ObjectId.isValid(proxySubjectId)) {
+        return res.status(400).json({ success: false, message: "Invalid proxySubjectId format" });
+      }
+
+      effectiveBranchId        = proxyBranchId;
+      effectiveYear            = parseInt(proxyYear, 10);
+      effectiveDivision        = proxyDivision;
+      effectiveSubjectId       = proxySubjectId;
+      effectiveSessionType     = proxySessionType || "LECTURE";
+      effectiveAcademicYear    = currentAcademicYear;
+      // Substitute: assigned teacher = original teacher; Extra: assigned = actual teacher
+      effectiveAssignedTeacher = originalTeacherId || teacherId;
+
+      const semBase = (effectiveYear - 1) * 2;
+      effectiveSemester = sessionMonth >= 6 ? semBase + 1 : semBase + 2;
+
+      // Practical ke liye batch validate karo
+      if (effectiveSessionType === "PRACTICAL") {
+        if (!proxyBatchId) {
+          return res.status(400).json({
+            success: false,
+            message: "proxyBatchId is required for PRACTICAL proxy sessions"
+          });
+        }
+        effectiveBatchId = proxyBatchId;
+      }
+
+      // ── [PROXY] Audit Logging ─────────────────────────────────────────
+      const proxyTeacher = await User.findById(teacherId).select("name email").lean();
+      let origTeacherName = "N/A";
+      if (originalTeacherId && mongoose.Types.ObjectId.isValid(originalTeacherId)) {
+        const origTeacher = await User.findById(originalTeacherId).select("name").lean();
+        origTeacherName = origTeacher?.name || "N/A";
+      }
+
+      console.log(`[PROXY] ============================================`);
+      console.log(`[PROXY] Teacher : ${proxyTeacher?.name || teacherId} (${proxyTeacher?.email || ""})`);
+      console.log(`[PROXY] Type    : ${isSubstitute ? "SUBSTITUTE" : "EXTRA LECTURE"}`);
+      console.log(`[PROXY] Subject : ${proxySubjectId}`);
+      console.log(`[PROXY] Class   : Branch=${proxyBranchId}, Year=${proxyYear}, Div=${proxyDivision}`);
+      console.log(`[PROXY] SessType: ${effectiveSessionType}`);
+      console.log(`[PROXY] Orig.   : ${origTeacherName}`);
+      console.log(`[PROXY] Reason  : ${substituteReason || extraLectureReason || "None"}`);
+      console.log(`[PROXY] Date    : ${date}`);
+      console.log(`[PROXY] Time    : ${new Date().toISOString()}`);
+      console.log(`[PROXY] ============================================`);
+    }
+
+    // ============ 4. LOAD STUDENTS ============
+    const studentQuery = {
+      status: "active",
+      academicYear: effectiveAcademicYear,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision
+    };
+
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
       studentQuery.$or = [
-        { batch: assignment.batchId.name },
-        { batchName: assignment.batchId.name }
+        { batch: effectiveBatchId },
+        { batchName: effectiveBatchId }
       ];
     }
 
@@ -701,11 +840,13 @@ export const markAndGenerateAttendance = async (req, res) => {
     if (!students.length) {
       return res.status(400).json({
         success: false,
-        message: "No students found for this session"
+        message: isProxySession
+          ? "No active students found for the selected proxy class. Please verify Branch/Year/Division."
+          : "No students found for this session"
       });
     }
 
-    // 5. Convert roll numbers to student IDs
+    // ============ 5. CONVERT ROLL NUMBERS TO STUDENT IDs ============
     const rollSet = new Set(absentRollNumbers.map((r) => Number(r)));
     const rollToStudent = new Map(students.map((s) => [s.rollNo, s]));
 
@@ -719,77 +860,89 @@ export const markAndGenerateAttendance = async (req, res) => {
 
     const absentStudentIds = [...rollSet].map((roll) => rollToStudent.get(roll)._id);
 
-    // 6. Check if attendance already exists
-    // Query must match the unique index fields: date + subject + branch + year + division + academicYear + semester + sessionType + batch
+    // ============ 6. CHECK FOR DUPLICATE ATTENDANCE ============
     const sessionDate = new Date(date);
     sessionDate.setHours(0, 0, 0, 0);
     const nextDate = new Date(sessionDate);
     nextDate.setDate(nextDate.getDate() + 1);
 
-    // Calculate semester for query
-    const month = new Date(date).getMonth();
-    const semesterBase = (assignment.year - 1) * 2;
-    const semester = month >= 6 ? semesterBase + 1 : semesterBase + 2;
-
-    // Build query matching the unique index
+    // Base duplicate query – unique index fields match karo
     const duplicateQuery = {
       date: { $gte: sessionDate, $lt: nextDate },
-      subject: assignment.subjectId,
-      branch: assignment.branchId,
-      year: assignment.year,
-      division: assignment.division,
-      academicYear: assignment.academicYear,
-      semester: semester,
-      sessionType: assignment.sessionType,
-      isCancelled: false // Index has partialFilterExpression
+      subject: effectiveSubjectId,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision,
+      academicYear: effectiveAcademicYear,
+      semester: effectiveSemester,
+      sessionType: effectiveSessionType,
+      isCancelled: false,
+      // Extra lectures same din pe multiple allow hain – isExtraLecture se differentiate hota hai
+      isExtraLecture: isExtraLecture === true ? true : { $ne: true }
     };
 
-    // Add batch for practical sessions
-    if (assignment.sessionType === "PRACTICAL" && assignment.batchId?.name) {
-      duplicateQuery.batch = assignment.batchId.name;
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      duplicateQuery.batch = effectiveBatchId;
+    }
+
+    // Substitute duplicate check
+    if (isSubstitute === true) {
+      duplicateQuery.isSubstitute = true;
     }
 
     const existing = await AttendanceSession.findOne(duplicateQuery);
 
-    // If attendance already exists, return response to allow editing
     if (existing) {
+      console.log(isProxySession ? `[PROXY] Duplicate found: ${existing._id}` : `Duplicate found: ${existing._id}`);
       return res.json({
         success: true,
         alreadyExists: true,
         attendanceId: existing._id,
-        message: "Attendance already marked for this session and date"
+        message: isProxySession
+          ? "Proxy/Extra attendance already marked for this session and date"
+          : "Attendance already marked for this session and date"
       });
     }
 
-    // 7. Save AttendanceSession
+    // ============ 7. SAVE ATTENDANCE SESSION ============
     const attendance = await AttendanceSession.create({
-      teachingAssignmentId,
+      teachingAssignmentId: !isProxySession ? teachingAssignmentId : null,
       date: sessionDate,
-      academicYear: assignment.academicYear,
-      semester,
-      sessionType: assignment.sessionType,
-      batch: assignment.sessionType === "PRACTICAL" ? assignment.batchId?.name : null,
-      assignedTeacher: assignment.teacherId,
-      teacher: teacherId,
-      isSubstitute: false,
-      substituteReason: null,
-      isExtraLecture: false,
-      extraLectureReason: null,
+      academicYear: effectiveAcademicYear,
+      semester: effectiveSemester,
+      sessionType: effectiveSessionType,
+      batch: effectiveSessionType === "PRACTICAL" ? effectiveBatchId : null,
+      assignedTeacher: effectiveAssignedTeacher, // Original teacher (timetable wala)
+      teacher: teacherId,                         // Actual teacher (proxy ya regular)
+      isSubstitute: isSubstitute === true,
+      substituteReason: isSubstitute === true ? substituteReason?.trim() : null,
+      isExtraLecture: isExtraLecture === true,
+      extraLectureReason: isExtraLecture === true ? extraLectureReason?.trim() : null,
       isCancelled: false,
       cancelReason: null,
-      subject: assignment.subjectId,
-      branch: assignment.branchId,
-      year: assignment.year,
-      division: assignment.division,
+      subject: effectiveSubjectId,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision,
       absentStudents: absentStudentIds,
       totalStudents: students.length,
       createdBy: teacherId
     });
 
-    // 8. Generate WhatsApp report text
+    if (isProxySession) {
+      console.log(`[PROXY-CREATE] Session created: ${attendance._id} | Type: ${isSubstitute ? "SUBSTITUTE" : "EXTRA"} | Teacher: ${teacherId}`);
+    }
+
+    // ============ 8. GENERATE WHATSAPP REPORT TEXT ============
     const teacher = await User.findById(teacherId).select("name email").lean();
-    const subject = await Subject.findById(assignment.subjectId).select("name code").lean();
-    const absentStudents = [...rollSet].map((roll) => ({
+
+    // Subject details – assignment se populated mila (regular) ya ID se fetch (proxy)
+    let subjectDoc = assignment?.subjectId || null;
+    if (!subjectDoc || !subjectDoc.name) {
+      subjectDoc = await Subject.findById(effectiveSubjectId).select("name code").lean();
+    }
+
+    const absentStudentsList = [...rollSet].map((roll) => ({
       rollNo: roll,
       name: rollToStudent.get(roll)?.userId?.name || ""
     }));
@@ -797,20 +950,22 @@ export const markAndGenerateAttendance = async (req, res) => {
     const reportText = generateDailyReport(
       {
         ...attendance.toObject(),
-        startTime: assignment.startTime,
-        endTime: assignment.endTime
+        startTime: assignment?.startTime || null,
+        endTime: assignment?.endTime || null
       },
-      absentStudents,
+      absentStudentsList,
       teacher,
-      subject
+      subjectDoc
     );
 
-    // 9. Update Monthly Excel Attendance Sheet
-    // This runs asynchronously and won't block the API response
+    // ============ 9. UPDATE MONTHLY EXCEL (ASYNC) ============
+    // Excel update asynchronously chalao taaki API response block na ho
     updateMonthlyAttendanceExcel(attendance.toObject())
       .then((result) => {
-        if (result.success) {
+        if (result.success && !result.skipped) {
           console.log(`📊 Excel updated: ${result.message}`);
+        } else if (result.skipped) {
+          console.log(`📊 Excel update skipped: ${result.message}`);
         } else {
           console.error(`📊 Excel update failed: ${result.error}`);
         }
@@ -819,35 +974,41 @@ export const markAndGenerateAttendance = async (req, res) => {
         console.error("📊 Excel update error:", error.message);
       });
 
-    // 10. Return response
+    // ============ 10. RETURN RESPONSE ============
     res.json({
       success: true,
       alreadyExists: false,
       attendance,
-      reportText
+      reportText,
+      isProxy: isProxySession,
+      proxyType: isSubstitute ? "substitute" : isExtraLecture ? "extra" : "regular"
     });
+
   } catch (error) {
     console.error("MARK AND GENERATE ERROR:", error);
-    
-    // Handle MongoDB duplicate key error (fallback if findOne missed it)
+
+    if (isProxySession) {
+      console.error("[PROXY-ERROR] Error during proxy session creation:", error.message);
+    }
+
+    // MongoDB duplicate key error (fallback if findOne missed it)
     if (error.code === 11000) {
-      // Try to find the existing attendance to return its ID
       try {
         const sessionDate = new Date(req.body.date);
         sessionDate.setHours(0, 0, 0, 0);
         const nextDate = new Date(sessionDate);
         nextDate.setDate(nextDate.getDate() + 1);
-        
-        const existing = await AttendanceSession.findOne({
-          teachingAssignmentId: req.body.teachingAssignmentId,
+
+        const existingFallback = await AttendanceSession.findOne({
+          teachingAssignmentId: req.body.teachingAssignmentId || undefined,
           date: { $gte: sessionDate, $lt: nextDate }
         });
-        
+
         return res.status(409).json({
           success: false,
           message: "Attendance already marked for this session and date",
           alreadyExists: true,
-          attendanceId: existing?._id
+          attendanceId: existingFallback?._id
         });
       } catch (findError) {
         return res.status(409).json({
@@ -857,7 +1018,7 @@ export const markAndGenerateAttendance = async (req, res) => {
         });
       }
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Server error"
@@ -868,7 +1029,6 @@ export const markAndGenerateAttendance = async (req, res) => {
 /**
  * UPDATE ATTENDANCE
  * PUT /api/attendance/update/:attendanceId
- * 
  * Update existing attendance record with new absent students list
  * Regenerates WhatsApp report and updates Excel file
  * 
