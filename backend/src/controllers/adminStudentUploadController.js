@@ -6,19 +6,11 @@ import Batch from "../models/Batch.js";
 import ExcelJS from "exceljs";
 import { parseStudentExcel, getCellValue } from "../utils/excelParser.js";
 import { validateStudentRow } from "../utils/excelValidator.js";
-
-// Helper function to auto-detect academic year
-function getCurrentAcademicYear() {
-  const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  const year = now.getFullYear();
-  
-  if (month >= 7) {
-    return `${year}-${year + 1}`;
-  } else {
-    return `${year - 1}-${year}`;
-  }
-}
+import {
+  calculateAdmissionYear,
+  generateStudentEmail,
+  getCurrentAcademicYear
+} from "../utils/emailGenerator.js";
 
 export const uploadStudentsExcel = async (req, res) => {
   try {
@@ -54,6 +46,8 @@ export const uploadStudentsExcel = async (req, res) => {
       }
 
       try {
+        const admissionYear = calculateAdmissionYear(s.year, autoAcademicYear);
+
         const user = await User.create({
           name: s.name,
           email: s.email,
@@ -69,6 +63,7 @@ export const uploadStudentsExcel = async (req, res) => {
           division: s.division.toUpperCase(),
           batch: batch ? batch._id : undefined,
           academicYear: autoAcademicYear,
+          admissionYear,
           admissionDate: new Date()
         });
         
@@ -128,12 +123,26 @@ export const getClassInfo = async (req, res) => {
     if (!branch) {
       return res.status(404).json({ success: false, message: "The selected branch was not found." });
     }
+
+    const academicYear = getCurrentAcademicYear();
+    const admissionYear = calculateAdmissionYear(yearNum, academicYear);
     
     const currentCount = await Student.countDocuments({
       branch: branchId,
       year: yearNum,
-      division: div
+      division: div,
+      admissionYear
     });
+
+    const usedRollNumbers = await Student.find({
+      branch: branchId,
+      year: yearNum,
+      division: div,
+      admissionYear
+    })
+      .select("rollNo")
+      .sort({ rollNo: 1 })
+      .lean();
     
     const yearLabels = {
       1: 'FE (First Year)',
@@ -141,8 +150,10 @@ export const getClassInfo = async (req, res) => {
       3: 'TE (Third Year)',
       4: 'BE (Fourth Year)'
     };
-    
-    const academicYear = getCurrentAcademicYear();
+
+    const domain = process.env.COLLEGE_EMAIL_DOMAIN || "college.edu";
+    const emailFormat = `{rollNo}.${branch.code.toLowerCase()}.${admissionYear}@${domain}`;
+    const sampleEmail = generateStudentEmail(1, branch.code, admissionYear);
     
     res.json({
       success: true,
@@ -154,7 +165,11 @@ export const getClassInfo = async (req, res) => {
         yearLabel: yearLabels[yearNum],
         division: div,
         academicYear,
+        admissionYear,
         currentStudentCount: currentCount,
+        rollNumbersUsed: usedRollNumbers.map((student) => student.rollNo),
+        emailFormat,
+        sampleEmail,
         displayName: `${yearLabels[yearNum].split(' ')[0]}-${div} ${branch.code}`
       }
     });
@@ -163,10 +178,6 @@ export const getClassInfo = async (req, res) => {
     console.error('[CLASS-INFO ERROR]', error);
     res.status(500).json({ success: false, message: "Failed to load class information.", error: error.message });
   }
-};
-
-const generateAutoEmail = (rollNumber, branchCode) => {
-  return `${rollNumber}.${branchCode.toLowerCase()}@college.edu`;
 };
 
 const normalizeHeaderText = (value) => String(value || "").trim().toLowerCase();
@@ -342,6 +353,13 @@ export const uploadStudentsSimple = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid division. Please select A, B, or C." });
     }
     
+    const academicYear = getCurrentAcademicYear();
+    const admissionYear = calculateAdmissionYear(yearNum, academicYear);
+
+    console.log(`[UPLOAD] Starting upload for ${branch.code}-Y${yearNum}-${div}`);
+    console.log(`[UPLOAD] Academic year: ${academicYear}`);
+    console.log(`[UPLOAD] Admission year: ${admissionYear}`);
+
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(req.file.buffer);
     const sheet = workbook.getWorksheet(1);
@@ -350,11 +368,9 @@ export const uploadStudentsSimple = async (req, res) => {
       return res.status(400).json({ success: false, message: "The uploaded Excel file does not contain any worksheet." });
     }
     
-    const academicYear = getCurrentAcademicYear();
-    
     const existingStudents = await Student.find({
       branch: branchId,
-      year: yearNum,
+      admissionYear,
       division: div
     }).select('rollNo');
     
@@ -362,8 +378,10 @@ export const uploadStudentsSimple = async (req, res) => {
       existingStudents.map(s => s.rollNo.toString())
     );
     
-    const allExistingUsers = await User.find({ role: 'student' }).select('email');
-    const allExistingEmails = new Set(allExistingUsers.map(u => u.email));
+    const allExistingUsers = await User.find({}).select('email');
+    const allExistingEmails = new Set(
+      allExistingUsers.map((u) => String(u.email || "").trim().toLowerCase())
+    );
     
     const successful = [];
     const failed = [];
@@ -423,9 +441,9 @@ export const uploadStudentsSimple = async (req, res) => {
         continue;
       }
 
-      let email = emailCell;
-      if (!email || email === '') {
-        email = generateAutoEmail(rollNo, branch.code);
+      let email = emailCell ? String(emailCell).trim().toLowerCase() : "";
+      if (!email) {
+        email = generateStudentEmail(rollNo, branch.code, admissionYear);
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -471,7 +489,8 @@ export const uploadStudentsSimple = async (req, res) => {
         year: yearNum,
         division: div,
         batch: batchId,
-        academicYear
+        academicYear,
+        admissionYear
       });
       
       processedRollNumbers.add(rollNo);
@@ -514,6 +533,7 @@ export const uploadStudentsSimple = async (req, res) => {
           division: studentData.division,
           batch: studentData.batch,
           academicYear: studentData.academicYear,
+          admissionYear: studentData.admissionYear,
           admissionDate: new Date()
         });
         
@@ -545,7 +565,8 @@ export const uploadStudentsSimple = async (req, res) => {
         branchName: branch.name,
         year: yearNum,
         division: div,
-        academicYear
+        academicYear,
+        admissionYear
       },
       summary: {
         total: totalDataRows,

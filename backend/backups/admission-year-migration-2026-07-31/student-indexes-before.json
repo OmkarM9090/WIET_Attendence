@@ -1,0 +1,46 @@
+[
+  {
+    "v": 2,
+    "key": {
+      "_id": 1
+    },
+    "name": "_id_"
+  },
+  {
+    "v": 2,
+    "key": {
+      "userId": 1
+    },
+    "name": "userId_1",
+    "unique": true
+  },
+  {
+    "v": 2,
+    "key": {
+      "branch": 1,
+      "year": 1,
+      "division": 1,
+      "status": 1
+    },
+    "name": "branch_1_year_1_division_1_status_1"
+  },
+  {
+    "v": 2,
+    "key": {
+      "academicYear": 1,
+      "status": 1
+    },
+    "name": "academicYear_1_status_1"
+  },
+  {
+    "v": 2,
+    "key": {
+      "branch": 1,
+      "admissionYear": 1,
+      "division": 1,
+      "rollNo": 1
+    },
+    "name": "unique_student_per_class",
+    "unique": true
+  }
+]

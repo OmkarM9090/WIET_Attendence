@@ -65,6 +65,9 @@ const studentSchema = new mongoose.Schema(
 
     admissionYear: {
       type: Number,
+      required: true,
+      min: 2000,
+      max: 2100,
     },
     
     // Soft Delete fields
@@ -80,7 +83,10 @@ const studentSchema = new mongoose.Schema(
  */
 studentSchema.index({ branch: 1, year: 1, division: 1, status: 1 });
 studentSchema.index({ academicYear: 1, status: 1 });
-studentSchema.index({ rollNo: 1, branch: 1 });
+studentSchema.index(
+  { branch: 1, admissionYear: 1, division: 1, rollNo: 1 },
+  { unique: true, name: "unique_student_per_class" }
+);
 
 /**
  * SCHEMA METHODS

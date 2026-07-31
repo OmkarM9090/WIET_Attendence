@@ -134,7 +134,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
           sourceRowNumber: sourceRowIndex + 1,
           name,
           rollNo,
-          email: email || `${rollNo}.${classInfo.branchCode.toLowerCase()}@college.edu`,
+          email: email || classInfo.sampleEmail.replace(/^1\./, `${rollNo}.`),
           batch,
           isValid: errors.length === 0,
           errors
@@ -289,19 +289,56 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                 </div>
                 
                 {classInfo && (
-                  <div className="mt-4 bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4">
-                    <div className="flex items-start gap-2.5">
-                      <CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-bold text-emerald-950 text-xs">
+                  <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                        <CheckCircle className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-slate-900 text-sm">
                           {classInfo.displayName}
                         </p>
-                        <p className="text-xs text-emerald-700 mt-0.5 font-medium">
-                          Academic Year: {classInfo.academicYear} | Current Students: {classInfo.currentStudentCount}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs">
+                          <div className="bg-white/70 rounded-lg p-2 border border-blue-100">
+                            <p className="text-slate-500">Academic Year</p>
+                            <p className="font-semibold text-slate-900">{classInfo.academicYear}</p>
+                          </div>
+                          <div className="bg-white/70 rounded-lg p-2 border border-blue-100">
+                            <p className="text-slate-500">Admission Year</p>
+                            <p className="font-semibold text-slate-900">{classInfo.admissionYear}</p>
+                          </div>
+                          <div className="bg-white/70 rounded-lg p-2 border border-blue-100">
+                            <p className="text-slate-500">Current Students</p>
+                            <p className="font-semibold text-slate-900">{classInfo.currentStudentCount}</p>
+                          </div>
+                          <div className="bg-white/70 rounded-lg p-2 border border-blue-100">
+                            <p className="text-slate-500">Used Roll Numbers</p>
+                            <p className="font-semibold text-slate-900">
+                              {classInfo.rollNumbersUsed?.length > 0
+                                ? `${classInfo.rollNumbersUsed.slice(0, 5).join(', ')}${classInfo.rollNumbersUsed.length > 5 ? '...' : ''}`
+                                : 'None yet'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 bg-white/80 rounded-lg border border-blue-100 p-3">
+                          <p className="text-xs text-slate-500 mb-1">
+                            Auto-generated email format
+                          </p>
+                          <code className="block text-xs font-mono text-indigo-700 break-all">
+                            {classInfo.emailFormat}
+                          </code>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Sample: <span className="font-mono text-slate-700">{classInfo.sampleEmail}</span>
+                          </p>
+                        </div>
+
+                        <p className="text-xs text-blue-800 mt-3 font-medium">
+                          Admission year is calculated automatically from the selected year. The same roll number can be used in a different admission year or division.
                         </p>
                         {classInfo.currentStudentCount > 0 && (
                           <p className="text-xs text-amber-700 mt-2 font-semibold">
-                            This class already has student records. During upload, any row with an existing roll number or email address will be rejected.
+                            This class already has student records. Any row with an existing roll number in this class or an email already used anywhere in the system will be rejected.
                           </p>
                         )}
                       </div>
