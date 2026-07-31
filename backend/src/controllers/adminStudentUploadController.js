@@ -111,22 +111,22 @@ export const getClassInfo = async (req, res) => {
     const { branchId, year, division } = req.query;
     
     if (!branchId || !year || !division) {
-      return res.status(400).json({ success: false, message: 'Branch, Year aur Division select karna zaroori hai' });
+      return res.status(400).json({ success: false, message: "Please select branch, year, and division." });
     }
     
     const yearNum = parseInt(year);
     if (![1, 2, 3, 4].includes(yearNum)) {
-      return res.status(400).json({ success: false, message: 'Year 1, 2, 3, ya 4 hona chahiye' });
+      return res.status(400).json({ success: false, message: "Invalid year. Please select 1, 2, 3, or 4." });
     }
     
     const div = division.toUpperCase();
     if (!['A', 'B', 'C'].includes(div)) {
-      return res.status(400).json({ success: false, message: 'Division A, B, ya C hona chahiye' });
+      return res.status(400).json({ success: false, message: "Invalid division. Please select A, B, or C." });
     }
     
     const branch = await Branch.findById(branchId);
     if (!branch) {
-      return res.status(404).json({ success: false, message: 'Branch database mein exist nahi karta' });
+      return res.status(404).json({ success: false, message: "The selected branch was not found." });
     }
     
     const currentCount = await Student.countDocuments({
@@ -161,7 +161,7 @@ export const getClassInfo = async (req, res) => {
     
   } catch (error) {
     console.error('[CLASS-INFO ERROR]', error);
-    res.status(500).json({ success: false, message: 'Class info fetch karne mein error aaya', error: error.message });
+    res.status(500).json({ success: false, message: "Failed to load class information.", error: error.message });
   }
 };
 
@@ -196,6 +196,50 @@ const hasStudentRowData = (row) => {
   const c3 = String(getCellValue(row.getCell(3)) || "").trim();
   const c4 = String(getCellValue(row.getCell(4)) || "").trim();
   return !!(c1 || c2 || c3 || c4);
+};
+
+const summarizeFailureReasons = (failedRows = []) => {
+  const counts = new Map();
+
+  failedRows.forEach((row) => {
+    const reason = row.reason || "Unknown validation error";
+    counts.set(reason, (counts.get(reason) || 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+};
+
+const buildZeroSuccessMessage = ({ totalRows, failedRows, branchCode, year, division }) => {
+  const failureSummary = summarizeFailureReasons(failedRows);
+  const allReasons = failureSummary.map((item) => item.reason);
+  const classLabel = `${branchCode} Year ${year} Division ${division}`;
+
+  if (totalRows === 0) {
+    return "No student rows were found in the uploaded Excel file. Please use the template and enter at least one student.";
+  }
+
+  if (allReasons.length === 1 && allReasons[0] === "Duplicate roll number") {
+    return `No students were uploaded because all roll numbers in this file already exist in ${classLabel}.`;
+  }
+
+  if (allReasons.length === 1 && allReasons[0] === "Duplicate email") {
+    return "No students were uploaded because every email address in this file is already registered.";
+  }
+
+  if (allReasons.every((reason) =>
+    ["Duplicate roll number", "Duplicate email", "Duplicate in Excel", "Duplicate email in Excel"].includes(reason)
+  )) {
+    return "No students were uploaded because every row in this file has duplicate roll numbers or email addresses. Please remove duplicates and try again.";
+  }
+
+  const topReasons = failureSummary
+    .slice(0, 2)
+    .map((item) => `${item.reason.toLowerCase()} (${item.count})`)
+    .join(", ");
+
+  return `No students were uploaded because all rows failed validation. Main issues found: ${topReasons}.`;
 };
 
 export const downloadSimpleTemplate = async (req, res) => {
@@ -274,28 +318,28 @@ export const uploadStudentsSimple = async (req, res) => {
   
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Excel file upload karo pehle' });
+      return res.status(400).json({ success: false, message: "Please upload an Excel file first." });
     }
     
     const { branchId, year, division } = req.body;
     
     if (!branchId || !year || !division) {
-      return res.status(400).json({ success: false, message: 'Branch, Year, aur Division select karna zaroori hai' });
+      return res.status(400).json({ success: false, message: "Please select branch, year, and division before uploading." });
     }
     
     const branch = await Branch.findById(branchId);
     if (!branch) {
-      return res.status(404).json({ success: false, message: 'Selected branch database mein exist nahi karta' });
+      return res.status(404).json({ success: false, message: "The selected branch was not found." });
     }
     
     const yearNum = parseInt(year);
     if (![1, 2, 3, 4].includes(yearNum)) {
-      return res.status(400).json({ success: false, message: 'Invalid year. 1, 2, 3, ya 4 hona chahiye' });
+      return res.status(400).json({ success: false, message: "Invalid year. Please select 1, 2, 3, or 4." });
     }
     
     const div = division.toUpperCase();
     if (!['A', 'B', 'C'].includes(div)) {
-      return res.status(400).json({ success: false, message: 'Invalid division. A, B, ya C hona chahiye' });
+      return res.status(400).json({ success: false, message: "Invalid division. Please select A, B, or C." });
     }
     
     const workbook = new ExcelJS.Workbook();
@@ -303,7 +347,7 @@ export const uploadStudentsSimple = async (req, res) => {
     const sheet = workbook.getWorksheet(1);
     
     if (!sheet) {
-      return res.status(400).json({ success: false, message: 'Excel file mein koi sheet nahi hai' });
+      return res.status(400).json({ success: false, message: "The uploaded Excel file does not contain any worksheet." });
     }
     
     const academicYear = getCurrentAcademicYear();
@@ -355,27 +399,27 @@ export const uploadStudentsSimple = async (req, res) => {
       const batchCell = getCellValue(row.getCell(4));
 
       if (!name) {
-        pushFailedRow(rowIdx, { name, rollNo }, 'Name missing', `Row ${logicalRowNumber} mein name empty hai`);
+        pushFailedRow(rowIdx, { name, rollNo }, "Name missing", `Row ${logicalRowNumber}: Student name is missing.`);
         continue;
       }
 
       if (!rollNo) {
-        pushFailedRow(rowIdx, { name, rollNo }, 'Roll number missing', `Row ${logicalRowNumber} mein roll number empty hai`);
+        pushFailedRow(rowIdx, { name, rollNo }, "Roll number missing", `Row ${logicalRowNumber}: Roll number is missing.`);
         continue;
       }
 
       if (!/^\d+$/.test(rollNo)) {
-        pushFailedRow(rowIdx, { name, rollNo }, 'Invalid roll number', `Row ${logicalRowNumber}: Roll number sirf numbers hone chahiye`);
+        pushFailedRow(rowIdx, { name, rollNo }, "Invalid roll number", `Row ${logicalRowNumber}: Roll number must contain digits only.`);
         continue;
       }
 
       if (existingRollNumbers.has(rollNo)) {
-        pushFailedRow(rowIdx, { name, rollNo }, 'Duplicate roll number', `Row ${logicalRowNumber}: Roll number ${rollNo} is class mein pehle se exist karta hai`);
+        pushFailedRow(rowIdx, { name, rollNo }, "Duplicate roll number", `Row ${logicalRowNumber}: Roll number ${rollNo} already exists in this class.`);
         continue;
       }
 
       if (processedRollNumbers.has(rollNo)) {
-        pushFailedRow(rowIdx, { name, rollNo }, 'Duplicate in Excel', `Row ${logicalRowNumber}: Roll number ${rollNo} Excel mein multiple baar hai`);
+        pushFailedRow(rowIdx, { name, rollNo }, "Duplicate in Excel", `Row ${logicalRowNumber}: Roll number ${rollNo} appears more than once in the Excel file.`);
         continue;
       }
 
@@ -385,17 +429,17 @@ export const uploadStudentsSimple = async (req, res) => {
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        pushFailedRow(rowIdx, { name, rollNo, email }, 'Invalid email', `Row ${logicalRowNumber}: Email format galat hai (${email})`);
+        pushFailedRow(rowIdx, { name, rollNo, email }, "Invalid email", `Row ${logicalRowNumber}: "${email}" is not a valid email address.`);
         continue;
       }
 
       if (allExistingEmails.has(email)) {
-        pushFailedRow(rowIdx, { name, rollNo, email }, 'Duplicate email', `Row ${logicalRowNumber}: Email ${email} pehle se registered hai`);
+        pushFailedRow(rowIdx, { name, rollNo, email }, "Duplicate email", `Row ${logicalRowNumber}: Email ${email} is already registered.`);
         continue;
       }
 
       if (processedEmails.has(email)) {
-        pushFailedRow(rowIdx, { name, rollNo, email }, 'Duplicate email in Excel', `Row ${logicalRowNumber}: Email ${email} Excel mein multiple baar hai`);
+        pushFailedRow(rowIdx, { name, rollNo, email }, "Duplicate email in Excel", `Row ${logicalRowNumber}: Email ${email} appears more than once in the Excel file.`);
         continue;
       }
       
@@ -437,9 +481,16 @@ export const uploadStudentsSimple = async (req, res) => {
     if (successful.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Koi valid students nahi mile Excel mein',
+        message: buildZeroSuccessMessage({
+          totalRows: totalDataRows,
+          failedRows: failed,
+          branchCode: branch.code,
+          year: yearNum,
+          division: div
+        }),
         summary: { total: totalDataRows, successful: 0, failed: failed.length },
-        failedRows: failed
+        failedRows: failed,
+        failureSummary: summarizeFailureReasons(failed)
       });
     }
     
@@ -478,8 +529,8 @@ export const uploadStudentsSimple = async (req, res) => {
         failed.push({
           rowNumber: 'DB',
           data: studentData,
-          reason: 'Database error',
-          simpleMessage: `${studentData.name} ko add karne mein database error aaya`
+          reason: "Database error",
+          simpleMessage: `${studentData.name} could not be added because of a database error.`
         });
       }
     }
@@ -510,7 +561,7 @@ export const uploadStudentsSimple = async (req, res) => {
     console.error('[UPLOAD ERROR]', error);
     res.status(500).json({
       success: false,
-      message: 'Upload mein error aaya. Please try again.',
+      message: "Something went wrong while uploading the file. Please try again.",
       error: error.message
     });
   }

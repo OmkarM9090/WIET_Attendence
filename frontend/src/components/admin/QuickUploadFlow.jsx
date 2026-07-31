@@ -17,6 +17,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
   const [previewData, setPreviewData] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
+  const [uploadErrorDetails, setUploadErrorDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   
@@ -97,6 +98,8 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     }
     
     setFile(selectedFile);
+    setUploadErrorDetails(null);
+    setUploadResult(null);
     
     try {
       const buffer = await selectedFile.arrayBuffer();
@@ -150,6 +153,7 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
     if (!file || !classInfo) return;
     
     setUploading(true);
+    setUploadErrorDetails(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -164,6 +168,14 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
       
       if (onSuccess) onSuccess();
     } catch (error) {
+      if (error?.failedRows || error?.failureSummary || error?.summary) {
+        setUploadErrorDetails({
+          message: error.message || "Upload failed.",
+          summary: error.summary || null,
+          failureSummary: error.failureSummary || [],
+          failedRows: error.failedRows || []
+        });
+      }
       showError(error.message || 'Upload failed');
     } finally {
       setUploading(false);
@@ -287,6 +299,11 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                         <p className="text-xs text-emerald-700 mt-0.5 font-medium">
                           Academic Year: {classInfo.academicYear} | Current Students: {classInfo.currentStudentCount}
                         </p>
+                        {classInfo.currentStudentCount > 0 && (
+                          <p className="text-xs text-amber-700 mt-2 font-semibold">
+                            This class already has student records. During upload, any row with an existing roll number or email address will be rejected.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -366,6 +383,61 @@ const QuickUploadFlow = ({ branches, onSuccess, onClose }) => {
                       </p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {uploadErrorDetails && (
+                <div className="space-y-3">
+                  <div className="bg-rose-50 border border-rose-200/80 p-3.5 rounded-xl text-xs">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-bold text-rose-950">
+                          {uploadErrorDetails.message}
+                        </p>
+                        {uploadErrorDetails.summary && (
+                          <p className="text-rose-800 mt-0.5 font-medium">
+                            Processed {uploadErrorDetails.summary.total} rows. Uploaded {uploadErrorDetails.summary.successful} and rejected {uploadErrorDetails.summary.failed}.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {uploadErrorDetails.failureSummary.length > 0 && (
+                    <div className="bg-white border border-rose-200 rounded-xl p-4 text-xs">
+                      <h4 className="font-bold text-slate-900 mb-2">
+                        Why the upload was rejected
+                      </h4>
+                      <ul className="space-y-1 text-slate-700 font-medium">
+                        {uploadErrorDetails.failureSummary.map((item) => (
+                          <li key={item.reason}>
+                            {item.reason}: {item.count} row{item.count > 1 ? "s" : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {uploadErrorDetails.failedRows.length > 0 && (
+                    <div className="bg-white border border-rose-200 rounded-xl p-4 text-xs max-h-48 overflow-y-auto">
+                      <h4 className="font-bold text-slate-900 mb-2">
+                        Row-by-row issues
+                      </h4>
+                      <ul className="space-y-1 text-slate-700 font-medium">
+                        {uploadErrorDetails.failedRows.slice(0, 12).map((row, index) => (
+                          <li key={`${row.excelRowNumber || row.rowNumber}-${index}`}>
+                            {row.simpleMessage}
+                          </li>
+                        ))}
+                      </ul>
+                      {uploadErrorDetails.failedRows.length > 12 && (
+                        <p className="mt-2 text-slate-500 font-medium">
+                          Showing first 12 issues out of {uploadErrorDetails.failedRows.length}.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               
