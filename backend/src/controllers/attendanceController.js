@@ -10,6 +10,10 @@ import { validateAttendanceDate } from "../utils/dateValidator.js";
 import { generateDailyReport } from "../services/reportGenerator.js";
 import { updateMonthlyAttendanceExcel } from "../utils/updateMonthlyAttendanceExcel.js";
 import { parseAttendanceExcel } from "../utils/excelParser.js";
+import { 
+  isStudentInBatch, 
+  getStudentsForBatch 
+} from "../utils/batchMembership.js";
 
 const getCurrentAcademicYear = () => {
   const now = new Date();
@@ -648,17 +652,37 @@ export const getStudentsForSession = async (req, res) => {
       division: effectiveDivision
     };
 
-    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
-      const batchName = effectiveBatchId.name;
-      studentQuery.$or = [{ batch: batchName }, { batchName }];
-    }
+    let students = [];
 
-    // Fetch students
-    const students = await Student.find(studentQuery)
-      .populate("userId", "name email")
-      .populate("branch", "name code")
-      .select("rollNo userId branch year division batch batchName academicYear status")
-      .sort({ rollNo: 1 });
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      // ✅ Use batchMembership helper (Phase 3 requirement)
+      const batchId = effectiveBatchId._id || effectiveBatchId;
+      students = await getStudentsForBatch(batchId);
+
+      // If helper returns empty, fallback to legacy query
+      if (!students || students.length === 0) {
+        const batchName = effectiveBatchId.name || effectiveBatchId;
+        studentQuery.$or = [
+          { batch: batchName },
+          { batch: batchId },
+          { practicalBatches: batchId }
+        ];
+        students = await Student.find(studentQuery)
+          .populate("userId", "name email")
+          .populate("branch", "name code")
+          .select("rollNo userId branch year division batch practicalBatches academicYear status")
+          .sort({ rollNo: 1 })
+          .lean();
+      }
+    } else {
+      // Lecture - fetch all
+      students = await Student.find(studentQuery)
+        .populate("userId", "name email")
+        .populate("branch", "name code")
+        .select("rollNo userId branch year division batch practicalBatches academicYear status")
+        .sort({ rollNo: 1 })
+        .lean();
+    }
 
     // Resolve missing user details
     const missingUserIds = students
@@ -946,27 +970,55 @@ export const markAndGenerateAttendance = async (req, res) => {
       console.log(`[PROXY-AUDIT] ============================================`);
     }
 
-    // ============ 4. LOAD STUDENTS ============
-    const studentQuery = {
-      status: "active",
-      academicYear: effectiveAcademicYear,
-      branch: effectiveBranchId,
-      year: effectiveYear,
-      division: effectiveDivision
-    };
+    // ============ 4. LOAD STUDENTS (use batchMembership helper for PRACTICAL) ============
+    let students = [];
 
     if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
-      studentQuery.$or = [
-        { batch: effectiveBatchId },
-        { batchName: effectiveBatchId }
-      ];
-    }
+      // ✅ RULE 3: Use batchMembership helper everywhere
+      const batchRef = effectiveBatchId._id || effectiveBatchId;
+      const batchStudents = await getStudentsForBatch(batchRef);
 
-    const students = await Student.find(studentQuery)
-      .populate("userId", "name email")
-      .select("rollNo userId")
-      .sort({ rollNo: 1 })
-      .lean();
+      if (batchStudents && batchStudents.length > 0) {
+        students = batchStudents.map(s => ({
+          _id: s._id,
+          rollNo: s.rollNo,
+          userId: s.userId
+        }));
+      } else {
+        // Legacy fallback
+        const studentQuery = {
+          status: "active",
+          academicYear: effectiveAcademicYear,
+          branch: effectiveBranchId,
+          year: effectiveYear,
+          division: effectiveDivision,
+          $or: [
+            { batch: effectiveBatchId },
+            { batch: effectiveBatchId?.name || effectiveBatchId },
+            { practicalBatches: batchRef }
+          ]
+        };
+        students = await Student.find(studentQuery)
+          .populate("userId", "name email")
+          .select("rollNo userId")
+          .sort({ rollNo: 1 })
+          .lean();
+      }
+    } else {
+      // Lecture flow
+      const studentQuery = {
+        status: "active",
+        academicYear: effectiveAcademicYear,
+        branch: effectiveBranchId,
+        year: effectiveYear,
+        division: effectiveDivision
+      };
+      students = await Student.find(studentQuery)
+        .populate("userId", "name email")
+        .select("rollNo userId")
+        .sort({ rollNo: 1 })
+        .lean();
+    }
 
     if (!students.length) {
       return res.status(400).json({
@@ -1035,16 +1087,34 @@ export const markAndGenerateAttendance = async (req, res) => {
       });
     }
 
-    // ============ 7. SAVE ATTENDANCE SESSION ============
+    // ============ 7. SAVE ATTENDANCE SESSION (save ObjectId for batch) ============
+    let batchForAttendance = null;
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      // Always resolve to ObjectId if possible (Phase 3 requirement)
+      if (mongoose.Types.ObjectId.isValid(effectiveBatchId)) {
+        batchForAttendance = effectiveBatchId;
+      } else if (typeof effectiveBatchId === "object" && effectiveBatchId._id) {
+        batchForAttendance = effectiveBatchId._id;
+      } else {
+        // Try to lookup by name
+        const BatchModel = (await import("../models/Batch.js")).default;
+        const foundBatch = await BatchModel.findOne({ 
+          name: effectiveBatchId, 
+          isDeleted: { $ne: true } 
+        }).select("_id");
+        if (foundBatch) batchForAttendance = foundBatch._id;
+      }
+    }
+
     const attendance = await AttendanceSession.create({
       teachingAssignmentId: !isProxySession ? teachingAssignmentId : null,
       date: sessionDate,
       academicYear: effectiveAcademicYear,
       semester: effectiveSemester,
       sessionType: effectiveSessionType,
-      batch: effectiveSessionType === "PRACTICAL" ? effectiveBatchId : null,
-      assignedTeacher: effectiveAssignedTeacher, // Original teacher (timetable wala)
-      teacher: teacherId,                         // Actual teacher (proxy ya regular)
+      batch: batchForAttendance,   // ✅ Save ObjectId (validated)
+      assignedTeacher: effectiveAssignedTeacher,
+      teacher: teacherId,
       isSubstitute: isSubstitute === true,
       substituteReason: isSubstitute === true ? substituteReason?.trim() : null,
       isExtraLecture: isExtraLecture === true,

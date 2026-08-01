@@ -1,0 +1,271 @@
+{
+  "info": {
+    "_postman_id": "b8f4e2a1-9c3d-4e7f-8b2a-6d1e5f4c9a3b",
+    "name": "WIET Attendance - Batch Management (Phase 3) Backend APIs",
+    "description": "Complete collection for Admin Batch Management APIs (Phase 3). Admin-only protected routes.\n\nBase URL: http://localhost:5000\n\nAuth: Bearer Token (Admin JWT)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "YOUR_ADMIN_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "branchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studentId1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studentId2",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{adminToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Get Batches (List)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches?branchId={{branchId}}&year=2&division=A",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches"],
+          "query": [
+            { "key": "branchId", "value": "{{branchId}}" },
+            { "key": "year", "value": "2" },
+            { "key": "division", "value": "A" }
+          ]
+        },
+        "description": "GET /api/admin/batches\nReturns all batches for class + unassigned count"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Single Batch",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}"]
+        },
+        "description": "GET /api/admin/batches/:id\nFull batch with populated students"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Quick Setup Batches",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"year\": 2,\n  \"division\": \"A\",\n  \"splitMethod\": \"count\",\n  \"batchCount\": 3,\n  \"namingPattern\": \"BA\",\n  \"academicYear\": \"2025-2026\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/quick-setup",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "quick-setup"]
+        },
+        "description": "POST /api/admin/batches/quick-setup\nAuto-split students into batches"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Create Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BA2-Custom\",\n  \"branchId\": \"{{branchId}}\",\n  \"year\": 2,\n  \"divisions\": [\"A\"],\n  \"studentIds\": [\"{{studentId1}}\", \"{{studentId2}}\"],\n  \"labRoom\": \"Lab-101\",\n  \"description\": \"Custom batch for practicals\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches"]
+        },
+        "description": "POST /api/admin/batches\nCreate custom batch with optional students"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Update Batch",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BA2-Updated\",\n  \"labRoom\": \"Lab-205\",\n  \"description\": \"Updated description\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}"]
+        },
+        "description": "PUT /api/admin/batches/:id"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Add Students to Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentIds\": [\"{{studentId1}}\", \"{{studentId2}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}/students",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}", "students"]
+        },
+        "description": "POST /api/admin/batches/:id/students"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Remove Student from Batch",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}/students/{{studentId1}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}", "students", "{{studentId1}}"]
+        },
+        "description": "DELETE /api/admin/batches/:id/students/:studentId"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Bulk Move Students",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fromBatchId\": \"FROM_BATCH_ID\",\n  \"toBatchId\": \"{{batchId}}\",\n  \"studentIds\": [\"{{studentId1}}\", \"{{studentId2}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/bulk-move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "bulk-move"]
+        },
+        "description": "POST /api/admin/batches/bulk-move"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Create Merged Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Merged-BA2-BB2\",\n  \"sourceBatchIds\": [\"BATCH_A_ID\", \"BATCH_B_ID\"],\n  \"studentIds\": [],\n  \"labRoom\": \"Lab-Merged\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/merge",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "merge"]
+        },
+        "description": "POST /api/admin/batches/merge"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Delete Batch",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}"]
+        },
+        "description": "DELETE /api/admin/batches/:id\n(Soft delete + active session check)"
+      },
+      "response": []
+    },
+    {
+      "name": "11. Get Unassigned Students",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/unassigned?branchId={{branchId}}&year=2&division=A",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "unassigned"],
+          "query": [
+            { "key": "branchId", "value": "{{branchId}}" },
+            { "key": "year", "value": "2" },
+            { "key": "division", "value": "A" }
+          ]
+        },
+        "description": "GET /api/admin/batches/unassigned"
+      },
+      "response": []
+    },
+    {
+      "name": "12. Get Batch Stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/stats?branchId={{branchId}}&year=2&division=A",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "stats"],
+          "query": [
+            { "key": "branchId", "value": "{{branchId}}" },
+            { "key": "year", "value": "2" },
+            { "key": "division", "value": "A" }
+          ]
+        },
+        "description": "GET /api/admin/batches/stats"
+      },
+      "response": []
+    }
+  ]
+}

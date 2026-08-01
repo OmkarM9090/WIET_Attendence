@@ -244,10 +244,11 @@ export const getMyTeachingAssignments = async (req, res) => {
 		}
 
 		// Fetch all active teaching assignments for this teacher
+		// Enhanced populate for Batch Management (Phase 3)
 		const assignments = await TeachingAssignment.find(query)
 			.populate("subjectId", "name code") // Get subject name and code
 			.populate("branchId", "name code") // Get branch name and code
-			.populate("batchId", "name") // Get batch name for practicals
+			.populate("batchId", "name displayName students batchType isMerged labRoom") // Get full batch info for practicals
 			.lean();
 
 		// Sort assignments by day order and time
@@ -262,33 +263,59 @@ export const getMyTeachingAssignments = async (req, res) => {
 			return startA - startB;
 		});
 
-		// Format response
-		const formattedAssignments = sortedAssignments.map((assignment) => ({
-			_id: assignment._id,
-			subject: {
-				_id: assignment.subjectId?._id,
-				name: assignment.subjectId?.name || "Unknown Subject",
-				code: assignment.subjectId?.code || "N/A",
-			},
-			branch: {
-				_id: assignment.branchId?._id,
-				name: assignment.branchId?.name || "Unknown Branch",
-				code: assignment.branchId?.code || "N/A",
-			},
-			year: assignment.year,
-			division: assignment.division,
-			batch: assignment.batchId
+		// Format response - Enhanced for Batch Management (Phase 3)
+		const formattedAssignments = sortedAssignments.map((assignment) => {
+			const batchData = assignment.batchId
 				? {
 						_id: assignment.batchId._id,
 						name: assignment.batchId.name,
+						displayName: assignment.batchId.displayName || assignment.batchId.name,
+						studentCount: assignment.batchId.students ? assignment.batchId.students.length : 0,
+						batchType: assignment.batchId.batchType || "regular",
+						isMerged: assignment.batchId.isMerged || false,
+						labRoom: assignment.batchId.labRoom || null,
 					}
-				: null,
-			sessionType: assignment.sessionType,
-			dayOfWeek: assignment.dayOfWeek,
-			startTime: assignment.startTime,
-			endTime: assignment.endTime,
-			academicYear: assignment.academicYear,
-		}));
+				: null;
+
+			// Enhanced displayName for practicals
+			let displayName = `${assignment.subjectId?.name || "Subject"} - ${assignment.branchId?.name || ""} ${assignment.year}-${assignment.division}`;
+			if (assignment.sessionType === "PRACTICAL" && batchData) {
+				displayName += ` (${batchData.name})`;
+			}
+
+			return {
+				_id: assignment._id,
+				subject: {
+					_id: assignment.subjectId?._id,
+					name: assignment.subjectId?.name || "Unknown Subject",
+					code: assignment.subjectId?.code || "N/A",
+				},
+				branch: {
+					_id: assignment.branchId?._id,
+					name: assignment.branchId?.name || "Unknown Branch",
+					code: assignment.branchId?.code || "N/A",
+				},
+				year: assignment.year,
+				division: assignment.division,
+				batch: batchData,
+				sessionType: assignment.sessionType,
+				dayOfWeek: assignment.dayOfWeek,
+				startTime: assignment.startTime,
+				endTime: assignment.endTime,
+				academicYear: assignment.academicYear,
+				displayName, // Enhanced display name
+				// Extra batch metadata for UI
+				batchInfo: batchData
+					? {
+							name: batchData.name,
+							studentCount: batchData.studentCount,
+							batchType: batchData.batchType,
+							isMerged: batchData.isMerged,
+							labRoom: batchData.labRoom,
+						}
+					: null,
+			};
+		});
 
 		res.status(200).json({
 			success: true,

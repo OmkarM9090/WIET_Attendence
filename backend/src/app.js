@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
 import adminTeacherRoutes from "./routes/adminTeacherRoutes.js";
+import adminBatchRoutes from "./routes/adminBatchRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import proxyRoutes from "./routes/proxyRoutes.js";
 import teacherRoutes from "./routes/teacherRoutes.js";
@@ -54,6 +55,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin", adminStudentRoutes);
 app.use("/api/admin", adminTeacherRoutes);
+// Batch Management APIs (Phase 3) - Admin only
+app.use("/api/admin/batches", adminBatchRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/proxy", proxyRoutes);
 app.use("/api/teacher", teacherRoutes);
