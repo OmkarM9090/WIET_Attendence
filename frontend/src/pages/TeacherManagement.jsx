@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
+import { getCurrentAcademicYear } from "../utils/academicYear";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
@@ -88,7 +90,7 @@ export default function TeacherManagement() {
     dayOfWeek: "MONDAY",
     startTime: "",
     endTime: "",
-    academicYear: "",
+    academicYear: getCurrentAcademicYear(),
   });
   const [ttValidationErrors, setTtValidationErrors] = useState({});
   const [ttSubmitting, setTtSubmitting] = useState(false);
@@ -104,15 +106,7 @@ export default function TeacherManagement() {
   const [detailsModalData, setDetailsModalData] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const sidebarItems = [
-    { path: "/admin", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
-    { path: "/admin/branches", icon: <Building2 size={18} />, label: "Branches" },
-    { path: "/admin/subjects", icon: <BookOpen size={18} />, label: "Subjects" },
-    { path: "/admin/students", icon: <GraduationCap size={18} />, label: "Students" },
-    { path: "/admin/teachers", icon: <Users size={18} />, label: "Teachers" },
-    { path: "/admin/reports", icon: <FileText size={18} />, label: "Reports" },
-    { path: "/admin/defaulters", icon: <AlertTriangle size={18} />, label: "Defaulters" },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   const fetchTeachers = async () => {
     try {
@@ -144,6 +138,30 @@ export default function TeacherManagement() {
       setLoadingAssignments(false);
     }
   };
+
+  // Dynamically fetch batches for selected class parameters
+  useEffect(() => {
+    if (ttFormData.branchId && ttFormData.year && ttFormData.division) {
+      const fetchBatchesForClass = async () => {
+        try {
+          const res = await axiosInstance.get("/admin/batches", {
+            params: {
+              branchId: ttFormData.branchId,
+              year: ttFormData.year,
+              division: ttFormData.division,
+            },
+          });
+          setBatches(res.data?.batches || []);
+        } catch (err) {
+          console.error("Failed to load batches for timetable assignment", err);
+          setBatches([]);
+        }
+      };
+      fetchBatchesForClass();
+    } else {
+      setBatches([]);
+    }
+  }, [ttFormData.branchId, ttFormData.year, ttFormData.division]);
 
   const DAY_OPTIONS = [
     "MONDAY",
@@ -216,7 +234,11 @@ export default function TeacherManagement() {
       }
     }
     setTtValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    if (Object.keys(errors).length > 0) {
+      setTtError("Please fix the validation errors: " + Object.values(errors).join(", "));
+      return false;
+    }
+    return true;
   };
 
   const checkForDuplicateAssignment = () => {
@@ -297,7 +319,7 @@ export default function TeacherManagement() {
         dayOfWeek: "MONDAY",
         startTime: "",
         endTime: "",
-        academicYear: "",
+        academicYear: getCurrentAcademicYear(),
       });
 
       await fetchAssignments();
@@ -893,6 +915,7 @@ export default function TeacherManagement() {
                 name="teacherId"
                 value={ttFormData.teacherId}
                 onChange={handleTtChange}
+                error={ttValidationErrors.teacherId}
                 options={[
                   { value: "", label: "Select teacher" },
                   ...teachers.map((t) => ({
@@ -908,6 +931,7 @@ export default function TeacherManagement() {
                 name="branchId"
                 value={ttFormData.branchId}
                 onChange={handleTtChange}
+                error={ttValidationErrors.branchId}
                 options={[
                   { value: "", label: "Select branch" },
                   ...branches.map((b) => ({
@@ -924,6 +948,7 @@ export default function TeacherManagement() {
                   name="semester"
                   value={ttFormData.semester}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.semester}
                   options={[
                     { value: "", label: "Select semester" },
                     ...Array.from({ length: 8 }, (_, i) => ({ value: i + 1, label: `Sem ${i + 1}` })),
@@ -936,6 +961,7 @@ export default function TeacherManagement() {
                   name="subjectId"
                   value={ttFormData.subjectId}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.subjectId}
                   options={[
                     { value: "", label: "Select subject" },
                     ...subjects.map((s) => ({
@@ -953,6 +979,7 @@ export default function TeacherManagement() {
                   name="division"
                   value={ttFormData.division}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.division}
                   options={[
                     { value: "", label: "Select division" },
                     ...DIVISION_OPTIONS.map((d) => ({ value: d, label: d })),
@@ -965,6 +992,7 @@ export default function TeacherManagement() {
                   name="sessionType"
                   value={ttFormData.sessionType}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.sessionType}
                   options={SESSION_TYPES.map((s) => ({ value: s, label: s }))}
                   required
                 />
@@ -976,9 +1004,16 @@ export default function TeacherManagement() {
                   name="batchId"
                   value={ttFormData.batchId}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.batchId}
                   options={[
-                    { value: "", label: "Select batch" },
-                    ...batches.map((b) => ({ value: b._id, label: b.name })),
+                    {
+                      value: "",
+                      label: batches.length === 0 ? "No batches created for this class yet" : "Select batch"
+                    },
+                    ...batches.map((b) => ({
+                      value: b._id,
+                      label: `${b.displayName || b.name}${b.isMerged ? " (MERGED)" : ""}`
+                    })),
                   ]}
                   required
                 />
@@ -990,6 +1025,7 @@ export default function TeacherManagement() {
                   name="dayOfWeek"
                   value={ttFormData.dayOfWeek}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.dayOfWeek}
                   options={DAY_OPTIONS.map((d) => ({ value: d, label: d }))}
                   required
                 />
@@ -999,6 +1035,7 @@ export default function TeacherManagement() {
                   type="time"
                   value={ttFormData.startTime}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.startTime}
                   required
                 />
                 <FormInput
@@ -1007,6 +1044,7 @@ export default function TeacherManagement() {
                   type="time"
                   value={ttFormData.endTime}
                   onChange={handleTtChange}
+                  error={ttValidationErrors.endTime}
                   required
                 />
               </div>
@@ -1018,6 +1056,7 @@ export default function TeacherManagement() {
                 placeholder="2025-2026"
                 value={ttFormData.academicYear}
                 onChange={handleTtChange}
+                error={ttValidationErrors.academicYear}
                 required
               />
 

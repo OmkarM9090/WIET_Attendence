@@ -40,6 +40,7 @@ const studentSchema = new mongoose.Schema(
       required: false,
     },
 
+    // Practical Batches (array of Batch references)
     // New source-of-truth field for practical batch membership.
     // A student can belong to multiple batches over time or for different practicals.
     practicalBatches: [

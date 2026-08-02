@@ -10,9 +10,11 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Info
+  Info,
+  Layers
 } from "lucide-react";
 
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import { getBranches, createBranch, deleteBranch, getBranchDeleteCount } from "../services/adminService";
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
@@ -176,15 +178,7 @@ export default function BranchManagement() {
     }
   };
 
-  const sidebarItems = [
-    { path: "/admin", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-    { path: "/admin/branches", icon: <Building2 size={20} />, label: "Branches" },
-    { path: "/admin/subjects", icon: <BookOpen size={20} />, label: "Subjects" },
-    { path: "/admin/students", icon: <GraduationCap size={20} />, label: "Students" },
-    { path: "/admin/teachers", icon: <Users size={20} />, label: "Teachers" },
-    { path: "/admin/reports", icon: <FileText size={20} />, label: "Reports" },
-    { path: "/admin/defaulters", icon: <AlertTriangle size={20} />, label: "Defaulters" },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   const columns = [
     {

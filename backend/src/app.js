@@ -11,6 +11,7 @@ import proxyRoutes from "./routes/proxyRoutes.js";
 import teacherRoutes from "./routes/teacherRoutes.js";
 import studentAttendanceRoutes from "./routes/studentAttendanceRoutes.js";
 import defaulterRoutes from "./routes/defaulterRoutes.js";
+import adminBatchRoutes from "./routes/adminBatchRoutes.js";
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin", adminStudentRoutes);
 app.use("/api/admin", adminTeacherRoutes);
+app.use("/api/admin/batches", adminBatchRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/proxy", proxyRoutes);
 app.use("/api/teacher", teacherRoutes);

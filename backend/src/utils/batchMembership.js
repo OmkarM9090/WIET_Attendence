@@ -1,3 +1,7 @@
+// utils/batchMembership.js
+// Central helper for batch operations and membership management
+// Used across controllers, routes, attendance, and reporting.
+
 import mongoose from "mongoose";
 import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
@@ -138,6 +142,7 @@ export const getStudentsForBatch = async (batchId) => {
       $or: [
         { batch: batch._id },
         { practicalBatches: batch._id },
+        { batchName: batch.name },
       ],
     };
 
@@ -253,9 +258,38 @@ export const addStudentToBatch = async (studentId, batchId) => {
 };
 
 /**
+ * Assign array of students to a batch
+ */
+export const assignStudentsToBatch = async (batchId, studentIds = []) => {
+  const batch = await resolveBatchDoc(batchId);
+  if (!batch) {
+    throw new Error("Batch not found");
+  }
+
+  const validStudentIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validStudentIds.length === 0) {
+    throw new Error("No valid student IDs provided");
+  }
+
+  await Promise.all([
+    Batch.updateOne(
+      { _id: batch._id },
+      { $addToSet: { students: { $each: validStudentIds } } }
+    ),
+    Student.updateMany(
+      { _id: { $in: validStudentIds } },
+      {
+        $addToSet: { practicalBatches: batch._id },
+        $set: { batch: batch._id },
+      }
+    ),
+  ]);
+
+  return Batch.findById(batch._id).populate("students");
+};
+
+/**
  * Removes a student from a batch on both sides.
- * If the legacy batch field points to the removed batch, it is reassigned to another batch
- * when possible, otherwise cleared.
  */
 export const removeStudentFromBatch = async (studentId, batchId) => {
   const [student, batch] = await Promise.all([
@@ -306,10 +340,123 @@ export const removeStudentFromBatch = async (studentId, batchId) => {
   };
 };
 
+/**
+ * Bulk move students from one batch to another
+ */
+export const moveStudentsBetweenBatches = async (fromBatchId, toBatchId, studentIds) => {
+  const validStudentIds = studentIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validStudentIds.length === 0) {
+    throw new Error("No valid student IDs provided");
+  }
+
+  const fromBatch = await Batch.findByIdAndUpdate(
+    fromBatchId,
+    { $pull: { students: { $in: validStudentIds } } },
+    { new: true }
+  );
+
+  const toBatch = await Batch.findByIdAndUpdate(
+    toBatchId,
+    { $addToSet: { students: { $each: validStudentIds } } },
+    { new: true }
+  );
+
+  await Student.updateMany(
+    { _id: { $in: validStudentIds } },
+    {
+      $pull: { practicalBatches: fromBatchId },
+    }
+  );
+
+  await Student.updateMany(
+    { _id: { $in: validStudentIds } },
+    {
+      $addToSet: { practicalBatches: toBatchId },
+      $set: { batch: toBatch._id },
+    }
+  );
+
+  return { fromBatch, toBatch };
+};
+
+/**
+ * Get students of a class not assigned to any practical batch
+ */
+export const getUnassignedStudentsForClass = async ({
+  branchId,
+  year,
+  division,
+  academicYear,
+}) => {
+  const batchQuery = { isDeleted: { $ne: true } };
+  if (branchId) batchQuery.branch = branchId;
+  if (year) batchQuery.year = Number(year);
+  if (division) batchQuery.division = division;
+
+  const batches = await Batch.find(batchQuery).select("_id students name").lean();
+
+  const assignedStudentIdsInBatches = new Set();
+  const batchNames = new Set();
+
+  batches.forEach((b) => {
+    batchNames.add(b.name);
+    (b.students || []).forEach((sId) => assignedStudentIdsInBatches.add(sId.toString()));
+  });
+
+  const studentQuery = {
+    status: "active",
+    isDeleted: { $ne: true },
+  };
+  if (branchId) studentQuery.branch = branchId;
+  if (year) studentQuery.year = Number(year);
+  if (division) studentQuery.division = division;
+
+  let allStudents = [];
+  if (academicYear) {
+    allStudents = await Student.find({ ...studentQuery, academicYear })
+      .populate("userId", "name email")
+      .sort({ rollNo: 1 })
+      .lean();
+  }
+
+  if (allStudents.length === 0) {
+    allStudents = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .sort({ rollNo: 1 })
+      .lean();
+  }
+
+  const unassigned = allStudents.filter((student) => {
+    const sId = student._id.toString();
+
+    if (assignedStudentIdsInBatches.has(sId)) return false;
+
+    if (student.batch && batches.some((b) => b._id.toString() === student.batch.toString())) {
+      return false;
+    }
+    if (
+      student.practicalBatches &&
+      student.practicalBatches.some((bId) => batches.some((b) => b._id.toString() === bId.toString()))
+    ) {
+      return false;
+    }
+    if (student.batchName && batchNames.has(student.batchName)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return unassigned;
+};
+
 export default {
   isStudentInBatch,
   getStudentsForBatch,
   getStudentBatches,
   addStudentToBatch,
+  assignStudentsToBatch,
   removeStudentFromBatch,
+  moveStudentsBetweenBatches,
+  getUnassignedStudentsForClass,
 };

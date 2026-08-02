@@ -94,6 +94,14 @@ const batchSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Source batch IDs for merged batches
+    sourceBatchIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Batch",
+      },
+    ],
+
     maxCapacity: {
       type: Number,
       min: 1,
@@ -147,6 +155,15 @@ const batchSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Virtual for studentCount
+batchSchema.virtual("studentCount").get(function () {
+  return this.students ? this.students.length : 0;
+});
+
+// Ensure virtuals are serialized in JSON
+batchSchema.set("toJSON", { virtuals: true });
+batchSchema.set("toObject", { virtuals: true });
 
 batchSchema.pre("validate", function normalizeBatch(next) {
   if (typeof this.name === "string") {

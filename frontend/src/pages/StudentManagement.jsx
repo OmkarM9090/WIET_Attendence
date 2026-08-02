@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import Table from "../components/Table";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
@@ -33,7 +34,8 @@ import {
   RefreshCw,
   Search,
   Edit2,
-  Trash2
+  Trash2,
+  Layers
 } from "lucide-react";
 
 export default function StudentManagement() {
@@ -76,15 +78,7 @@ export default function StudentManagement() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const sidebarItems = [
-    { path: "/admin", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
-    { path: "/admin/branches", icon: <Building2 size={18} />, label: "Branches" },
-    { path: "/admin/subjects", icon: <BookOpen size={18} />, label: "Subjects" },
-    { path: "/admin/students", icon: <GraduationCap size={18} />, label: "Students" },
-    { path: "/admin/teachers", icon: <Users size={18} />, label: "Teachers" },
-    { path: "/admin/reports", icon: <FileText size={18} />, label: "Reports" },
-    { path: "/admin/defaulters", icon: <AlertTriangle size={18} />, label: "Defaulters" },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   useEffect(() => {
     const init = async () => {

@@ -1,6 +1,7 @@
 import AttendanceSession from "../models/AttendanceSession.js";
 import Student from "../models/Student.js";
 import Subject from "../models/Subject.js";
+import { isStudentInBatch } from "../utils/batchMembership.js";
 
 /**
  * GENERATE DEFAULTERS (LECTURE + PRACTICAL)
@@ -109,19 +110,20 @@ export const generateDefaulters = async (req, res) => {
       });
 
       // Process each session
-      sessions.forEach(session => {
+      for (const session of sessions) {
         const entry = subjectMap[session.subject.code];
-        if (!entry) return;
+        if (!entry) continue;
 
         // LATE ADMISSION LOGIC: Skip sessions before student admission
         if (student.admissionDate && student.admissionDate > session.date) {
-          return; // Skip this session for this student
+          continue; // Skip this session for this student
         }
 
-        // BATCH LOGIC: For practicals, only count if batch matches
-        if (session.sessionType === "PRACTICAL") {
-          if (session.batch !== student.batch) {
-            return; // Skip this session (different batch)
+        // BATCH LOGIC: For practicals, check batch membership using central helper
+        if (session.sessionType === "PRACTICAL" && session.batch) {
+          const inBatch = await isStudentInBatch(student._id, session.batch);
+          if (!inBatch) {
+            continue; // Skip session if student is not in this batch
           }
         }
 
@@ -140,7 +142,7 @@ export const generateDefaulters = async (req, res) => {
           entry.pracTotal++;
           if (!isAbsent) entry.pracAttended++;
         }
-      });
+      }
 
       // Calculate percentages
       let totalPercent = 0;

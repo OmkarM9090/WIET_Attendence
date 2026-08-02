@@ -1,9 +1,16 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import DashboardHeader from "./DashboardHeader";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 
 export default function DashboardLayout({ children, sidebarItems, title, subtitle }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const effectiveSidebarItems =
+    sidebarItems ||
+    (location.pathname.startsWith("/admin") ? DEFAULT_ADMIN_SIDEBAR_ITEMS : []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f8f9fa] text-[#212529] font-sans antialiased">
@@ -22,7 +29,7 @@ export default function DashboardLayout({ children, sidebarItems, title, subtitl
         }`}
       >
         <Sidebar
-          items={sidebarItems}
+          items={effectiveSidebarItems}
           onClose={() => setMobileMenuOpen(false)}
         />
       </div>

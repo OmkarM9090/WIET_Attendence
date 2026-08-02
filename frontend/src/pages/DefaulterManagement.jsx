@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
@@ -18,7 +19,9 @@ import {
   AlertTriangle,
   Download,
   Filter,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Mail,
+  Layers,
 } from "lucide-react";
 
 export default function DefaulterManagement() {
@@ -40,14 +43,7 @@ export default function DefaulterManagement() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
 
-  const sidebarItems = [
-    { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={18} /> },
-    { label: "Branches", path: "/admin/branches", icon: <Building2 size={18} /> },
-    { label: "Subjects", path: "/admin/subjects", icon: <BookOpen size={18} /> },
-    { label: "Students", path: "/admin/students", icon: <GraduationCap size={18} /> },
-    { label: "Teachers", path: "/admin/teachers", icon: <Users size={18} /> },
-    { label: "Reports", path: "/admin/defaulters", icon: <AlertTriangle size={18} /> },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   useEffect(() => {
     const init = async () => {

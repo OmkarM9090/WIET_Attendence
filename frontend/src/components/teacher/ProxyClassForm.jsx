@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, AlertTriangle, UserCheck } from 'lucide-react';
+import { ArrowLeft, BookOpen, AlertTriangle, UserCheck, Layers, CheckCircle2 } from 'lucide-react';
 import FormInput from '../FormInput';
 import Button from '../Button';
 import axiosInstance from '../../utils/axios';
@@ -19,6 +19,12 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
   const [subjects, setSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
+
+  // Batch selection for practical proxy
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState('');
+
   const [substituteReason, setSubstituteReason] = useState('');
   
   // Extra Lecture State
@@ -50,6 +56,9 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
           setSelectedTeacherId('');
           setSubjects([]);
           setSelectedSubjectId('');
+          setAvailableBatches([]);
+          setSelectedBatchId('');
+
           const res = await axiosInstance.get('/proxy/teachers-for-class', {
             params: { branchId: selectedBranch, year: selectedYear, division: selectedDiv }
           });
@@ -66,6 +75,8 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
       setSelectedTeacherId('');
       setSubjects([]);
       setSelectedSubjectId('');
+      setAvailableBatches([]);
+      setSelectedBatchId('');
     }
   }, [proxyType, selectedBranch, selectedYear, selectedDiv]);
 
@@ -76,7 +87,10 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
         try {
           setSubjects([]);
           setSelectedSubjectId('');
+          setAvailableBatches([]);
+          setSelectedBatchId('');
           setLoadingSubjects(true);
+
           const res = await axiosInstance.get('/proxy/subjects-for-class', {
             params: {
               branchId: selectedBranch,
@@ -96,8 +110,49 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
     } else {
       setSubjects([]);
       setSelectedSubjectId('');
+      setAvailableBatches([]);
+      setSelectedBatchId('');
     }
   }, [proxyType, selectedBranch, selectedYear, selectedDiv, selectedTeacherId]);
+
+  // Fetch batches when selected subject is PRACTICAL
+  useEffect(() => {
+    if (proxyType === 'substitute' && selectedBranch && selectedYear && selectedDiv && selectedSubjectId) {
+      const subjectObj = subjects.find(s => String(s.assignmentId || `${s._id}_${s.sessionType}`) === selectedSubjectId);
+      
+      if (subjectObj && subjectObj.sessionType === 'PRACTICAL') {
+        const fetchClassBatches = async () => {
+          try {
+            setLoadingBatches(true);
+            setAvailableBatches([]);
+            setSelectedBatchId('');
+
+            const res = await axiosInstance.get('/admin/batches', {
+              params: { branchId: selectedBranch, year: selectedYear, division: selectedDiv }
+            });
+            
+            const fetchedBatches = res.data?.batches || [];
+            setAvailableBatches(fetchedBatches);
+
+            // Default to subjectObj.batch if present in fetchedBatches
+            if (subjectObj.batch && subjectObj.batch._id) {
+              setSelectedBatchId(subjectObj.batch._id);
+            } else if (fetchedBatches.length > 0) {
+              setSelectedBatchId(fetchedBatches[0]._id);
+            }
+          } catch (err) {
+            console.error("Failed to fetch class batches for practical proxy", err);
+          } finally {
+            setLoadingBatches(false);
+          }
+        };
+        fetchClassBatches();
+      } else {
+        setAvailableBatches([]);
+        setSelectedBatchId('');
+      }
+    }
+  }, [proxyType, selectedBranch, selectedYear, selectedDiv, selectedSubjectId, subjects]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -114,6 +169,16 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
       
       if (!subjectObj) return;
 
+      const isPractical = subjectObj.sessionType === 'PRACTICAL';
+      
+      if (isPractical && !selectedBatchId && (!subjectObj.batch || !subjectObj.batch.name)) {
+        setError('Please select a practical batch for substitute practical session');
+        return;
+      }
+
+      const batchObj = availableBatches.find(b => b._id === selectedBatchId) || subjectObj.batch || null;
+      const batchName = batchObj?.name || (typeof batchObj === 'string' ? batchObj : '');
+
       const mockAssignment = {
         _id: 'proxy_substitute',
         isProxy: true,
@@ -121,13 +186,15 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
         isSubstitute: true,
         substituteReason,
         branch: branchObj,
-        year: parseInt(selectedYear),
+        year: parseInt(selectedYear, 10),
         division: selectedDiv,
         subject: { _id: subjectObj._id, name: subjectObj.name, code: subjectObj.code },
         sessionType: subjectObj.sessionType,
-        batch: subjectObj.batch || null,
+        batch: batchObj,
+        proxyBatchId: batchName || (batchObj?._id ? String(batchObj._id) : ''),
         originalTeacherId: subjectObj.originalTeacherId
       };
+
       onContinue(mockAssignment);
     } else {
       if (!selectedMyAssignmentId || !extraReason) {
@@ -149,11 +216,16 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
         division: assignmentObj.division,
         subject: assignmentObj.subject,
         sessionType: assignmentObj.sessionType,
-        batch: assignmentObj.batch
+        batch: assignmentObj.batch,
+        proxyBatchId: assignmentObj.batch?.name || assignmentObj.batch || ''
       };
+
       onContinue(mockAssignment);
     }
   };
+
+  const selectedSubjectObj = subjects.find(s => String(s.assignmentId || `${s._id}_${s.sessionType}`) === selectedSubjectId);
+  const selectedMyAssignmentObj = myAssignments.find(a => a._id === selectedMyAssignmentId);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs mb-5">
@@ -180,13 +252,13 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
           <div className="flex gap-4">
             <label className={`flex-1 flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all ${proxyType === 'substitute' ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'}`}>
               <input type="radio" name="proxyType" className="sr-only" checked={proxyType === 'substitute'} onChange={() => { setProxyType('substitute'); setError(''); }} />
-              <span className="font-bold text-slate-900 mb-1">Substitute Lecture</span>
-              <span className="text-xs text-slate-500 font-medium">Taking a lecture for an absent teacher in another class.</span>
+              <span className="font-bold text-slate-900 mb-1">Substitute Lecture / Practical</span>
+              <span className="text-xs text-slate-500 font-medium">Taking a lecture or practical for an absent teacher in another class.</span>
             </label>
             <label className={`flex-1 flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all ${proxyType === 'extra' ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'}`}>
               <input type="radio" name="proxyType" className="sr-only" checked={proxyType === 'extra'} onChange={() => { setProxyType('extra'); setError(''); }} />
-              <span className="font-bold text-slate-900 mb-1">Extra Lecture</span>
-              <span className="text-xs text-slate-500 font-medium">Taking an extra lecture for your own assigned subject.</span>
+              <span className="font-bold text-slate-900 mb-1">Extra Lecture / Practical</span>
+              <span className="text-xs text-slate-500 font-medium">Taking an extra lecture or practical session for your assigned subject.</span>
             </label>
           </div>
         </div>
@@ -244,6 +316,36 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
                 </select>
               </div>
             )}
+
+            {/* BATCH SELECTOR FOR PRACTICAL SESSION */}
+            {selectedSubjectObj && selectedSubjectObj.sessionType === 'PRACTICAL' && (
+              <div className="bg-purple-50/70 border border-purple-200 p-4 rounded-xl space-y-2">
+                <label className="block text-xs font-bold text-purple-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <Layers size={14} className="text-purple-600" /> Practical Batch Selection
+                </label>
+
+                {loadingBatches ? (
+                  <p className="text-xs text-purple-700">Loading batches for class...</p>
+                ) : availableBatches.length > 0 ? (
+                  <select
+                    value={selectedBatchId}
+                    onChange={(e) => setSelectedBatchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-purple-300 rounded-xl text-sm font-bold text-purple-900 focus:ring-2 focus:ring-purple-600 outline-none cursor-pointer"
+                  >
+                    {availableBatches.map((b) => (
+                      <option key={b._id} value={b._id}>
+                        {b.displayName || b.name} {b.isMerged ? "(MERGED)" : ""} ({b.studentCount || 0} students)
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-xs text-purple-800 flex items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    <span>Auto-selected batch: <strong>{selectedSubjectObj.batch?.name || "BA1"}</strong></span>
+                  </div>
+                )}
+              </div>
+            )}
             
             <FormInput
               label="Reason for Substitute"
@@ -261,11 +363,25 @@ export default function ProxyClassForm({ myAssignments, onContinue, onCancel }) 
                 <option value="">Select from your active assignments</option>
                 {myAssignments.map(a => (
                   <option key={a._id} value={a._id}>
-                    {a.subject?.name} - {a.branch?.code} Y{a.year} Div {a.division} ({a.sessionType})
+                    {a.subject?.name} - {a.branch?.code} Y{a.year} Div {a.division} ({a.sessionType}{a.batch?.name ? ` - Batch ${a.batch.name}` : ''})
                   </option>
                 ))}
               </select>
             </div>
+
+            {/* Extra Practical Batch Info Card */}
+            {selectedMyAssignmentObj && selectedMyAssignmentObj.sessionType === 'PRACTICAL' && (
+              <div className="bg-purple-50/70 border border-purple-200 p-3.5 rounded-xl flex items-center justify-between text-xs text-purple-900">
+                <div className="flex items-center gap-2">
+                  <Layers size={16} className="text-purple-600" />
+                  <span>Practical Session for Batch: <strong className="text-purple-950 font-bold">{selectedMyAssignmentObj.batch?.name || "Default Batch"}</strong></span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-purple-200 text-purple-800 font-extrabold text-[10px]">
+                  PRACTICAL
+                </span>
+              </div>
+            )}
+
             <FormInput
               label="Reason for Extra Class"
               placeholder="E.g., Syllabus completion, Revision"

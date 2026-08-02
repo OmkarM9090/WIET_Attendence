@@ -103,17 +103,11 @@ export const createTeachingAssignment = async (req, res) => {
 			});
 		}
 
-		// Academic year validation (current or future)
+		// Academic year format validation
 		const parsedYear = parseAcademicYear(academicYear);
 		if (!parsedYear) {
 			return res.status(400).json({
-				message: "academicYear must be in format YYYY-YYYY and valid.",
-			});
-		}
-		const currentStartYear = getCurrentAcademicStartYear();
-		if (parsedYear.startYear < currentStartYear) {
-			return res.status(400).json({
-				message: "academicYear must be current or future.",
+				message: "academicYear must be in format YYYY-YYYY (e.g., 2024-2025).",
 			});
 		}
 
@@ -247,7 +241,7 @@ export const getMyTeachingAssignments = async (req, res) => {
 		const assignments = await TeachingAssignment.find(query)
 			.populate("subjectId", "name code") // Get subject name and code
 			.populate("branchId", "name code") // Get branch name and code
-			.populate("batchId", "name") // Get batch name for practicals
+			.populate("batchId", "name displayName batchType isMerged labRoom students") // Get batch details for practicals
 			.lean();
 
 		// Sort assignments by day order and time
@@ -263,32 +257,51 @@ export const getMyTeachingAssignments = async (req, res) => {
 		});
 
 		// Format response
-		const formattedAssignments = sortedAssignments.map((assignment) => ({
-			_id: assignment._id,
-			subject: {
-				_id: assignment.subjectId?._id,
-				name: assignment.subjectId?.name || "Unknown Subject",
-				code: assignment.subjectId?.code || "N/A",
-			},
-			branch: {
-				_id: assignment.branchId?._id,
-				name: assignment.branchId?.name || "Unknown Branch",
-				code: assignment.branchId?.code || "N/A",
-			},
-			year: assignment.year,
-			division: assignment.division,
-			batch: assignment.batchId
-				? {
-						_id: assignment.batchId._id,
-						name: assignment.batchId.name,
-					}
-				: null,
-			sessionType: assignment.sessionType,
-			dayOfWeek: assignment.dayOfWeek,
-			startTime: assignment.startTime,
-			endTime: assignment.endTime,
-			academicYear: assignment.academicYear,
-		}));
+		const formattedAssignments = sortedAssignments.map((assignment) => {
+			const subjectName = assignment.subjectId?.name || "Unknown Subject";
+			const branchCode = assignment.branchId?.code || "N/A";
+			const batchName = assignment.batchId?.name;
+
+			let displayName = `${subjectName} - ${branchCode}-${assignment.year}-${assignment.division}`;
+			if (assignment.sessionType === "PRACTICAL" && batchName) {
+				displayName += ` - ${batchName} (Practical)`;
+			}
+
+			return {
+				_id: assignment._id,
+				id: assignment._id,
+				subject: {
+					_id: assignment.subjectId?._id,
+					name: subjectName,
+					code: assignment.subjectId?.code || "N/A",
+				},
+				branch: {
+					_id: assignment.branchId?._id,
+					name: assignment.branchId?.name || "Unknown Branch",
+					code: branchCode,
+				},
+				year: assignment.year,
+				division: assignment.division,
+				batch: assignment.batchId
+					? {
+							_id: assignment.batchId._id,
+							id: assignment.batchId._id,
+							name: assignment.batchId.name,
+							displayName: assignment.batchId.displayName || assignment.batchId.name,
+							studentCount: Array.isArray(assignment.batchId.students) ? assignment.batchId.students.length : 0,
+							batchType: assignment.batchId.batchType || "regular",
+							isMerged: assignment.batchId.isMerged || false,
+							labRoom: assignment.batchId.labRoom || null,
+						}
+					: null,
+				displayName,
+				sessionType: assignment.sessionType,
+				dayOfWeek: assignment.dayOfWeek,
+				startTime: assignment.startTime,
+				endTime: assignment.endTime,
+				academicYear: assignment.academicYear,
+			};
+		});
 
 		res.status(200).json({
 			success: true,
