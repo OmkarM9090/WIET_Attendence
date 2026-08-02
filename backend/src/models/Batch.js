@@ -357,11 +357,11 @@ batchSchema.statics.canAcceptStudent = async function canAcceptStudent(
  * - Fast class-level lookup
  */
 batchSchema.index(
-  { branch: 1, year: 1, name: 1, academicYear: 1 },
+  { branch: 1, year: 1, division: 1, name: 1, academicYear: 1 },
   {
     unique: true,
     partialFilterExpression: {
-      isDeleted: { $ne: true },
+      isDeleted: false,
       academicYear: { $type: "string" },
     },
   }
