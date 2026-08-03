@@ -156,20 +156,32 @@ export default function BatchManagement() {
   };
 
   // Delete Batch Handler
-  const handleDeleteBatch = async (batch) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete batch "${batch.name}"? This action cannot be undone.`
-    );
-    if (!confirmDelete) return;
+  const handleDeleteBatch = async (batch, force = false) => {
+    if (!force) {
+      const confirmDelete = window.confirm(
+        `Are you sure you want to delete batch "${batch.name}"? This action cannot be undone.`
+      );
+      if (!confirmDelete) return;
+    }
 
     try {
-      await deleteBatch(batch._id);
+      await deleteBatch(batch._id, force);
       setSuccess(`Batch ${batch.name} deleted successfully`);
+      setError("");
       window.scrollTo({ top: 0, behavior: "smooth" });
       fetchClassBatchData();
     } catch (err) {
-      setError(err.message || "Failed to delete batch");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (err.hasSessions && !force) {
+        const confirmForce = window.confirm(
+          `${err.message}\n\nDo you want to proceed and force delete this batch?`
+        );
+        if (confirmForce) {
+          return handleDeleteBatch(batch, true);
+        }
+      } else {
+        setError(err.message || "Failed to delete batch");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
 

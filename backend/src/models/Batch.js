@@ -165,7 +165,7 @@ batchSchema.virtual("studentCount").get(function () {
 batchSchema.set("toJSON", { virtuals: true });
 batchSchema.set("toObject", { virtuals: true });
 
-batchSchema.pre("validate", function normalizeBatch(next) {
+batchSchema.pre("validate", function normalizeBatch() {
   if (typeof this.name === "string") {
     this.name = this.name.trim();
   }
@@ -216,8 +216,6 @@ batchSchema.pre("validate", function normalizeBatch(next) {
       }))
       .filter((range) => range.from || range.to || range.division);
   }
-
-  next();
 });
 
 /**

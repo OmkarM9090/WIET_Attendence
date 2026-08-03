@@ -439,17 +439,28 @@ export const updateBatch = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid Batch ID" });
     }
 
-    const batch = await Batch.findOne({ _id: id, isDeleted: false });
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    const batch = await Batch.findOne({ _id: objectId, isDeleted: false });
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
 
-    if (name) batch.name = name;
-    if (displayName) batch.displayName = displayName;
+    if (name !== undefined) batch.name = name;
+    if (displayName !== undefined) batch.displayName = displayName;
     if (labRoom !== undefined) batch.labRoom = labRoom;
     if (description !== undefined) batch.description = description;
-    if (maxCapacity !== undefined) batch.maxCapacity = Number(maxCapacity);
-    if (rollRanges) batch.rollRanges = rollRanges;
+    
+    if (maxCapacity !== undefined) {
+      // If empty string or 0, unset it. Otherwise parse as number.
+      if (!maxCapacity || maxCapacity === "") {
+        batch.maxCapacity = undefined;
+      } else {
+        batch.maxCapacity = Number(maxCapacity);
+      }
+    }
+    
+    if (rollRanges !== undefined) batch.rollRanges = rollRanges;
 
     await batch.save();
 
@@ -683,14 +694,16 @@ export const deleteBatch = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid Batch ID" });
     }
 
-    const batch = await Batch.findOne({ _id: id, isDeleted: false });
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    const batch = await Batch.findOne({ _id: objectId, isDeleted: false });
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
 
     // Check for existing attendance sessions referencing this batch
     const sessionCount = await AttendanceSession.countDocuments({
-      batch: id,
+      batch: objectId,
       isDeleted: false,
     });
 
@@ -710,14 +723,15 @@ export const deleteBatch = async (req, res) => {
     // Soft delete
     batch.isDeleted = true;
     batch.deletedAt = new Date();
-    if (req.user && req.user.id) batch.deletedBy = req.user.id;
+    if (req.user && req.user._id) batch.deletedBy = req.user._id;
     await batch.save();
 
-    // Pull batch from students
+    // Pull batch from students (both legacy single field and new array field)
     await Student.updateMany(
-      { $or: [{ batch: id }, { practicalBatches: id }] },
+      { $or: [{ batch: objectId }, { practicalBatches: objectId }] },
       {
-        $pull: { practicalBatches: id },
+        $unset: { batch: 1 },
+        $pull: { practicalBatches: objectId },
       }
     );
 
