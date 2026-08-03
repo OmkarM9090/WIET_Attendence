@@ -531,7 +531,6 @@ export default function BatchManagement() {
           division: selectedDivision,
           academicYear,
         }}
-        existingBatches={batches}
         onSuccess={handleCreateMergedBatch}
       />
 

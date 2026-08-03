@@ -172,3 +172,29 @@ export const getBatchStats = async (filters = {}) => {
     throw error.response?.data || { message: "Failed to fetch batch statistics" };
   }
 };
+
+/**
+ * Get ALL batches for merge (cross-division)
+ * @param {Object} filters { branchId, year, academicYear }
+ */
+export const getAllBatchesForMerge = async (filters = {}) => {
+  try {
+    const response = await axiosInstance.get("/admin/batches/all-for-merge", { params: filters });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch batches for merge" };
+  }
+};
+
+/**
+ * Get ALL students for merge (cross-division)
+ * @param {Object} filters { branchId, year, academicYear }
+ */
+export const getStudentsForMerge = async (filters = {}) => {
+  try {
+    const response = await axiosInstance.get("/admin/batches/students-for-merge", { params: filters });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch students for merge" };
+  }
+};

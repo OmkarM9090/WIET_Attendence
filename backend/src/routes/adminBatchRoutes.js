@@ -17,6 +17,8 @@ import {
   deleteBatch,
   getUnassignedStudents,
   getBatchStats,
+  getAllBatchesForMerge,
+  getStudentsForMerge,
 } from "../controllers/adminBatchController.js";
 
 const router = express.Router();
@@ -26,6 +28,8 @@ router.use(protect);
 router.use(allowRoles("admin"));
 
 // Utility / Stat Routes (placed before :id param routes)
+router.get("/all-for-merge", getAllBatchesForMerge);
+router.get("/students-for-merge", getStudentsForMerge);
 router.get("/unassigned", getUnassignedStudents);
 router.get("/stats", getBatchStats);
 

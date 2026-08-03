@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { X, Sparkles, AlertCircle, RefreshCw, Layers } from "lucide-react";
 
+const getYearPrefix = (year) => {
+  const prefixes = { 1: 'F', 2: 'S', 3: 'T', 4: 'B' };
+  return prefixes[Number(year)] || 'X';
+};
+
 export default function QuickSetupModal({ isOpen, onClose, classData, totalStudentsCount, onSuccess }) {
   const [splitMethod, setSplitMethod] = useState("equal"); // 'equal' | 'fixed' | 'custom'
   const [batchCount, setBatchCount] = useState(3);
@@ -21,7 +26,7 @@ export default function QuickSetupModal({ isOpen, onClose, classData, totalStude
     setCustomRanges([
       ...customRanges,
       {
-        name: `B${classData.division}${customRanges.length + 1}`,
+        name: `${getYearPrefix(classData.year)}${classData.division}${customRanges.length + 1}`,
         from: lastTo + 1,
         to: lastTo + 20,
       },
@@ -229,7 +234,7 @@ export default function QuickSetupModal({ isOpen, onClose, classData, totalStude
                 onChange={(e) => setNamingPattern(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none"
               >
-                <option value="auto">Auto (B{classData.division}1, B{classData.division}2...)</option>
+                <option value="auto">Auto ({getYearPrefix(classData.year)}{classData.division}1, {getYearPrefix(classData.year)}{classData.division}2...)</option>
                 <option value="custom">Batch 1, Batch 2...</option>
               </select>
             </div>

@@ -144,6 +144,11 @@ export const getBatchById = async (req, res) => {
   }
 };
 
+const getYearPrefix = (year) => {
+  const prefixes = { 1: 'F', 2: 'S', 3: 'T', 4: 'B' };
+  return prefixes[Number(year)] || 'X';
+};
+
 /**
  * 3. QUICK AUTO-SETUP BATCHES
  * POST /api/admin/batches/quick-setup
@@ -208,7 +213,8 @@ export const quickSetupBatches = async (req, res) => {
         const chunk = students.slice(i * chunkSize, (i + 1) * chunkSize);
         if (chunk.length === 0) continue;
 
-        const batchName = namingPattern === "auto" ? `B${division}${i + 1}` : `Batch_${i + 1}`;
+        const yearPrefix = getYearPrefix(year);
+        const batchName = namingPattern === "auto" ? `${yearPrefix}${division}${i + 1}` : `Batch_${i + 1}`;
         const minRoll = chunk[0].rollNo;
         const maxRoll = chunk[chunk.length - 1].rollNo;
 
@@ -260,7 +266,8 @@ export const quickSetupBatches = async (req, res) => {
         const chunk = students.slice(i * perBatch, (i + 1) * perBatch);
         if (chunk.length === 0) continue;
 
-        const batchName = `B${division}${i + 1}`;
+        const yearPrefix = getYearPrefix(year);
+        const batchName = `${yearPrefix}${division}${i + 1}`;
         const minRoll = chunk[0].rollNo;
         const maxRoll = chunk[chunk.length - 1].rollNo;
 
@@ -291,7 +298,8 @@ export const quickSetupBatches = async (req, res) => {
         const range = customRanges[index];
         const fromRoll = Number(range.from);
         const toRoll = Number(range.to);
-        const bName = range.name || `B${division}${index + 1}`;
+        const yearPrefix = getYearPrefix(year);
+        const bName = range.name || `${yearPrefix}${division}${index + 1}`;
 
         const chunk = students.filter((s) => s.rollNo >= fromRoll && s.rollNo <= toRoll);
 
@@ -590,57 +598,79 @@ export const bulkMoveStudents = async (req, res) => {
  */
 export const createMergedBatch = async (req, res) => {
   try {
-    const { name, sourceBatchIds = [], studentIds = [], labRoom, description } = req.body;
+    const { name, sourceBatchIds = [], studentIds = [], labRoom, description, branchId, year, academicYear } = req.body;
 
-    if (!name || !Array.isArray(sourceBatchIds) || sourceBatchIds.length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Merged batch name and at least 2 sourceBatchIds are required",
-      });
+    const isBatchMode = sourceBatchIds && sourceBatchIds.length > 0;
+    const isStudentMode = studentIds && studentIds.length > 0;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Merged batch name is required" });
     }
 
-    // Validate source batches
-    const sourceBatches = await Batch.find({
-      _id: { $in: sourceBatchIds },
-      isDeleted: false,
-    }).populate("students");
-
-    if (sourceBatches.length !== sourceBatchIds.length) {
-      return res.status(400).json({
-        success: false,
-        message: "One or more source batches were not found",
-      });
+    if (!isBatchMode && !isStudentMode) {
+      return res.status(400).json({ success: false, message: "Either source batches or students must be selected" });
     }
 
-    // Check same year & branch
-    const firstBranch = sourceBatches[0].branch.toString();
-    const firstYear = sourceBatches[0].year;
-
-    const invalid = sourceBatches.some(
-      (b) => b.branch.toString() !== firstBranch || b.year !== firstYear
-    );
-
-    if (invalid) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot merge batches from different branches or academic years",
-      });
+    if (isBatchMode && sourceBatchIds.length < 2) {
+      return res.status(400).json({ success: false, message: "At least 2 batches required for merge" });
     }
 
-    // Extract all divisions involved
-    const divisions = [...new Set(sourceBatches.map((b) => b.division))];
+    if (isStudentMode && studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "At least 1 student required for merged batch" });
+    }
 
-    // Combine student IDs
+    let firstBranch = branchId;
+    let firstYear = year ? parseInt(year) : null;
+    let firstAcademicYear = academicYear;
+    let divisions = [];
     let combinedStudentIds = [];
-    if (Array.isArray(studentIds) && studentIds.length > 0) {
-      combinedStudentIds = studentIds;
-    } else {
-      sourceBatches.forEach((b) => {
-        (b.students || []).forEach((s) => {
-          const idStr = s._id ? s._id.toString() : s.toString();
-          if (!combinedStudentIds.includes(idStr)) combinedStudentIds.push(idStr);
+    let sourceBatches = [];
+
+    if (isBatchMode) {
+      // Validate source batches
+      sourceBatches = await Batch.find({
+        _id: { $in: sourceBatchIds },
+        isDeleted: false,
+      }).populate("students");
+
+      if (sourceBatches.length !== sourceBatchIds.length) {
+        return res.status(400).json({ success: false, message: "One or more source batches were not found" });
+      }
+
+      firstBranch = sourceBatches[0].branch.toString();
+      firstYear = sourceBatches[0].year;
+      firstAcademicYear = sourceBatches[0].academicYear;
+
+      const invalid = sourceBatches.some((b) => b.branch.toString() !== firstBranch || b.year !== firstYear);
+      if (invalid) {
+        return res.status(400).json({ success: false, message: "Cannot merge batches from different branches or academic years" });
+      }
+
+      divisions = [...new Set(sourceBatches.map((b) => b.division))];
+
+      if (!isStudentMode) {
+        sourceBatches.forEach((b) => {
+          (b.students || []).forEach((s) => {
+            const idStr = s._id ? s._id.toString() : s.toString();
+            if (!combinedStudentIds.includes(idStr)) combinedStudentIds.push(idStr);
+          });
         });
+      } else {
+        combinedStudentIds = studentIds;
+      }
+    } else {
+      // Student Mode purely
+      const students = await Student.find({
+        _id: { $in: studentIds },
+        branch: branchId,
+        year: parseInt(year)
       });
+      
+      if (students.length !== studentIds.length) {
+        return res.status(400).json({ success: false, message: "Some students not found or from different year/branch" });
+      }
+      divisions = [...new Set(students.map((s) => s.division))];
+      combinedStudentIds = studentIds;
     }
 
     const mergedBatch = await Batch.create({
@@ -648,14 +678,14 @@ export const createMergedBatch = async (req, res) => {
       displayName: `Merged Batch ${name}`,
       branch: firstBranch,
       year: firstYear,
-      division: divisions[0],
+      division: divisions.length > 0 ? divisions[0] : "A",
       divisions,
-      academicYear: sourceBatches[0].academicYear,
+      academicYear: firstAcademicYear,
       batchType: "merged",
       isMerged: true,
-      sourceBatchIds,
+      sourceBatchIds: isBatchMode ? sourceBatchIds : [],
       labRoom: labRoom || "",
-      description: description || `Merged from ${sourceBatches.map((b) => b.name).join(", ")}`,
+      description: description || (isBatchMode ? `Merged from ${sourceBatches.map((b) => b.name).join(", ")}` : `Merged custom selection`),
       students: [],
     });
 
@@ -841,6 +871,104 @@ export const getBatchStats = async (req, res) => {
       success: false,
       message: "Failed to calculate batch statistics",
       error: error.message,
+    });
+  }
+};
+
+export const getAllBatchesForMerge = async (req, res) => {
+  try {
+    const { branchId, year, academicYear } = req.query;
+    
+    const batches = await Batch.find({
+      branch: branchId,
+      year: parseInt(year),
+      academicYear,
+      isActive: true,
+      isDeleted: { $ne: true },
+      batchType: { $ne: 'merged' }
+    })
+      .populate({
+        path: 'students',
+        select: 'rollNo division userId',
+        populate: { path: 'userId', select: 'name email' }
+      })
+      .sort({ division: 1, name: 1 })
+      .lean();
+    
+    // Map student names from userId
+    const formattedBatches = batches.map(batch => ({
+      ...batch,
+      students: batch.students ? batch.students.map(s => ({
+        ...s,
+        name: s.userId?.name || 'Unknown',
+        email: s.userId?.email
+      })) : []
+    }));
+    
+    if (!batches || batches.length === 0) {
+      return res.json({
+        success: true,
+        batches: [],
+        groupedByDivision: {},
+        totalBatches: 0,
+        message: 'No batches found for this class'
+      });
+    }
+
+    const grouped = {};
+    formattedBatches.forEach(batch => {
+      const div = batch.division || batch.divisions?.[0] || 'Unknown';
+      if (!grouped[div]) grouped[div] = [];
+      grouped[div].push(batch);
+    });
+    
+    res.json({
+      success: true,
+      batches: formattedBatches,
+      groupedByDivision: grouped,
+      totalBatches: formattedBatches.length
+    });
+    
+  } catch (error) {
+    console.error('[BATCH-MERGE] Fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch batches for merge'
+    });
+  }
+};
+
+export const getStudentsForMerge = async (req, res) => {
+  try {
+    const { branchId, year, academicYear } = req.query;
+    
+    const students = await Student.find({
+      branch: branchId,
+      year: parseInt(year),
+      isActive: { $ne: false }
+    })
+      .populate('userId', 'name email')
+      .select('rollNo division admissionYear userId')
+      .sort({ division: 1, rollNo: 1 })
+      .lean();
+      
+    const formattedStudents = students.map(s => ({
+      ...s,
+      name: s.userId?.name || 'Unknown',
+      email: s.userId?.email
+    }));
+    
+    res.json({
+      success: true,
+      students: formattedStudents,
+      totalStudents: formattedStudents.length
+    });
+    
+  } catch (error) {
+    console.error('[BATCH-MERGE] Error fetching students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch students'
     });
   }
 };
