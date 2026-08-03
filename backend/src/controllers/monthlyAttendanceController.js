@@ -1,5 +1,6 @@
 import AttendanceSession from "../models/AttendanceSession.js";
 import Student from "../models/Student.js";
+import { isStudentInBatch } from "../utils/batchMembership.js";
 
 /**
  * MONTHLY ATTENDANCE AGGREGATION
@@ -100,7 +101,7 @@ export const getMonthlyAttendance = async (req, res) => {
     // 5️⃣ AGGREGATION LOGIC (LECTURE + PRACTICAL SEPARATE)
     const report = {};
 
-    sessions.forEach((session) => {
+    for (const session of sessions) {
       const subjectKey = session.subject._id.toString();
 
       if (!report[subjectKey]) {
@@ -119,19 +120,20 @@ export const getMonthlyAttendance = async (req, res) => {
         report[subjectKey].totalPracticals += 1;
       }
 
-      students.forEach((student) => {
+      for (const student of students) {
         const studentId = student._id.toString();
         const studentInfo = studentMap[studentId];
 
         // LATE ADMISSION LOGIC: Skip if student joined after session date
         if (studentInfo.admissionDate && studentInfo.admissionDate > session.date) {
-          return; // Skip this student for this session
+          continue; // Skip this student for this session
         }
 
         // BATCH LOGIC: For practicals, only count if batch matches
-        if (session.sessionType === "PRACTICAL") {
-          if (session.batch !== studentInfo.batch) {
-            return; // Skip this student (different batch)
+        if (session.sessionType === "PRACTICAL" && session.batch) {
+          const inBatch = await isStudentInBatch(student._id, session.batch);
+          if (!inBatch) {
+            continue; // Skip this student (different batch)
           }
         }
 
@@ -165,8 +167,8 @@ export const getMonthlyAttendance = async (req, res) => {
             report[subjectKey].students[studentId].practicalAttended += 1;
           }
         }
-      });
-    });
+      }
+    }
 
     // 6️⃣ FORMAT FINAL RESPONSE WITH PERCENTAGES
     const response = Object.values(report).map((subjectBlock) => ({

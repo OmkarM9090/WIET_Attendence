@@ -11,10 +11,12 @@ import {
   Edit2,
   Trash2,
   Filter,
-  Info
+  Info,
+  Layers
 } from "lucide-react";
 
 import { getSubjects, createSubject, getBranches, deleteSubject } from "../services/adminService";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import DashboardLayout from "../components/DashboardLayout";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
@@ -230,15 +232,7 @@ export default function SubjectManagement() {
     }
   };
 
-  const sidebarItems = [
-    { path: "/admin", icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-    { path: "/admin/branches", icon: <Building2 size={20} />, label: "Branches" },
-    { path: "/admin/subjects", icon: <BookOpen size={20} />, label: "Subjects" },
-    { path: "/admin/students", icon: <GraduationCap size={20} />, label: "Students" },
-    { path: "/admin/teachers", icon: <Users size={20} />, label: "Teachers" },
-    { path: "/admin/reports", icon: <FileText size={20} />, label: "Reports" },
-    { path: "/admin/defaulters", icon: <AlertTriangle size={20} />, label: "Defaulters" },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   const semesterOptions = [
     { value: "", label: "All Semesters" },

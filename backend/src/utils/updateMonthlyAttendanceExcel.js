@@ -9,6 +9,7 @@ import Subject from "../models/Subject.js";
 import Branch from "../models/Branch.js";
 import Batch from "../models/Batch.js";
 import mongoose from "mongoose";
+import { getStudentsForBatch } from "./batchMembership.js";
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -142,7 +143,7 @@ export const updateMonthlyAttendanceExcel = async (attendanceSession) => {
     }
 
     // ============ 8. FIND OR CREATE DATE COLUMN ============
-    const dateColumn = findOrCreateDateColumn(worksheet, date, sessionType);
+    const dateColumn = findOrCreateDateColumn(worksheet, date, sessionType, attendanceSession, batchNameForExcel);
 
     // ============ 9. MARK ATTENDANCE FOR THIS DATE ============
     await markAttendanceInColumn(
@@ -362,6 +363,16 @@ const fetchEligibleStudents = async (
   batch,
   sessionDate
 ) => {
+  if (sessionType === "PRACTICAL" && batch) {
+    const batchStudents = await getStudentsForBatch(batch);
+    return batchStudents.map((s) => ({
+      _id: s._id,
+      rollNo: s.rollNo,
+      name: s.userId?.name || "Unknown",
+      batch: s.batchName || (s.batch?.name ? s.batch.name : s.batch) || ""
+    }));
+  }
+
   const studentFilter = {
     branch: mongoose.Types.ObjectId.isValid(branchId)
       ? new mongoose.Types.ObjectId(branchId)
@@ -371,14 +382,6 @@ const fetchEligibleStudents = async (
     status: "active",
     academicYear
   };
-
-  // Filter by batch for practicals
-  if (sessionType === "PRACTICAL" && batch) {
-    studentFilter.$or = [
-      { batch },
-      { batchName: batch }
-    ];
-  }
 
   const students = await Student.find(studentFilter)
     .populate("userId", "name email")
@@ -484,9 +487,18 @@ const addMissingStudents = async (worksheet, students, sessionType) => {
  * 
  * @returns {number} - Column index for this date
  */
-const findOrCreateDateColumn = (worksheet, date, sessionType, attendanceSession) => {
+const findOrCreateDateColumn = (worksheet, date, sessionType, attendanceSession, batchName) => {
   const dateObj = new Date(date);
-  let dateStr = dateObj.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[dateObj.getMonth()];
+  const yr = dateObj.getFullYear();
+
+  let dateStr = `${day}-${month}-${yr}`;
+
+  if (sessionType === "PRACTICAL" && batchName) {
+    dateStr += ` (${batchName})`;
+  }
   
   if (attendanceSession?.isSubstitute) {
     dateStr += " (Proxy)";

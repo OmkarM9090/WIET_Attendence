@@ -1,0 +1,127 @@
+<USER_REQUEST>
+🚨 CRITICAL FIXES: Batch Management System
+Bhai, Batch Management feature mein 4 critical issues hain jo fix karne zaroori hain. Screenshots se identified problems + improvements needed.
+
+⚠️ MASTER RULES
+text
+
+🔴 RULE 1: ANALYZE existing code FIRST, then fix
+🔴 RULE 2: Complete files (no snippets)
+🔴 RULE 3: Don't break working features
+🔴 RULE 4: Production ready, all edge cases
+🔴 RULE 5: Mobile responsive
+🔴 RULE 6: Step by step — one fix at a time
+🐛 ISSUE 1: Cross-Division Merged Batch Not Working (CRITICAL)
+Current Problem:
+text
+
+Admin wants to merge:
+- BA3 (Division A, Roll 41-65) → 25 students
+- BB1 (Division B, Roll 66-78) → 13 students
+
+Create merged batch: "BA3-BB1" → 38 students combined
+
+❌ CURRENTLY: Can only merge batches from SAME division
+❌ Cannot select Div A batch + Div B batch together
+❌ Modal only shows batches of currently selected division
+Required Fix:
+The merged batch modal should allow selecting batches from ANY division of same year and branch.
+
+Backend Fix:
+JavaScript
+
+// In adminBatchController.js → createMergedBatch()
+
+// CURRENT (Wrong): Only fetches batches from same division
+const sourceBatches = await Batch.find({
+  branch: branchId,
+  year: yearNum,
+  division: division,  // ❌ WRONG — limits to single division
+  isActive: true
+});
+
+// NEW (Correct): Fetch batches from ALL divisions of same year+branch
+const sourceBatches = await Batch.find({
+  branch: branchId,
+  year: yearNum,
+  // ✅ NO division filter — show all divisions
+  isActive: true,
+  isDeleted: { $ne: true }
+});
+
+// Validation changes:
+// OLD: sourceBatches must be from same division ❌
+// NEW: sourceBatches must be from same branch + year ✅
+//      Can be from different divisions ✅
+
+// When creating merged batch:
+const mergedBatch = await Batch.create({
+  name: name,               // "BA3-BB1"
+  branch: branchId,
+  year: yearNum,
+  divisions: [...new Set(sourceBatches.map(b => b.division))],  // ["A", "B"]
+  batchType: 'merged',
+  isMerged: true,
+  student
+<truncated 14071 bytes>
+udents from both divisions
+□ Test 4: Try merge from different years → Reject
+□ Test 5: Student picker → Select specific students
+□ Test 6: Search works in student picker
+□ Test 7: Division filter works
+
+NAMING:
+□ Test 8: FE-A auto-setup → FA1, FA2, FA3
+□ Test 9: SE-B auto-setup → SB1, SB2, SB3
+□ Test 10: BE-A auto-setup → BA1, BA2, BA3
+
+REPORTS:
+□ Test 11: History shows "LECTURE" / "PRACTICAL" badges
+□ Test 12: History shows batch name
+□ Test 13: Merged batch shows "(Merged)" tag
+□ Test 14: Lecture shows "-" for batch
+□ Test 15: Excel includes batch info
+
+EDGE CASES:
+□ Test 16: Empty batch merge → Reject
+□ Test 17: Single batch merge → Reject
+□ Test 18: Duplicate batch name → Reject
+□ Test 19: Mobile responsive merge modal
+□ Test 20: 100+ students in picker → Performance OK
+⚙️ EXECUTION RULES
+text
+
+🔴 RULE 1: Fix 1 first (cross-division merge is CRITICAL)
+🔴 RULE 2: Complete file code (no snippets)
+🔴 RULE 3: Don't break existing features
+🔴 RULE 4: Test each fix before next
+🔴 RULE 5: Mobile responsive
+🔴 RULE 6: Production ready
+🔴 RULE 7: Simple comments
+🔴 RULE 8: Console logs [BATCH] tag
+🔴 RULE 9: User-friendly error messages
+🔴 RULE 10: Backward compatible
+🚀 START WITH FIX 1
+Begin with Fix 1: Cross-Division Merged Batch
+
+Show me:
+
+New/Updated backend API
+Updated route registration
+Updated MergedBatchModal.jsx
+Testing steps
+Explain what changed
+Wait for my confirmation, then Fix 2.
+
+Chalo, cross-division merge fix karte hain! 🎯
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-08-03T20:49:59+05:30.
+
+The user's current state is as follows:
+Active Document: c:\MERN Practice\Wiet-AttendenceSystem\backend\src\models\Batch.js (LANGUAGE_JAVASCRIPT)
+Cursor is on line: 228
+Other open documents:
+- c:\MERN Practice\Wiet-AttendenceSystem\backend\src\models\Batch.js (LANGUAGE_JAVASCRIPT)
+- c:\MERN Practice\Wiet-AttendenceSystem\backend\src\controllers\adminBatchController.js (LANGUAGE_JAVASCRIPT)
+</ADDITIONAL_METADATA>

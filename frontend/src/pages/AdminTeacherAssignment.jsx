@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../utils/axios";
 import DashboardLayout from "../components/DashboardLayout";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import Button from "../components/Button";
 import FormInput from "../components/FormInput";
 import FormSelect from "../components/FormSelect";
@@ -17,7 +18,9 @@ import {
   FileText, 
   AlertTriangle,
   Plus,
-  Clock
+  Clock,
+  AlertCircle,
+  Layers,
 } from "lucide-react";
 
 const DAY_OPTIONS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
@@ -63,15 +66,7 @@ export default function AdminTeacherAssignment() {
 
   const [validationErrors, setValidationErrors] = useState({});
 
-  const sidebarItems = [
-    { label: "Dashboard", path: "/admin", icon: <LayoutDashboard size={18} /> },
-    { label: "Branches", path: "/admin/branches", icon: <Building2 size={18} /> },
-    { label: "Subjects", path: "/admin/subjects", icon: <BookOpen size={18} /> },
-    { label: "Students", path: "/admin/students", icon: <GraduationCap size={18} /> },
-    { label: "Teachers", path: "/admin/teachers", icon: <Users size={18} /> },
-    { label: "Timetable", path: "/admin/teacher-assignments", icon: <Calendar size={18} /> },
-    { label: "Reports", path: "/admin/defaulters", icon: <AlertTriangle size={18} /> },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   useEffect(() => {
     const initialize = async () => {

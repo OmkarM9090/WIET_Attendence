@@ -13,11 +13,13 @@ import {
   Server,
   Mail,
   Activity,
-  UserPlus
+  UserPlus,
+  Layers
 } from "lucide-react";
 
 import { getBranches, getStudents, getSubjects } from "../services/adminService";
 import DashboardLayout from "../components/DashboardLayout";
+import { DEFAULT_ADMIN_SIDEBAR_ITEMS } from "../config/navigation";
 import StatsCard from "../components/StatsCard";
 import Button from "../components/Button";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -65,43 +67,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const sidebarItems = [
-    {
-      path: "/admin",
-      icon: <LayoutDashboard size={18} />,
-      label: "Dashboard",
-    },
-    {
-      path: "/admin/branches",
-      icon: <Building2 size={18} />,
-      label: "Branches",
-    },
-    {
-      path: "/admin/subjects",
-      icon: <BookOpen size={18} />,
-      label: "Subjects",
-    },
-    {
-      path: "/admin/students",
-      icon: <GraduationCap size={18} />,
-      label: "Students",
-    },
-    {
-      path: "/admin/teachers",
-      icon: <Users size={18} />,
-      label: "Teachers",
-    },
-    {
-      path: "/admin/reports",
-      icon: <FileText size={18} />,
-      label: "Reports",
-    },
-    {
-      path: "/admin/defaulters",
-      icon: <AlertTriangle size={18} />,
-      label: "Defaulters",
-    },
-  ];
+  const sidebarItems = DEFAULT_ADMIN_SIDEBAR_ITEMS;
 
   const quickActions = [
     {

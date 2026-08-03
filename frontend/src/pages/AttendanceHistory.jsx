@@ -32,6 +32,7 @@ export default function AttendanceHistory() {
   const [filters, setFilters] = useState({
     subjectId: "",
     sessionType: "",
+    batch: "",
     startDate: "",
     endDate: "",
     query: "",
@@ -73,6 +74,17 @@ export default function AttendanceHistory() {
     return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
   }, [sessions]);
 
+  const batchOptions = useMemo(() => {
+    const map = new Map();
+    sessions.forEach((s) => {
+      const bName = s.batch?.name || (typeof s.batch === "string" ? s.batch : null);
+      if (bName) {
+        map.set(bName, bName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [sessions]);
+
   const filteredSessions = useMemo(() => {
     return sessions.filter((s) => {
       const subjectMatch = filters.subjectId
@@ -81,6 +93,10 @@ export default function AttendanceHistory() {
       const typeMatch = filters.sessionType
         ? s.sessionType === filters.sessionType
         : true;
+      const sessionBatchName = s.batch?.name || (typeof s.batch === "string" ? s.batch : "");
+      const batchMatch = filters.batch
+        ? sessionBatchName === filters.batch
+        : true;
       const startMatch = filters.startDate
         ? new Date(s.date) >= new Date(filters.startDate)
         : true;
@@ -88,11 +104,11 @@ export default function AttendanceHistory() {
         ? new Date(s.date) <= new Date(filters.endDate)
         : true;
       const queryMatch = filters.query
-        ? `${s.subject?.name || ""} ${s.subject?.code || ""} ${s.branch?.code || ""} ${s.branch?.name || ""}`
+        ? `${s.subject?.name || ""} ${s.subject?.code || ""} ${s.branch?.code || ""} ${s.branch?.name || ""} ${sessionBatchName}`
             .toLowerCase()
             .includes(filters.query.toLowerCase())
         : true;
-      return subjectMatch && typeMatch && startMatch && endMatch && queryMatch;
+      return subjectMatch && typeMatch && batchMatch && startMatch && endMatch && queryMatch;
     });
   }, [sessions, filters]);
 
@@ -150,7 +166,7 @@ export default function AttendanceHistory() {
         <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
           <Filter size={14} /> Filter Sessions
         </div>
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-6">
           <FormSelect
             label="Subject"
             value={filters.subjectId}
@@ -166,6 +182,12 @@ export default function AttendanceHistory() {
               { value: "LECTURE", label: "Lecture" },
               { value: "PRACTICAL", label: "Practical" },
             ]}
+          />
+          <FormSelect
+            label="Batch"
+            value={filters.batch}
+            onChange={(e) => setFilters((prev) => ({ ...prev, batch: e.target.value }))}
+            options={[{ value: "", label: "All Batches" }, ...batchOptions]}
           />
           <FormInput
             label="Start Date"
@@ -192,7 +214,7 @@ export default function AttendanceHistory() {
           <Button
             variant="outline"
             onClick={() =>
-              setFilters({ subjectId: "", sessionType: "", startDate: "", endDate: "", query: "" })
+              setFilters({ subjectId: "", sessionType: "", batch: "", startDate: "", endDate: "", query: "" })
             }
           >
             Clear Filters
@@ -217,6 +239,7 @@ export default function AttendanceHistory() {
                   <th className="px-6 py-3.5">Subject</th>
                   <th className="px-6 py-3.5">Class</th>
                   <th className="px-6 py-3.5">Type</th>
+                  <th className="px-6 py-3.5">Batch</th>
                   <th className="px-6 py-3.5">Attendance</th>
                   <th className="px-6 py-3.5">Absentees</th>
                 </tr>
@@ -230,6 +253,7 @@ export default function AttendanceHistory() {
                     : 0;
 
                   const isExpanded = expandedSessionId === session._id;
+                  const batchName = session.batch?.name || (typeof session.batch === "string" ? session.batch : null);
 
                   return (
                     <React.Fragment key={session._id}>
@@ -257,6 +281,15 @@ export default function AttendanceHistory() {
                             {session.sessionType}
                           </span>
                         </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-slate-700 whitespace-nowrap">
+                          {session.sessionType === "PRACTICAL" && batchName ? (
+                            <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold">
+                              {batchName}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-mono">-</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-sm font-bold whitespace-nowrap">
                           <span className={percentage >= 75 ? "text-emerald-600" : "text-rose-600"}>
                             {present}/{session.totalStudents} ({percentage}%)
@@ -268,7 +301,7 @@ export default function AttendanceHistory() {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan="6" className="p-0 border-b border-slate-200">
+                          <td colSpan="7" className="p-0 border-b border-slate-200">
                             <div className="animate-in fade-in duration-200">
                               <AttendanceDetailPanel 
                                 sessionId={session._id} 

@@ -13,6 +13,8 @@ import BranchManagement from "./pages/BranchManagement";
 import SubjectManagement from "./pages/SubjectManagement";
 import TeacherManagement from "./pages/TeacherManagement";
 import StudentManagement from "./pages/StudentManagement";
+import BatchManagement from "./pages/BatchManagement";
+import BatchDetailsPage from "./pages/BatchDetailsPage";
 import DefaulterManagement from "./pages/DefaulterManagement";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherMarkAttendance from "./pages/TeacherMarkAttendance";
@@ -77,6 +79,22 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <StudentManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/batches"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <BatchManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/batches/:batchId"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <BatchDetailsPage />
               </ProtectedRoute>
             }
           />

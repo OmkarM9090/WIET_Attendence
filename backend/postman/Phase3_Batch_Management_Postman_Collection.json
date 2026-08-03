@@ -1,0 +1,260 @@
+{
+  "info": {
+    "_postman_id": "b3e91122-phase3-batch-mgmt-api",
+    "name": "Phase 3: Batch Management & Attendance Integration APIs",
+    "description": "Complete Postman test suite for Batch CRUD, Quick Setup, Merging, Membership, and Attendance Integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get Batches (Empty or Filtered Class)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches?branchId={{branchId}}&year=2&division=A&academicYear=2024-2025",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches"],
+          "query": [
+            { "key": "branchId", "value": "{{branchId}}" },
+            { "key": "year", "value": "2" },
+            { "key": "division", "value": "A" },
+            { "key": "academicYear", "value": "2024-2025" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Quick Setup (3 Equal Batches)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"year\": 2,\n  \"division\": \"A\",\n  \"academicYear\": \"2024-2025\",\n  \"splitMethod\": \"equal\",\n  \"batchCount\": 3,\n  \"namingPattern\": \"auto\",\n  \"labRoom\": \"Lab-201\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/quick-setup",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "quick-setup"]
+        }
+      }
+    },
+    {
+      "name": "3. Quick Setup (Fixed Size 25)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"year\": 2,\n  \"division\": \"A\",\n  \"academicYear\": \"2024-2025\",\n  \"splitMethod\": \"fixed\",\n  \"studentsPerBatch\": 25,\n  \"labRoom\": \"Lab-202\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/quick-setup",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "quick-setup"]
+        }
+      }
+    },
+    {
+      "name": "4. Create Custom Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BA4\",\n  \"displayName\": \"Batch A4 Special\",\n  \"branchId\": \"{{branchId}}\",\n  \"year\": 2,\n  \"division\": \"A\",\n  \"academicYear\": \"2024-2025\",\n  \"studentIds\": [\"{{studentId1}}\", \"{{studentId2}}\"],\n  \"labRoom\": \"Lab-301\",\n  \"description\": \"Special practical batch\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches"]
+        }
+      }
+    },
+    {
+      "name": "5. Add Students to Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentIds\": [\"{{studentId3}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}/students",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}", "students"]
+        }
+      }
+    },
+    {
+      "name": "6. Remove Student from Batch",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}/students/{{studentId3}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}", "students", "{{studentId3}}"]
+        }
+      }
+    },
+    {
+      "name": "7. Bulk Move Students",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fromBatchId\": \"{{fromBatchId}}\",\n  \"toBatchId\": \"{{toBatchId}}\",\n  \"studentIds\": [\"{{studentId1}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/bulk-move",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "bulk-move"]
+        }
+      }
+    },
+    {
+      "name": "8. Create Merged Batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BA3-BB1\",\n  \"sourceBatchIds\": [\"{{batchId1}}\", \"{{batchId2}}\"],\n  \"labRoom\": \"Merged Lab 1\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/merge",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "merge"]
+        }
+      }
+    },
+    {
+      "name": "9. Invalid Merge Test (Reject)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"INVALID-MERGE\",\n  \"sourceBatchIds\": [\"{{batchIdYear2}}\", \"{{batchIdYear3}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/merge",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "merge"]
+        }
+      }
+    },
+    {
+      "name": "10. Delete Batch (Warning if sessions exist)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}"]
+        }
+      }
+    },
+    {
+      "name": "11. Get Batch Statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/stats?branchId={{branchId}}&year=2&division=A",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "stats"],
+          "query": [
+            { "key": "branchId", "value": "{{branchId}}" },
+            { "key": "year", "value": "2" },
+            { "key": "division", "value": "A" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12. Update Batch Details",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"BA1-Renamed\",\n  \"displayName\": \"Batch A1 Computer Lab\",\n  \"labRoom\": \"Lab 404\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/batches/{{batchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "batches", "{{batchId}}"]
+        }
+      }
+    },
+    {
+      "name": "13. Teacher My Assignments (Includes Batch Info)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/teacher/my-assignments",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "teacher", "my-assignments"]
+        }
+      }
+    },
+    {
+      "name": "14. Get Students For Session (Filters by Batch)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/attendance/students-for-session?teachingAssignmentId={{practicalAssignmentId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "attendance", "students-for-session"],
+          "query": [
+            { "key": "teachingAssignmentId", "value": "{{practicalAssignmentId}}" }
+          ]
+        }
+      }
+    }
+  ]
+}
