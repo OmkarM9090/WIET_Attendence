@@ -6,46 +6,16 @@ import Subject from "../models/Subject.js";
 import Branch from "../models/Branch.js";
 import User from "../models/User.js";
 import TeachingAssignment from "../models/TeachingAssignment.js";
-import Batch from "../models/Batch.js";
 import { validateAttendanceDate } from "../utils/dateValidator.js";
 import { generateDailyReport } from "../services/reportGenerator.js";
 import { updateMonthlyAttendanceExcel } from "../utils/updateMonthlyAttendanceExcel.js";
 import { parseAttendanceExcel } from "../utils/excelParser.js";
-import { getStudentsForBatch, isStudentInBatch } from "../utils/batchMembership.js";
 
 const getCurrentAcademicYear = () => {
   const now = new Date();
   const currentStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
   const computedAcademicYear = `${currentStartYear}-${currentStartYear + 1}`;
   return process.env.CURRENT_ACADEMIC_YEAR || computedAcademicYear;
-};
-
-const resolveBatchDoc = async (batchInput, branchId, year, division) => {
-  if (!batchInput) return null;
-
-  if (typeof batchInput === "object" && batchInput._id) {
-    return batchInput;
-  }
-
-  if (mongoose.Types.ObjectId.isValid(batchInput)) {
-    const batchDoc = await Batch.findById(batchInput);
-    if (batchDoc) return batchDoc;
-  }
-
-  const batchByName = await Batch.findOne({
-    $or: [{ name: batchInput }, { displayName: batchInput }],
-    branch: branchId,
-    year: Number(year),
-    division: division,
-    isDeleted: false
-  });
-  if (batchByName) return batchByName;
-
-  const globalBatch = await Batch.findOne({
-    $or: [{ name: batchInput }, { displayName: batchInput }],
-    isDeleted: false
-  });
-  return globalBatch || null;
 };
 
 const validateProxyOriginalAssignment = async ({
@@ -669,26 +639,53 @@ export const getStudentsForSession = async (req, res) => {
       };
     }
 
-    let students = [];
-    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
-      students = await getStudentsForBatch(effectiveBatchId);
-    } else {
-      // Build student query for regular lecture
-      let studentQuery = {
-        status: "active",
-        isDeleted: { $ne: true },
-        academicYear: effectiveAcademicYear,
-        branch: effectiveBranchId,
-        year: effectiveYear,
-        division: effectiveDivision
-      };
+    // Build student query
+    let studentQuery = {
+      status: "active",
+      academicYear: effectiveAcademicYear,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision
+    };
 
-      students = await Student.find(studentQuery)
-        .populate("userId", "name email")
-        .populate("branch", "name code")
-        .select("rollNo userId branch year division batch batchName academicYear status")
-        .sort({ rollNo: 1 });
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      let bName = typeof effectiveBatchId === "object" ? effectiveBatchId.name : effectiveBatchId;
+      let bId = typeof effectiveBatchId === "object" ? effectiveBatchId._id : null;
+      
+      if (!bId && mongoose.Types.ObjectId.isValid(effectiveBatchId)) {
+          bId = effectiveBatchId;
+      }
+
+      // Try to find the Batch ObjectId if we only have the name
+      if (!bId && bName) {
+          const Batch = mongoose.model("Batch");
+          const bDoc = await Batch.findOne({ 
+              name: bName, 
+              branch: effectiveBranchId, 
+              year: effectiveYear, 
+              division: effectiveDivision,
+              isDeleted: { $ne: true }
+          });
+          if (bDoc) bId = bDoc._id;
+      }
+
+      if (bId) {
+          studentQuery.$or = [
+              { batch: bId },
+              { practicalBatches: bId }
+          ];
+          if (bName) studentQuery.$or.push({ batchName: bName });
+      } else if (bName) {
+          studentQuery.batchName = bName; // Only query string field to avoid CastError
+      }
     }
+
+    // Fetch students
+    const students = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .populate("branch", "name code")
+      .select("rollNo userId branch year division batch batchName academicYear status")
+      .sort({ rollNo: 1 });
 
     // Resolve missing user details
     const missingUserIds = students
@@ -891,17 +888,7 @@ export const markAndGenerateAttendance = async (req, res) => {
       effectiveDivision        = assignment.division;
       effectiveSubjectId       = assignment.subjectId;
       effectiveSessionType     = assignment.sessionType;
-
-      let resolvedBatch = null;
-      if (assignment.sessionType === "PRACTICAL" && assignment.batchId) {
-        resolvedBatch = await resolveBatchDoc(
-          assignment.batchId,
-          effectiveBranchId,
-          effectiveYear,
-          effectiveDivision
-        );
-      }
-      effectiveBatchId         = resolvedBatch ? resolvedBatch._id : null;
+      effectiveBatchId         = assignment.batchId || null;
       effectiveAcademicYear    = assignment.academicYear;
       effectiveAssignedTeacher = assignment.teacherId;
 
@@ -956,29 +943,13 @@ export const markAndGenerateAttendance = async (req, res) => {
 
       // Practical ke liye batch validate karo
       if (effectiveSessionType === "PRACTICAL") {
-        const rawBatchInput = proxyBatchId || (req.body.batch ? req.body.batch : null);
-        if (!rawBatchInput) {
+        if (!proxyBatchId) {
           return res.status(400).json({
             success: false,
             message: "proxyBatchId is required for PRACTICAL proxy sessions"
           });
         }
-
-        const resolvedBatch = await resolveBatchDoc(
-          rawBatchInput,
-          effectiveBranchId,
-          effectiveYear,
-          effectiveDivision
-        );
-
-        if (resolvedBatch) {
-          effectiveBatchId = resolvedBatch._id;
-        } else {
-          return res.status(400).json({
-            success: false,
-            message: `Batch '${rawBatchInput}' not found for this class`
-          });
-        }
+        effectiveBatchId = proxyBatchId;
       }
 
       // ── [PROXY] Audit Logging ─────────────────────────────────────────
@@ -995,9 +966,6 @@ export const markAndGenerateAttendance = async (req, res) => {
       console.log(`[PROXY-AUDIT] Subject : ${proxySubjectId}`);
       console.log(`[PROXY-AUDIT] Class   : Branch=${proxyBranchId}, Year=${proxyYear}, Div=${proxyDivision}`);
       console.log(`[PROXY-AUDIT] SessType: ${effectiveSessionType}`);
-      if (effectiveSessionType === "PRACTICAL") {
-        console.log(`[PROXY-AUDIT] Batch   : ${effectiveBatchId}`);
-      }
       console.log(`[PROXY-AUDIT] Orig.   : ${origTeacherName}`);
       console.log(`[PROXY-AUDIT] Reason  : ${substituteReason || extraLectureReason || "None"}`);
       console.log(`[PROXY-AUDIT] Date    : ${date}`);
@@ -1006,25 +974,53 @@ export const markAndGenerateAttendance = async (req, res) => {
     }
 
     // ============ 4. LOAD STUDENTS ============
-    let students = [];
-    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
-      students = await getStudentsForBatch(effectiveBatchId);
-    } else {
-      const studentQuery = {
-        status: "active",
-        isDeleted: { $ne: true },
-        academicYear: effectiveAcademicYear,
-        branch: effectiveBranchId,
-        year: effectiveYear,
-        division: effectiveDivision
-      };
+    const studentQuery = {
+      status: "active",
+      academicYear: effectiveAcademicYear,
+      branch: effectiveBranchId,
+      year: effectiveYear,
+      division: effectiveDivision
+    };
 
-      students = await Student.find(studentQuery)
-        .populate("userId", "name email")
-        .select("rollNo userId")
-        .sort({ rollNo: 1 })
-        .lean();
+    if (effectiveSessionType === "PRACTICAL" && effectiveBatchId) {
+      let bName = typeof effectiveBatchId === "object" ? effectiveBatchId.name : effectiveBatchId;
+      let bId = typeof effectiveBatchId === "object" ? effectiveBatchId._id : null;
+      
+      if (!bId && mongoose.Types.ObjectId.isValid(effectiveBatchId)) {
+          bId = effectiveBatchId;
+      }
+
+      if (!bId && bName) {
+          const Batch = mongoose.model("Batch");
+          const bDoc = await Batch.findOne({ 
+              name: bName, 
+              branch: effectiveBranchId, 
+              year: effectiveYear, 
+              division: effectiveDivision,
+              isDeleted: { $ne: true }
+          });
+          if (bDoc) bId = bDoc._id;
+      }
+
+      if (bId) {
+          studentQuery.$or = [
+              { batch: bId },
+              { practicalBatches: bId }
+          ];
+          if (bName) studentQuery.$or.push({ batchName: bName });
+          
+          // Use ObjectId for AttendanceSession saving
+          effectiveBatchId = bId;
+      } else if (bName) {
+          studentQuery.batchName = bName;
+      }
     }
+
+    const students = await Student.find(studentQuery)
+      .populate("userId", "name email")
+      .select("rollNo userId")
+      .sort({ rollNo: 1 })
+      .lean();
 
     if (!students.length) {
       return res.status(400).json({
@@ -1318,6 +1314,7 @@ export const updateAttendance = async (req, res) => {
       if (attendance.batch) {
         studentQuery.$or = [
           { batch: attendance.batch },
+          { practicalBatches: attendance.batch },
           { batchName: attendance.batch }
         ];
       }
@@ -1622,14 +1619,33 @@ export const importAttendanceExcel = async (req, res) => {
       academicYear
     };
 
-    let resolvedImportBatchId = null;
     if (sessionType === "PRACTICAL" && batch) {
-      const bDoc = await resolveBatchDoc(batch, branchId, year, division);
-      resolvedImportBatchId = bDoc ? bDoc._id : null;
-    }
+      let bName = batch;
+      let bId = null;
 
-    if (sessionType === "PRACTICAL" && resolvedImportBatchId) {
-      studentQuery.$or = [{ batch: resolvedImportBatchId }, { batchName: batch }];
+      if (mongoose.Types.ObjectId.isValid(batch)) {
+          bId = batch;
+      } else {
+          const Batch = mongoose.model("Batch");
+          const bDoc = await Batch.findOne({ 
+              name: bName, 
+              branch: branchId, 
+              year: parseInt(year), 
+              division,
+              isDeleted: { $ne: true }
+          });
+          if (bDoc) bId = bDoc._id;
+      }
+
+      if (bId) {
+          studentQuery.$or = [
+              { batch: bId },
+              { practicalBatches: bId },
+              { batchName: bName }
+          ];
+      } else {
+          studentQuery.batchName = bName;
+      }
     }
 
     const students = await Student.find(studentQuery).select("rollNo _id").lean();
@@ -1666,8 +1682,8 @@ export const importAttendanceExcel = async (req, res) => {
         sessionType: sessionType
       };
 
-      if (sessionType === "PRACTICAL" && resolvedImportBatchId) {
-        duplicateQuery.batch = resolvedImportBatchId;
+      if (sessionType === "PRACTICAL" && batch) {
+        duplicateQuery.batch = batch;
       }
 
       const existingSession = await AttendanceSession.findOne(duplicateQuery);
@@ -1689,7 +1705,7 @@ export const importAttendanceExcel = async (req, res) => {
           academicYear,
           semester,
           sessionType,
-          batch: sessionType === "PRACTICAL" ? resolvedImportBatchId : null,
+          batch: sessionType === "PRACTICAL" ? batch : null,
           assignedTeacher: req.user.id, // default to admin
           teacher: req.user.id,
           subject: subjectId,
