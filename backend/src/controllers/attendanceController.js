@@ -684,6 +684,7 @@ export const getStudentsForSession = async (req, res) => {
     const students = await Student.find(studentQuery)
       .populate("userId", "name email")
       .populate("branch", "name code")
+      .populate("batch", "name")
       .select("rollNo userId branch year division batch batchName academicYear status")
       .sort({ rollNo: 1 });
 
@@ -722,7 +723,7 @@ export const getStudentsForSession = async (req, res) => {
         branchCode: student.branch?.code,
         year: student.year,
         division: student.division,
-        batch: student.batchName || student.batch || "",
+        batch: student.batch?.name || student.batchName || student.batch || "",
         academicYear: student.academicYear
       };
     });
