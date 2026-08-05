@@ -2,12 +2,55 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Attendance System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    
+    <!-- Primary Meta Tags -->
+    <title>WIET Attendance Management System</title>
+    <meta name="title" content="WIET Attendance Management System" />
+    <meta name="description" content="Complete attendance management system for WIET College - Track, manage, and analyze student attendance efficiently." />
+    <meta name="keywords" content="attendance, college, WIET, management, education, students, teachers" />
+    <meta name="author" content="WIET College" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#4F46E5" />
+    <meta name="msapplication-TileColor" content="#4F46E5" />
+    <meta name="msapplication-TileImage" content="/icons/android/launchericon-144x144.png" />
+    
+    <!-- Apple PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="WIET Attend" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/ios/16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/ios/32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/ios/180.png" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Prevent iOS Zoom on Input Focus -->
+    <style>
+      @media screen and (-webkit-min-device-pixel-ratio: 0) {
+        select, textarea, input {
+          font-size: 16px !important;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="text-align: center; padding: 50px;">
+        <h1>JavaScript Required</h1>
+        <p>WIET Attendance System requires JavaScript to work.</p>
+        <p>Please enable JavaScript in your browser settings.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
