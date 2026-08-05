@@ -18,6 +18,10 @@ Detailed installation with troubleshooting and advanced configuration.
 → [**PWA INSTALLATION_GUIDE.md**](./INSTALLATION_GUIDE.md)  
 Guide to installing the app on Android, iOS, and Desktop.
 
+### For PWA Learning & Portfolio
+→ [**PWA_LEARNING_GUIDE.md**](./PWA_LEARNING_GUIDE.md) | [**PWA_INTERVIEW_GUIDE.md**](./PWA_INTERVIEW_GUIDE.md) | [**PWA_RESUME_POINTS.md**](./PWA_RESUME_POINTS.md) | [**PWA_BEST_PRACTICES.md**](./PWA_BEST_PRACTICES.md)  
+Complete documentation on Progressive Web App concepts, architecture, best practices, and interview prep.
+
 ### For Understanding What Changed
 → [**IMPLEMENTATION_SUMMARY.md**](./IMPLEMENTATION_SUMMARY.md)  
 See what was done, what changed, and what stayed the same.
@@ -359,6 +363,10 @@ Documentation Files:
 ├── FRONTEND_UI_GUIDE.md
 ├── DESIGN_SYSTEM.md
 ├── CHANGELOG.md
+├── PWA_LEARNING_GUIDE.md
+├── PWA_BEST_PRACTICES.md
+├── PWA_RESUME_POINTS.md
+├── PWA_INTERVIEW_GUIDE.md
 └── README.md (THIS FILE)
 ```
 
