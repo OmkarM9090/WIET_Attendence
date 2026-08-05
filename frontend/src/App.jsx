@@ -3,6 +3,11 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+// PWA Components
+import InstallPrompt from "./components/InstallPrompt";
+import OfflineIndicator from "./components/OfflineIndicator";
+import UpdatePrompt from "./components/UpdatePrompt";
+
 // Pages
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -168,6 +173,11 @@ export default function App() {
           />
         </Routes>
       </BrowserRouter>
+      
+      {/* PWA UI Components */}
+      <InstallPrompt />
+      <OfflineIndicator />
+      <UpdatePrompt />
     </AuthProvider>
     </ErrorBoundary>
   );

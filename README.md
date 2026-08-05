@@ -14,6 +14,10 @@ Get your app running in 3 simple steps. Fastest way to start.
 → [**INSTALLATION_GUIDE.md**](./INSTALLATION_GUIDE.md)  
 Detailed installation with troubleshooting and advanced configuration.
 
+### For PWA (App) Installation
+→ [**PWA INSTALLATION_GUIDE.md**](./INSTALLATION_GUIDE.md)  
+Guide to installing the app on Android, iOS, and Desktop.
+
 ### For Understanding What Changed
 → [**IMPLEMENTATION_SUMMARY.md**](./IMPLEMENTATION_SUMMARY.md)  
 See what was done, what changed, and what stayed the same.
