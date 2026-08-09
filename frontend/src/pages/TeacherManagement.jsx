@@ -102,6 +102,9 @@ export default function TeacherManagement() {
   const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
   const [editAssignmentData, setEditAssignmentData] = useState(null);
   const [editAssignmentLoading, setEditAssignmentLoading] = useState(false);
+  const [editAssignmentError, setEditAssignmentError] = useState("");
+  const [editSubjects, setEditSubjects] = useState([]);
+  const [editBatches, setEditBatches] = useState([]);
   const [deleteAssignmentLoading, setDeleteAssignmentLoading] = useState(null);
   const [detailsModalData, setDetailsModalData] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -337,8 +340,59 @@ export default function TeacherManagement() {
     }
   };
 
+  useEffect(() => {
+    const fetchEditSubjects = async () => {
+      if (!editAssignmentData?.branchId) {
+        setEditSubjects([]);
+        return;
+      }
+      try {
+        const data = await getSubjects(editAssignmentData.branchId);
+        setEditSubjects(data);
+      } catch (err) {
+        setEditSubjects([]);
+      }
+    };
+    if (isEditAssignmentOpen) {
+      fetchEditSubjects();
+    }
+  }, [editAssignmentData?.branchId, isEditAssignmentOpen]);
+
+  useEffect(() => {
+    if (
+      isEditAssignmentOpen &&
+      editAssignmentData?.branchId &&
+      editAssignmentData?.year &&
+      editAssignmentData?.division
+    ) {
+      const fetchBatchesForClass = async () => {
+        try {
+          const res = await axiosInstance.get("/admin/batches", {
+            params: {
+              branchId: editAssignmentData.branchId,
+              year: editAssignmentData.year,
+              division: editAssignmentData.division,
+            },
+          });
+          setEditBatches(res.data?.batches || []);
+        } catch (err) {
+          setEditBatches([]);
+        }
+      };
+      fetchBatchesForClass();
+    } else {
+      setEditBatches([]);
+    }
+  }, [
+    isEditAssignmentOpen,
+    editAssignmentData?.branchId,
+    editAssignmentData?.year,
+    editAssignmentData?.division,
+  ]);
+
   const handleEditAssignment = (assignment) => {
     setEditingAssignment(assignment);
+    setEditAssignmentError("");
     setEditAssignmentData({
       teacherId: assignment.teacherId?._id || assignment.teacherId,
       subjectId: assignment.subjectId?._id || assignment.subjectId,
@@ -355,10 +409,12 @@ export default function TeacherManagement() {
     setIsEditAssignmentOpen(true);
   };
 
-  const handleUpdateAssignment = async () => {
+  const handleUpdateAssignment = async (e) => {
+    if (e) e.preventDefault();
     if (!editingAssignment || !editAssignmentData) return;
 
     setEditAssignmentLoading(true);
+    setEditAssignmentError("");
     try {
       await updateTeachingAssignment(editingAssignment._id, {
         ...editAssignmentData,
@@ -377,7 +433,7 @@ export default function TeacherManagement() {
         err.response?.data?.message ||
         err.message ||
         "Failed to update assignment";
-      setTtError(errorMsg);
+      setEditAssignmentError(errorMsg);
     } finally {
       setEditAssignmentLoading(false);
     }
@@ -697,14 +753,24 @@ export default function TeacherManagement() {
           actions={(row) => (
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => openEditModal(row)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-blue-700 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openEditModal(row);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-blue-700 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer"
               >
                 <Edit2 size={13} /> Edit
               </button>
               <button
-                onClick={() => handleDeleteTeacher(row)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-rose-700 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDeleteTeacher(row);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md text-rose-700 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors cursor-pointer"
               >
                 <Trash2 size={13} /> Delete
               </button>
@@ -855,6 +921,237 @@ export default function TeacherManagement() {
                   })
                 }
               />
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Edit Teaching Assignment Modal */}
+      <Modal
+        isOpen={isEditAssignmentOpen}
+        onClose={() => {
+          setIsEditAssignmentOpen(false);
+          setEditAssignmentError("");
+        }}
+        title="Edit Teaching Assignment"
+      >
+        {editAssignmentData && (
+          <form onSubmit={handleUpdateAssignment} className="space-y-4">
+            {editAssignmentError && <Alert type="error" message={editAssignmentError} />}
+
+            <FormSelect
+              label="Teacher"
+              name="teacherId"
+              value={editAssignmentData.teacherId}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  teacherId: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select teacher" },
+                ...teachers.map((t) => ({
+                  value: t.userId?._id || t.userId,
+                  label: `${t.userId?.name || "Unknown"} (${t.department?.code || "N/A"})`,
+                })),
+              ]}
+              required
+            />
+
+            <div className="grid grid-cols-3 gap-3">
+              <FormSelect
+                label="Branch"
+                name="branchId"
+                value={editAssignmentData.branchId}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    branchId: e.target.value,
+                    subjectId: "",
+                    batchId: "",
+                  }))
+                }
+                options={[
+                  { value: "", label: "Branch" },
+                  ...branches.map((b) => ({ value: b._id, label: b.code })),
+                ]}
+                required
+              />
+
+              <FormSelect
+                label="Year"
+                name="year"
+                value={editAssignmentData.year}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    year: Number(e.target.value),
+                    batchId: "",
+                  }))
+                }
+                options={[
+                  { value: "", label: "Year" },
+                  ...YEAR_OPTIONS.map((y) => ({ value: y, label: `Year ${y}` })),
+                ]}
+                required
+              />
+
+              <FormSelect
+                label="Division"
+                name="division"
+                value={editAssignmentData.division}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    division: e.target.value,
+                    batchId: "",
+                  }))
+                }
+                options={[
+                  { value: "", label: "Div" },
+                  ...DIVISION_OPTIONS.map((d) => ({ value: d, label: `Div ${d}` })),
+                ]}
+                required
+              />
+            </div>
+
+            <FormSelect
+              label="Subject"
+              name="subjectId"
+              value={editAssignmentData.subjectId}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  subjectId: e.target.value,
+                }))
+              }
+              options={[
+                { value: "", label: "Select subject" },
+                ...editSubjects.map((s) => ({
+                  value: s._id,
+                  label: `${s.name} (${s.code})`,
+                })),
+              ]}
+              required
+            />
+
+            <FormSelect
+              label="Session Type"
+              name="sessionType"
+              value={editAssignmentData.sessionType}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  sessionType: e.target.value,
+                  batchId: e.target.value === "LECTURE" ? "" : prev.batchId,
+                }))
+              }
+              options={SESSION_TYPES.map((st) => ({ value: st, label: st }))}
+              required
+            />
+
+            {editAssignmentData.sessionType === "PRACTICAL" && (
+              <FormSelect
+                label="Batch"
+                name="batchId"
+                value={editAssignmentData.batchId}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    batchId: e.target.value,
+                  }))
+                }
+                options={[
+                  {
+                    value: "",
+                    label: editBatches.length === 0 ? "No batches created for this class yet" : "Select batch",
+                  },
+                  ...editBatches.map((b) => ({
+                    value: b._id,
+                    label: `${b.displayName || b.name}${b.isMerged ? " (MERGED)" : ""}`,
+                  })),
+                ]}
+                required
+              />
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
+              <FormSelect
+                label="Day"
+                name="dayOfWeek"
+                value={editAssignmentData.dayOfWeek}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    dayOfWeek: e.target.value,
+                  }))
+                }
+                options={DAY_OPTIONS.map((d) => ({ value: d, label: d }))}
+                required
+              />
+              <FormInput
+                label="Start Time"
+                name="startTime"
+                type="time"
+                value={editAssignmentData.startTime}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    startTime: e.target.value,
+                  }))
+                }
+                required
+              />
+              <FormInput
+                label="End Time"
+                name="endTime"
+                type="time"
+                value={editAssignmentData.endTime}
+                onChange={(e) =>
+                  setEditAssignmentData((prev) => ({
+                    ...prev,
+                    endTime: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
+            <FormInput
+              label="Academic Year"
+              name="academicYear"
+              type="text"
+              placeholder="2025-2026"
+              value={editAssignmentData.academicYear}
+              onChange={(e) =>
+                setEditAssignmentData((prev) => ({
+                  ...prev,
+                  academicYear: e.target.value,
+                }))
+              }
+              required
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditAssignmentOpen(false);
+                  setEditAssignmentError("");
+                }}
+                disabled={editAssignmentLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                loading={editAssignmentLoading}
+                disabled={editAssignmentLoading}
+              >
+                Save Changes
+              </Button>
             </div>
           </form>
         )}

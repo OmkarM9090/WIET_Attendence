@@ -185,13 +185,13 @@ export default function TimetableView({
                                       </td>
                                       <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                          <button onClick={(e) => { e.stopPropagation(); onView(a); }} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-md transition-colors" title="View Details">
+                                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onView(a); }} className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-md transition-colors cursor-pointer" title="View Details">
                                             <Eye size={16} />
                                           </button>
-                                          <button onClick={(e) => { e.stopPropagation(); onEdit(a); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors" title="Edit">
+                                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(a); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors cursor-pointer" title="Edit Assignment">
                                             <Edit2 size={16} />
                                           </button>
-                                          <button onClick={(e) => { e.stopPropagation(); onDelete(a._id); }} disabled={deleteLoading === a._id} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50" title="Delete">
+                                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(a._id); }} disabled={deleteLoading === a._id} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 cursor-pointer" title="Delete Assignment">
                                             <Trash2 size={16} />
                                           </button>
                                         </div>
@@ -234,13 +234,13 @@ export default function TimetableView({
                                     </div>
                                     
                                     <div className="flex items-center gap-1">
-                                      <button onClick={(e) => { e.stopPropagation(); onView(a); }} className="p-1.5 sm:p-2 text-sky-600 bg-sky-50 rounded-md active:bg-sky-100 transition-colors">
+                                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onView(a); }} className="p-1.5 sm:p-2 text-sky-600 bg-sky-50 rounded-md active:bg-sky-100 transition-colors cursor-pointer" title="View Details">
                                         <Eye size={16} />
                                       </button>
-                                      <button onClick={(e) => { e.stopPropagation(); onEdit(a); }} className="p-1.5 sm:p-2 text-amber-600 bg-amber-50 rounded-md active:bg-amber-100 transition-colors">
+                                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(a); }} className="p-1.5 sm:p-2 text-amber-600 bg-amber-50 rounded-md active:bg-amber-100 transition-colors cursor-pointer" title="Edit Assignment">
                                         <Edit2 size={16} />
                                       </button>
-                                      <button onClick={(e) => { e.stopPropagation(); onDelete(a._id); }} disabled={deleteLoading === a._id} className="p-1.5 sm:p-2 text-red-600 bg-red-50 rounded-md active:bg-red-100 transition-colors disabled:opacity-50">
+                                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(a._id); }} disabled={deleteLoading === a._id} className="p-1.5 sm:p-2 text-red-600 bg-red-50 rounded-md active:bg-red-100 transition-colors disabled:opacity-50 cursor-pointer" title="Delete Assignment">
                                         <Trash2 size={16} />
                                       </button>
                                     </div>

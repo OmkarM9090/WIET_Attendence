@@ -3,8 +3,12 @@ import dotenv from "dotenv";
 import app from "./src/app.js";
 
 dotenv.config();
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 try {
-  mongoose.connect(process.env.MONGO_URI).then(async () => {
+  mongoose.connect(process.env.MONGO_URI, {
+    tlsAllowInvalidCertificates: true,
+  }).then(async () => {
     console.log("MongoDB Connected");
     
     // Automatically sync and drop any legacy indexes from older schemas

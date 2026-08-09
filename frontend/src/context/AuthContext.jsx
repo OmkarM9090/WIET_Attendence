@@ -12,13 +12,39 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper to verify if stored JWT token is expired (> 7 days)
+  const isTokenExpired = (token) => {
+    try {
+      const base64Url = token.split(".")[1];
+      if (!base64Url) return true;
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const decoded = JSON.parse(jsonPayload);
+      if (!decoded.exp) return false;
+      return Date.now() >= decoded.exp * 1000;
+    } catch (e) {
+      return true;
+    }
+  };
+
   // Initialize user state from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("token");
     
     if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
+      if (isTokenExpired(storedToken)) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        setUser(null);
+      } else {
+        setUser(JSON.parse(storedUser));
+      }
     }
     setLoading(false);
   }, []);

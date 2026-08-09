@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { loginUser } from "../services/authService";
@@ -10,7 +10,19 @@ import Alert from "../components/Alert";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role) {
+      if (user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (user.role === "teacher") {
+        navigate("/teacher", { replace: true });
+      } else if (user.role === "student") {
+        navigate("/student", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

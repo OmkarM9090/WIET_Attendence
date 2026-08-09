@@ -121,35 +121,114 @@ export const getTeachingAssignments = async (_req, res) => {
   }
 };
 
+const toMinutes = (timeStr) => {
+  if (!timeStr) return null;
+  const [hours, minutes] = String(timeStr).split(":").map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
 // UPDATE TEACHING ASSIGNMENT (Admin)
 export const updateTeachingAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { teacher, subject, branch, year, division } = req.body;
+    const {
+      teacherId,
+      subjectId,
+      branchId,
+      year,
+      division,
+      batchId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      sessionType,
+      academicYear,
+    } = req.body;
 
-    const assignment = await TeachingAssignment.findByIdAndUpdate(
-      id,
-      { teacher, subject, branch, year, division },
-      { new: true, runValidators: true }
-    )
-      .populate({
-        path: "teacher",
-        populate: { path: "userId", select: "name email" },
-      })
-      .populate("subject", "name code")
-      .populate("branch", "name code");
+    const assignment = await TeachingAssignment.findById(id);
 
     if (!assignment) {
       return res.status(404).json({ message: "Assignment not found" });
     }
 
+    const targetTeacherId = teacherId || assignment.teacherId;
+    const targetSubjectId = subjectId || assignment.subjectId;
+    const targetBranchId = branchId || assignment.branchId;
+    const targetYear = year !== undefined ? year : assignment.year;
+    const targetDivision = division || assignment.division;
+    const targetSessionType = sessionType || assignment.sessionType;
+    const targetBatchId = targetSessionType === "PRACTICAL" ? (batchId !== undefined ? batchId : assignment.batchId) : null;
+    const targetDayOfWeek = dayOfWeek || assignment.dayOfWeek;
+    const targetStartTime = startTime || assignment.startTime;
+    const targetEndTime = endTime || assignment.endTime;
+    const targetAcademicYear = academicYear || assignment.academicYear;
+
+    if (targetSessionType === "PRACTICAL" && !targetBatchId) {
+      return res.status(400).json({ message: "batchId is required for PRACTICAL sessions." });
+    }
+
+    const startMinutes = toMinutes(targetStartTime);
+    const endMinutes = toMinutes(targetEndTime);
+    if (startMinutes == null || endMinutes == null) {
+      return res.status(400).json({ message: "startTime and endTime must be in HH:mm format." });
+    }
+    if (endMinutes <= startMinutes) {
+      return res.status(400).json({ message: "endTime must be after startTime." });
+    }
+
+    const existingSlots = await TeachingAssignment.find({
+      _id: { $ne: id },
+      teacherId: targetTeacherId,
+      dayOfWeek: targetDayOfWeek,
+      academicYear: targetAcademicYear,
+      isActive: true,
+    }).select("startTime endTime");
+
+    const hasOverlap = existingSlots.some((slot) => {
+      const slotStart = toMinutes(slot.startTime);
+      const slotEnd = toMinutes(slot.endTime);
+      if (slotStart == null || slotEnd == null) return false;
+      return startMinutes < slotEnd && endMinutes > slotStart;
+    });
+
+    if (hasOverlap) {
+      return res.status(409).json({ message: "Overlapping time slot detected for the teacher." });
+    }
+
+    assignment.teacherId = targetTeacherId;
+    assignment.subjectId = targetSubjectId;
+    assignment.branchId = targetBranchId;
+    assignment.year = targetYear;
+    assignment.division = targetDivision;
+    assignment.sessionType = targetSessionType;
+    assignment.batchId = targetBatchId ? targetBatchId : undefined;
+    assignment.dayOfWeek = targetDayOfWeek;
+    assignment.startTime = targetStartTime;
+    assignment.endTime = targetEndTime;
+    assignment.academicYear = targetAcademicYear;
+
+    await assignment.save();
+
+    const updated = await TeachingAssignment.findById(id)
+      .populate("teacherId", "name email")
+      .populate("subjectId", "name code")
+      .populate("branchId", "name code")
+      .populate("batchId", "name code");
+
     res.json({
       message: "Assignment updated successfully",
-      assignment,
+      assignment: updated,
+      data: updated,
     });
   } catch (error) {
+    if (error && error.code === 11000) {
+      return res.status(409).json({ message: "Duplicate assignment already exists." });
+    }
     console.error("UPDATE TEACHING ASSIGNMENT ERROR:", error);
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: error.message || "Failed to update assignment" });
   }
 };
 
