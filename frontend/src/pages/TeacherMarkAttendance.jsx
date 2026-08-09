@@ -441,12 +441,20 @@ export default function TeacherMarkAttendance() {
       const link = document.createElement('a');
       link.href = url;
 
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = 'Attendance.xlsx';
+      const contentDisposition = response.headers['content-disposition'] || response.headers['Content-Disposition'];
+      const branchCode = (selectedAssignment?.branch?.code || selectedAssignment?.branch?.name || "Class").replace(/[\s\/]/g, "");
+      const yearVal = selectedAssignment?.year ? `Year${selectedAssignment.year}` : "";
+      const divVal = selectedAssignment?.division ? `Div${selectedAssignment.division}` : "";
+      const subjectName = (selectedAssignment?.subject?.code || selectedAssignment?.subject?.name || "Report").replace(/[\s\/]/g, "_");
+      const todayDate = new Date().toISOString().split('T')[0];
+
+      let filename = `Attendance_${branchCode}_${yearVal}_${divVal}_${subjectName}_${todayDate}.xlsx`.replace(/__+/g, "_");
+
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-        if (filenameMatch && filenameMatch.length === 2)
-          filename = filenameMatch[1];
+        const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].trim();
+        }
       }
 
       link.setAttribute('download', filename);

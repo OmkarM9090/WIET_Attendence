@@ -1755,8 +1755,13 @@ export const downloadExcel = async (req, res) => {
       });
     }
 
-    // Find attendance session
-    const attendance = await AttendanceSession.findById(attendanceId).lean();
+    // Find attendance session with populated metadata for filename
+    const attendance = await AttendanceSession.findById(attendanceId)
+      .populate("branch", "code name")
+      .populate("subject", "name code")
+      .populate("batch", "name")
+      .lean();
+
     if (!attendance) {
       return res.status(404).json({
         success: false,
@@ -1782,11 +1787,20 @@ export const downloadExcel = async (req, res) => {
       });
     }
 
-    // Send file to client
-    res.download(result.filePath, (err) => {
+    // Dynamic filename format: Attendance_{Branch}_{Year}_Div{Division}_{Subject}_{Date}.xlsx
+    const branchCode = (attendance.branch?.code || attendance.branch?.name || "Branch").replace(/[\s\/]/g, "");
+    const yearVal = attendance.year ? `Year${attendance.year}` : "";
+    const divVal = attendance.division ? `Div${attendance.division}` : "";
+    const subjectCode = (attendance.subject?.code || attendance.subject?.name || "Subject").replace(/[\s\/]/g, "_");
+    const batchName = attendance.batch?.name ? `_Batch${attendance.batch.name}` : "";
+    const dateStr = attendance.date ? new Date(attendance.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+    const customFilename = `Attendance_${branchCode}_${yearVal}_${divVal}_${subjectCode}${batchName}_${dateStr}.xlsx`.replace(/__+/g, "_");
+
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+    res.download(result.filePath, customFilename, (err) => {
       if (err) {
         console.error("❌ Excel download error:", err);
-        // Do not send res.status if headers are already sent
         if (!res.headersSent) {
           res.status(500).json({ success: false, message: "Error downloading file" });
         }

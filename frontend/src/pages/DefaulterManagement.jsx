@@ -116,7 +116,12 @@ export default function DefaulterManagement() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Defaulters_${division}_${year}_${Date.now()}.pdf`;
+
+      const selectedBranchObj = branches.find((b) => b._id === branch);
+      const branchCode = selectedBranchObj?.code || selectedBranchObj?.name || "Branch";
+      const todayDate = new Date().toISOString().split("T")[0];
+
+      link.download = `Defaulter_List_${branchCode}_Year${year}_Div${division}_${academicYear}_${todayDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -152,7 +157,12 @@ export default function DefaulterManagement() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Defaulters_${division}_${year}_${Date.now()}.xlsx`;
+
+      const selectedBranchObj = branches.find((b) => b._id === branch);
+      const branchCode = selectedBranchObj?.code || selectedBranchObj?.name || "Branch";
+      const todayDate = new Date().toISOString().split("T")[0];
+
+      link.download = `Defaulter_List_${branchCode}_Year${year}_Div${division}_${academicYear}_${todayDate}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

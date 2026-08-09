@@ -20,14 +20,15 @@ export const generateDefaulterExcel = async (defaulters, subjects, metadata = {}
 
   // METADATA: Add header information
   if (metadata.academicYear) {
-    sheet.addRow([`Academic Year: ${metadata.academicYear}`]);
-  }
-  if (metadata.semester) {
-    sheet.addRow([`Semester: ${metadata.semester}`]);
-  }
-  if (metadata.dateRange) {
-    sheet.addRow([`Period: ${metadata.dateRange.startDate} to ${metadata.dateRange.endDate}`]);
-  }
+  sheet.addRow([`Academic Year: ${metadata.academicYear}`]);
+}
+if (metadata.semester) {
+  sheet.addRow([`Semester: ${metadata.semester}`]);
+}
+if (metadata.dateRange && metadata.dateRange.startDate) {
+  sheet.addRow([`Period: ${metadata.dateRange.startDate} to ${metadata.dateRange.endDate}`]);
+}
+sheet.addRow([`Generated On: ${new Date().toLocaleDateString("en-IN")}`]);
   if (metadata.threshold) {
     sheet.addRow([`Attendance Threshold: ${metadata.threshold}%`]);
   }

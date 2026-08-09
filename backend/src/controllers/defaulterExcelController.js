@@ -45,6 +45,9 @@ export const exportDefaulterExcel = async (req, res) => {
 
     // Generate workbook
     const workbook = await generateDefaulterExcel(defaulters, subjects, metadata);
+    const dateStr = startDate && endDate ? `_(${startDate}_to_${endDate})` : "";
+    const safeFilename = `Defaulter_List_${academicYear || "All"}_Sem${semester || "All"}${dateStr}.xlsx`.replace(/[\s\/]/g, "_");
+
 
     // Set response headers
     res.setHeader(
@@ -53,7 +56,7 @@ export const exportDefaulterExcel = async (req, res) => {
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=Defaulter_List_${academicYear || "All"}_Sem${semester || "All"}.xlsx`
+      `attachment; filename=${safeFilename}`
     );
 
     // Write and send

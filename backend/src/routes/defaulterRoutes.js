@@ -7,15 +7,14 @@ import { allowRoles } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
+router.get("/", protect, allowRoles("admin"), generateDefaulters);
 router.get("/defaulters", protect, allowRoles("admin"), generateDefaulters);
+
+router.post("/export", protect, allowRoles("admin"), exportDefaulterExcel);
 router.post("/defaulters/export", protect, allowRoles("admin"), exportDefaulterExcel);
 
-router.post(
-  "/defaulters/pdf",
-  protect,
-  allowRoles("admin"),
-  exportDefaulterPDF
-);
+router.post("/pdf", protect, allowRoles("admin"), exportDefaulterPDF);
+router.post("/defaulters/pdf", protect, allowRoles("admin"), exportDefaulterPDF);
 
 
 export default router;

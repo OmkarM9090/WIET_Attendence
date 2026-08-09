@@ -313,7 +313,9 @@ export const downloadSimpleTemplate = async (req, res) => {
     });
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=students_${branchCode}_Y${year}_${division}.xlsx`);
+    // res.setHeader('Content-Disposition', `attachment; filename=students_${branchCode}_Y${year}_${division}.xlsx`);
+    const customRosterName = `Student_Roster_${branchCode}_Year${year}_Div${division}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename=${customRosterName}`);
     
     await workbook.xlsx.write(res);
     res.end();

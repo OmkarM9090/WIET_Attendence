@@ -43,7 +43,13 @@ const AttendanceDetailPanel = ({ sessionId, onClose }) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Attendance_Session_${sessionId}.xlsx`;
+      const branchCode = (details?.branch?.code || details?.branch?.name || "Class").replace(/[\s\/]/g, "");
+      const yearVal = details?.year ? `Year${details.year}` : "";
+      const divVal = details?.division ? `Div${details.division}` : "";
+      const subjectName = (details?.subject?.code || details?.subject?.name || "Report").replace(/[\s\/]/g, "_");
+      const sessionDate = details?.date ? new Date(details.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+      a.download = `Attendance_${branchCode}_${yearVal}_${divVal}_${subjectName}_${sessionDate}.xlsx`.replace(/__+/g, "_");
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
